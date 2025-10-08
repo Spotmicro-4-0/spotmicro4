@@ -10,7 +10,7 @@ from spotmicroai.utilities.config import Config
 import spotmicroai.utilities.queues as queues
 
 # Import tunable constants
-from constants import (
+from spotmicroai.remote_controller.constants import (
     PUBLISH_RATE_HZ,
     DEADZONE,
     AXIS_UPDATE_THRESHOLD,

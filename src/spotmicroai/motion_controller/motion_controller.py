@@ -169,7 +169,11 @@ class MotionController:
         activate_debounce_time = 0
         gait_debounce_time = 0
 
+        FRAME_RATE_HZ = 50
+        FRAME_DURATION = 1.0 / FRAME_RATE_HZ
+
         while True:
+            frame_start = time.time()
             ########################################################################
             #region Handle reading events
             try:
@@ -415,6 +419,10 @@ class MotionController:
                 #continue
                 pass
             #endregion
+            elapsed_time = time.time() - frame_start
+            
+            if elapsed_time < FRAME_DURATION:
+                time.sleep(FRAME_DURATION - elapsed_time)
 
     def load_gait_from_config(self):
         raw_gait = Config().get(Config.GAIT_KEYFRAMES)
