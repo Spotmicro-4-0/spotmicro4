@@ -3,11 +3,11 @@ from enum import Enum
 import math
 import signal
 import sys
-import busio
-from board import SCL, SDA
-from adafruit_pca9685 import PCA9685
-from adafruit_motor import servo
-import RPi.GPIO as GPIO
+import busio  # type: ignore
+from board import SCL, SDA  # type: ignore
+from adafruit_pca9685 import PCA9685  # type: ignore
+from adafruit_motor import servo  # type: ignore
+import RPi.GPIO as GPIO  # type: ignore
 import time
 from spotmicroai.motion_controller.InverseKinematics import InverseKinematics, interpolate
 from spotmicroai.motion_controller.models import Coordinate, Instinct, Keyframe, KeyframeCollection, ServoConfigurations, ServoConfigurationsCollection, ServoConfigurationsForLimb, ServoStateCollection, ServoStateForLimb
@@ -215,7 +215,7 @@ class MotionController:
             if self._event == {}:
                 # if there is no user input, check to see if it have been long enough to warn the user
                 if (time.time() - inactivity_counter) >= self.INACTIVITY_TIME:
-                    log.info('Inactivity lasted 60 seconds. Press start to reactivate')
+                    log.info(f'Inactivity lasted {self.INACTIVITY_TIME} seconds. Press start to reactivate')
                     log.info('Shutting down the servos.')
                     log.info('Press START/OPTIONS to enable the servos')
                     
