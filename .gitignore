@@ -147,3 +147,6 @@ Thumbs.db
 .settings/
 .classpath
 .project
+
+######### Deployment Configuration
+src/deployment/deployment_config.json
