@@ -672,9 +672,10 @@ class DeploymentManager:
         self.print_info("Python packages installed successfully")
         return True
     
-    def set_executable_permissions(self):
+    def set_executable_permissions(self, interactive=True):
         """Set executable permissions on shell scripts"""
-        self.print_info("Setting executable permissions on scripts...")
+        if interactive:
+            self.print_info("Setting executable permissions on scripts...")
         
         chmod_commands = [
             "cd ~/spotmicroai && find . -name '*.sh' -exec chmod +x {} \\;",
@@ -682,22 +683,29 @@ class DeploymentManager:
             "cd ~/spotmicroai && chmod +x deploy.sh || true"
         ]
         
-        self.print_info("Permission commands:")
-        for i, cmd in enumerate(chmod_commands, 1):
-            print(f"  {i}. {cmd}")
+        if interactive:
+            self.print_info("Permission commands:")
+            for i, cmd in enumerate(chmod_commands, 1):
+                print(f"  {i}. {cmd}")
         
-        if not self.confirm_yes_no("Set executable permissions?", True):
-            self.print_info("Permission setting skipped")
-            return True
-            
+            if not self.confirm_yes_no("Set executable permissions?", True):
+                self.print_info("Permission setting skipped")
+                return True
+        
         # Execute chmod commands
+        success = True
         for i, cmd in enumerate(chmod_commands, 1):
-            self.print_info(f"Step {i}/{len(chmod_commands)}: Setting permissions...")
+            if interactive:
+                self.print_info(f"Step {i}/{len(chmod_commands)}: Setting permissions...")
             if not self.execute_ssh_command(cmd):
-                self.print_warning(f"Permission command {i} failed (may be normal)")
+                if interactive:
+                    self.print_warning(f"Permission command {i} failed (may be normal)")
+                success = False
                     
-        self.print_info("Executable permissions set successfully")
-        return True
+        if interactive:
+            self.print_info("Executable permissions set successfully")
+        
+        return success
     
     def setup_systemctl_service(self):
         """Set up SpotMicroAI as a systemctl service"""
@@ -910,6 +918,11 @@ class DeploymentManager:
         else:
             self.print_warning("spotmicroai.json not found in source directory")
         
+        # Third, set executable permissions on transferred files
+        self.print_info("Setting executable permissions on transferred files...")
+        if not self.set_executable_permissions(interactive=False):
+            self.print_warning("Failed to set some executable permissions")
+        
         return True
     
     def perform_full_deployment(self):
@@ -919,12 +932,13 @@ class DeploymentManager:
         # Sync files
         if not self.sync_files_to_rpi():
             return False
+        
+        # Note: sync_files_to_rpi() already handles chmod automatically
             
         # Restart services
         self.print_info("Managing SpotMicroAI services...")
         
         service_commands = [
-            "cd ~/spotmicroai && chmod +x *.sh",      # Make scripts executable
             "pkill -f spotmicroai || true",           # Stop any running instances
             "cd ~/spotmicroai && source venv/bin/activate && ./run.sh &",  # Start in venv
         ]
