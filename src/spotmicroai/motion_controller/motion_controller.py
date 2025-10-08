@@ -1,6 +1,7 @@
 #region Standard Dependencies Imports
 from enum import Enum
 import math
+import queue
 import signal
 import sys
 import busio  # type: ignore
@@ -172,11 +173,9 @@ class MotionController:
             ########################################################################
             #region Handle reading events
             try:
-                self._event = self._motion_queue.get(block=False, timeout=60)
-                inactivity_counter = time.time()
+                self._event = self._motion_queue.get(block=False)
 
-            except Exception as e:
-                # This exception is thrown when nothing is in the queue
+            except queue.Empty:
                 self._event = {}
             #endregion
             
@@ -203,6 +202,8 @@ class MotionController:
                     self.activate_servos()
                     self.rest_position()
                     start = time.time()
+                    # Reset inactivity counter on activation so timer starts now
+                    inactivity_counter = time.time()
                     self._is_activated = True
             #endregion
 
