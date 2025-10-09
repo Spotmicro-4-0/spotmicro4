@@ -96,13 +96,8 @@
 		"recommendations": [
 			"ms-python.python",
 			"ms-python.pylint",
-			"ms-python.black-formatter",
 			"ms-python.isort",
-			"ms-vscode.test-adapter-converter",
-			"timonwong.shellcheck",
 			"ms-vscode.vscode-json",
-			"streetsidesoftware.code-spell-checker",
-			"ms-vscode.hexeditor",
 			"ms-vscode-remote.remote-ssh",
 			"github.copilot",
 			"github.copilot-chat",
