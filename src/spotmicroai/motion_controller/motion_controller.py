@@ -263,7 +263,7 @@ class MotionController:
 
                     # The call below interpolates the next frame. Basically, it checks what fraction of a second has elapsed since the last frame to calculate a ratio
                     # Then it uses the ratio to adjust the values of the last frame accordingly. 
-                    self.interpolateKeyframes(ratio)
+                    self.interpolate_keyframes(ratio)
 
             #endregion  
             
@@ -523,7 +523,7 @@ class MotionController:
 
     ########################################################################
     #region Kinematics Helper functions
-    def interpolateKeyframes(self, ratio):
+    def interpolate_keyframes(self, ratio):
         """Interpolate between the current and next keyframes for each leg and apply the servo positions.
 
         Parameters
@@ -531,19 +531,19 @@ class MotionController:
         ratio : float
             The ratio of each keyframe in the interpolation. Should be in the range 0.0-1.0.
         """
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_right, self._height_factor, -self._lean_factor, ratio)
-        self.frontRightLeg(foot, leg, shoulder)
+    foot, leg, shoulder = self._process_keyframe(self._keyframes.front_right, self._height_factor, -self._lean_factor, ratio)
+    self.front_right_leg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_left, self._height_factor, self._lean_factor, ratio)
-        self.rearLeftLeg(foot, leg, shoulder)
+    foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_left, self._height_factor, self._lean_factor, ratio)
+    self.rear_left_leg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_left, self._height_factor, self._lean_factor, ratio)
-        self.frontLeftLeg(foot, leg, shoulder)
+    foot, leg, shoulder = self._process_keyframe(self._keyframes.front_left, self._height_factor, self._lean_factor, ratio)
+    self.front_left_leg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_right, self._height_factor, -self._lean_factor, ratio)
-        self.rearRightLeg(foot, leg, shoulder)
+    foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_right, self._height_factor, -self._lean_factor, ratio)
+    self.rear_right_leg(foot, leg, shoulder)
 
-    def rearLeftLeg(self, foot, leg, shoulder):
+    def rear_left_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the back left leg.
 
         Parameters
@@ -559,7 +559,7 @@ class MotionController:
         self.servos.rear_left.leg.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
         self.servos.rear_left.foot.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
 
-    def rearRightLeg(self, foot, leg, shoulder):
+    def rear_right_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the back right leg.
 
         Parameters
@@ -575,7 +575,7 @@ class MotionController:
         self.servos.rear_right.leg.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
         self.servos.rear_right.foot.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
 
-    def frontLeftLeg(self, foot, leg, shoulder):
+    def front_left_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the front left leg.
 
         Parameters
@@ -591,7 +591,7 @@ class MotionController:
         self.servos.front_left.leg.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
         self.servos.front_left.foot.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
 
-    def frontRightLeg(self, foot, leg, shoulder):
+    def front_right_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the front right leg.
 
         Parameters
