@@ -19,8 +19,7 @@ class LCDScreenController:
     lcd_screen_controller = None
     abort_controller = None
     remote_controller_controller = None
-    motion_controller_1 = None
-    motion_controller_2 = None
+    motion_controller = None
 
     def __init__(self, communication_queues):
         try:
@@ -74,11 +73,8 @@ class LCDScreenController:
                     if event.startswith(queues.REMOTE_CONTROLLER_CONTROLLER + ' '):
                         self.remote_controller_controller = event[len(queues.REMOTE_CONTROLLER_CONTROLLER + ' '):]
 
-                    if event.startswith('motion_controller_1 '):
-                        self.motion_controller_1 = event[len('motion_controller_1 '):]
-
-                    if event.startswith('motion_controller_2 '):
-                        self.motion_controller_2 = event[len('motion_controller_2 '):]
+                    if event.startswith(queues.MOTION_CONTROLLER + ' '):
+                        self.motion_controller = event[len(queues.MOTION_CONTROLLER + ' '):]
 
                 except queue.Empty as e:
                     self.update_lcd_creen()
@@ -178,12 +174,7 @@ class LCDScreenController:
 
         self.screen.lcd_write_char(0)
 
-        if self.motion_controller_1 == 'OK':
-            self.screen.lcd_write_char(1)
-        else:
-            self.screen.lcd_write_char(6)
-
-        if self.motion_controller_2 == 'OK':
+        if self.motion_controller == 'OK':
             self.screen.lcd_write_char(1)
         else:
             self.screen.lcd_write_char(6)

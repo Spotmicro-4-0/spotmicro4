@@ -87,16 +87,16 @@ class ServoConfigurations:
         max_pulse: The maximum pulse width in microseconds
         rest_angle: The value of the resting angle of the servo
     """
-    channel = int
-    minPulse = int
-    maxPulse = int
-    restAngle = float
+    channel: int
+    min_pulse: int
+    max_pulse: int
+    rest_angle: float
 
-    def __init__(self, channel: int, minPulse, maxPulse, restAngle):
+    def __init__(self, channel: int, min_pulse: int, max_pulse: int, rest_angle: float):
         self.channel = channel
-        self.minPulse = minPulse
-        self.maxPulse = maxPulse
-        self.restAngle = restAngle
+        self.min_pulse = min_pulse
+        self.max_pulse = max_pulse
+        self.rest_angle = rest_angle
 
 class ServoConfigurationsForLimb:
     """A class containing the configurations for the 3 servos in a single limb.
@@ -108,9 +108,9 @@ class ServoConfigurationsForLimb:
         leg: The leg servo
         foot: The foot servo
     """
-    shoulder = ServoConfigurations
-    leg = ServoConfigurations
-    foot = ServoConfigurations
+    shoulder: ServoConfigurations
+    leg: ServoConfigurations
+    foot: ServoConfigurations
 
     def __init__(self, shoulder: ServoConfigurations, leg: ServoConfigurations, foot: ServoConfigurations):
         self.shoulder = shoulder
@@ -123,21 +123,21 @@ class ServoConfigurationsCollection:
     Used to track the configurations of all servos
 
     Attributes:
-        rearLeft: The rear left limb
-        rearRight: The rear right limb
-        frontLeft: The front left limb
-        frontRight: The front right limb
+        rear_left: The rear left limb
+        rear_right: The rear right limb
+        front_left: The front left limb
+        front_right: The front right limb
     """
-    rearLeft = ServoConfigurationsForLimb
-    rearRight = ServoConfigurationsForLimb
-    frontLeft = ServoConfigurationsForLimb
-    frontRight = ServoConfigurationsForLimb
+    rear_left: ServoConfigurationsForLimb
+    rear_right: ServoConfigurationsForLimb
+    front_left: ServoConfigurationsForLimb
+    front_right: ServoConfigurationsForLimb
 
-    def __init__(self, rearLeft: ServoConfigurationsForLimb, rearRight: ServoConfigurationsForLimb, frontLeft: ServoConfigurationsForLimb, frontRight: ServoConfigurationsForLimb):
-        self.rearLeft = rearLeft
-        self.rearRight = rearRight
-        self.frontLeft = frontLeft
-        self.frontRight = frontRight
+    def __init__(self, rear_left: ServoConfigurationsForLimb, rear_right: ServoConfigurationsForLimb, front_left: ServoConfigurationsForLimb, front_right: ServoConfigurationsForLimb):
+        self.rear_left = rear_left
+        self.rear_right = rear_right
+        self.front_left = front_left
+        self.front_right = front_right
 
 class ServoStateForLimb:
     """A class containing the servos in a single limb.
@@ -149,9 +149,9 @@ class ServoStateForLimb:
         leg: The leg servo
         foot: The foot servo
     """
-    shoulder = servo.Servo
-    leg = servo.Servo
-    foot = servo.Servo
+    shoulder: servo.Servo
+    leg: servo.Servo
+    foot: servo.Servo
 
     def __init__(self, shoulder: servo.Servo, leg: servo.Servo, foot: servo.Servo):
         self.shoulder = shoulder
@@ -164,19 +164,19 @@ class ServoStateCollection:
     Used to track all 12 servos
 
     Attributes:
-        rearLeft: The rear left limb
-        rearRight: The rear right limb
-        frontLeft: The front left limb
-        frontRight: The front right limb
+        rear_left: The rear left limb
+        rear_right: The rear right limb
+        front_left: The front left limb
+        front_right: The front right limb
     """
 
-    rearLeft = ServoStateForLimb
-    rearRight = ServoStateForLimb
-    frontLeft = ServoStateForLimb
-    frontRight = ServoStateForLimb
+    rear_left: ServoStateForLimb
+    rear_right: ServoStateForLimb
+    front_left: ServoStateForLimb
+    front_right: ServoStateForLimb
 
-    def __init__(self, rearLeft: ServoStateForLimb, rearRight: ServoStateForLimb, frontLeft: ServoStateForLimb, frontRight: ServoStateForLimb):
-        self.rearLeft = rearLeft
-        self.rearRight = rearRight
-        self.frontLeft = frontLeft
-        self.frontRight = frontRight
+    def __init__(self, rear_left: ServoStateForLimb, rear_right: ServoStateForLimb, front_left: ServoStateForLimb, front_right: ServoStateForLimb):
+        self.rear_left = rear_left
+        self.rear_right = rear_right
+        self.front_left = front_left
+        self.front_right = front_right
