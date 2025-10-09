@@ -4,9 +4,7 @@ import math
 import queue
 import signal
 import sys
-import busio  # type: ignore
-from board import SCL, SDA  # type: ignore
-from adafruit_pca9685 import PCA9685  # type: ignore
+from spotmicroai.motion_controller.pca9685 import PCA9685Board
 from adafruit_motor import servo  # type: ignore
 import RPi.GPIO as GPIO  # type: ignore
 import time
@@ -41,16 +39,6 @@ class MotionController:
         Leg = 1
         Foot = 2
 
-    #endregion
-
-    #############################################
-    #region PCA9685 Board Variables
-    i2c = None
-    pca9685 = None
-
-    pca9685_address = None
-    pca9685_reference_clock_speed = None
-    pca9685_frequency = None
     #endregion
 
     #############################################
@@ -92,15 +80,13 @@ class MotionController:
     #endregion
 
     def __init__(self, communication_queues):
-
         try:
             print('Starting controller...')
 
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self.i2c = busio.I2C(SCL, SDA)
-            self.load_pca9685_board_configuration()
+            self.pca9685_board = PCA9685Board()
             self.load_servos_configuration()
 
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
@@ -116,14 +102,15 @@ class MotionController:
             log.error('Motion controller initialization problem', e)
             self._lcd_screen_queue.put('motion_controller_1 NOK')
             try:
-                self.pca9685.deinit()
+                if self.pca9685_board:
+                    self.pca9685_board.deactivate()
             finally:
                 sys.exit(1)
 
     def exit_gracefully(self, signum, frame):
         try:
             time.sleep(0.25)
-            self.deactivate_pca9685_board()
+            self.pca9685_board.deactivate()
             self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
             self._is_activated = False
         finally:
@@ -176,14 +163,14 @@ class MotionController:
                     self.beep()
                     self.rest_position()
                     time.sleep(0.25)
-                    self.deactivate_pca9685_board()
+                    self.pca9685_board.deactivate()
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                     self._is_activated = False
                 else:
                     log.info('Press START/OPTIONS to re-enable the servos')
                     self.beep()
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
-                    self.activate_pca9685_board()
+                    self.pca9685_board.activate()
                     self.activate_servos()
                     self.rest_position()
                     start = time.time()
@@ -207,7 +194,7 @@ class MotionController:
                     
                     self.rest_position()
                     time.sleep(0.1)
-                    self.deactivate_pca9685_board()
+                    self.pca9685_board.deactivate()
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                     self._is_activated = False
                     self._is_running = False
@@ -653,31 +640,6 @@ class MotionController:
 
     #endregion
 
-    def load_pca9685_board_configuration(self):
-        self.pca9685_address = int(Config().get(Config.MOTION_CONTROLLER_PCA9685_ADDRESS), 0)
-        self.pca9685_reference_clock_speed = int(Config().get(Config.MOTION_CONTROLLER_PCA9685_REFERENCE_CLOCK_SPEED))
-        self.pca9685_frequency = int(Config().get(Config.MOTION_CONTROLLER_PCA9685_FREQUENCY))
-
-    def activate_pca9685_board(self):
-
-        self.pca9685 = PCA9685(self.i2c, address=self.pca9685_address,
-                                 reference_clock_speed=self.pca9685_reference_clock_speed)
-        self.pca9685.frequency = self.pca9685_frequency
-
-        self._is_activated = True
-        print('PCA9685 board activated')
-
-    def deactivate_pca9685_board(self):
-
-        try:
-            if self.pca9685:
-                self.pca9685.deinit()
-        finally:
-            self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
-            self._is_activated = False
-
-        print('PCA9685 board deactivated')
-
     def load_servos_configuration(self):
 
         #region Rear Left Limb
@@ -786,15 +748,15 @@ class MotionController:
     def activate_servos(self):
         #region Rear Left Limb
         rear_left_shoulder_config = self.servos_configurations.rear_left.shoulder
-        rear_left_shoulder_servo = servo.Servo(self.pca9685.channels[rear_left_shoulder_config.channel])
+        rear_left_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(rear_left_shoulder_config.channel))
         rear_left_shoulder_servo.set_pulse_width_range(min_pulse = rear_left_shoulder_config.min_pulse , max_pulse = rear_left_shoulder_config.max_pulse)
 
         rear_left_leg_config = self.servos_configurations.rear_left.leg
-        rear_left_leg_servo = servo.Servo(self.pca9685.channels[rear_left_leg_config.channel])
+        rear_left_leg_servo = servo.Servo(self.pca9685_board.get_channel(rear_left_leg_config.channel))
         rear_left_leg_servo.set_pulse_width_range(min_pulse = rear_left_leg_config.min_pulse , max_pulse = rear_left_leg_config.max_pulse)
 
         rear_left_foot_config = self.servos_configurations.rear_left.foot
-        rear_left_foot_servo = servo.Servo(self.pca9685.channels[rear_left_foot_config.channel])
+        rear_left_foot_servo = servo.Servo(self.pca9685_board.get_channel(rear_left_foot_config.channel))
         rear_left_foot_servo.set_pulse_width_range(min_pulse = rear_left_foot_config.min_pulse , max_pulse = rear_left_foot_config.max_pulse)
 
         rear_left_limb_servo = ServoStateForLimb(rear_left_shoulder_servo, rear_left_leg_servo, rear_left_foot_servo)
@@ -802,15 +764,15 @@ class MotionController:
 
         #region Rear Right Limb
         rear_right_shoulder_config = self.servos_configurations.rear_right.shoulder
-        rear_right_shoulder_servo = servo.Servo(self.pca9685.channels[rear_right_shoulder_config.channel])
+        rear_right_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(rear_right_shoulder_config.channel))
         rear_right_shoulder_servo.set_pulse_width_range(min_pulse = rear_right_shoulder_config.min_pulse , max_pulse = rear_right_shoulder_config.max_pulse)
 
         rear_right_leg_config = self.servos_configurations.rear_right.leg
-        rear_right_leg_servo = servo.Servo(self.pca9685.channels[rear_right_leg_config.channel])
+        rear_right_leg_servo = servo.Servo(self.pca9685_board.get_channel(rear_right_leg_config.channel))
         rear_right_leg_servo.set_pulse_width_range(min_pulse = rear_right_leg_config.min_pulse , max_pulse = rear_right_leg_config.max_pulse)
 
         rear_right_foot_config = self.servos_configurations.rear_right.foot
-        rear_right_foot_servo = servo.Servo(self.pca9685.channels[rear_right_foot_config.channel])
+        rear_right_foot_servo = servo.Servo(self.pca9685_board.get_channel(rear_right_foot_config.channel))
         rear_right_foot_servo.set_pulse_width_range(min_pulse = rear_right_foot_config.min_pulse , max_pulse = rear_right_foot_config.max_pulse)
 
         rear_right_limb_servo = ServoStateForLimb(rear_right_shoulder_servo, rear_right_leg_servo, rear_right_foot_servo)
@@ -818,15 +780,15 @@ class MotionController:
 
         #region Front Left Limb
         front_left_shoulder_config = self.servos_configurations.front_left.shoulder
-        front_left_shoulder_servo = servo.Servo(self.pca9685.channels[front_left_shoulder_config.channel])
+        front_left_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(front_left_shoulder_config.channel))
         front_left_shoulder_servo.set_pulse_width_range(min_pulse = front_left_shoulder_config.min_pulse , max_pulse = front_left_shoulder_config.max_pulse)
 
         front_left_leg_config = self.servos_configurations.front_left.leg
-        front_left_leg_servo = servo.Servo(self.pca9685.channels[front_left_leg_config.channel])
+        front_left_leg_servo = servo.Servo(self.pca9685_board.get_channel(front_left_leg_config.channel))
         front_left_leg_servo.set_pulse_width_range(min_pulse = front_left_leg_config.min_pulse , max_pulse = front_left_leg_config.max_pulse)
 
         front_left_foot_config = self.servos_configurations.front_left.foot
-        front_left_foot_servo = servo.Servo(self.pca9685.channels[front_left_foot_config.channel])
+        front_left_foot_servo = servo.Servo(self.pca9685_board.get_channel(front_left_foot_config.channel))
         front_left_foot_servo.set_pulse_width_range(min_pulse = front_left_foot_config.min_pulse , max_pulse = front_left_foot_config.max_pulse)
 
         front_left_limb_servo = ServoStateForLimb(front_left_shoulder_servo, front_left_leg_servo, front_left_foot_servo)
@@ -834,15 +796,15 @@ class MotionController:
 
         #region Front right Limb
         front_right_shoulder_config = self.servos_configurations.front_right.shoulder
-        front_right_shoulder_servo = servo.Servo(self.pca9685.channels[front_right_shoulder_config.channel])
+        front_right_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(front_right_shoulder_config.channel))
         front_right_shoulder_servo.set_pulse_width_range(min_pulse = front_right_shoulder_config.min_pulse , max_pulse = front_right_shoulder_config.max_pulse)
 
         front_right_leg_config = self.servos_configurations.front_right.leg
-        front_right_leg_servo = servo.Servo(self.pca9685.channels[front_right_leg_config.channel])
+        front_right_leg_servo = servo.Servo(self.pca9685_board.get_channel(front_right_leg_config.channel))
         front_right_leg_servo.set_pulse_width_range(min_pulse = front_right_leg_config.min_pulse , max_pulse = front_right_leg_config.max_pulse)
 
         front_right_foot_config = self.servos_configurations.front_right.foot
-        front_right_foot_servo = servo.Servo(self.pca9685.channels[front_right_foot_config.channel])
+        front_right_foot_servo = servo.Servo(self.pca9685_board.get_channel(front_right_foot_config.channel))
         front_right_foot_servo.set_pulse_width_range(min_pulse = front_right_foot_config.min_pulse , max_pulse = front_right_foot_config.max_pulse)
 
         front_right_limb_servo = ServoStateForLimb(front_right_shoulder_servo, front_right_leg_servo, front_right_foot_servo)
