@@ -11,5 +11,5 @@ cd ~/spotmicroai || exit
 
 export PYTHONPATH=.
 
-venv/bin/python3 utilities/startup/beep.py
+venv/bin/python3 spotmicroai/beep.py
 venv/bin/python3 spotmicroai/main.py
