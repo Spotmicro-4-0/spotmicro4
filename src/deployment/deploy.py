@@ -168,14 +168,13 @@ class DeploymentManager:
             print(f"  Username: {self.config.get('username', 'Not set')}")
             print()
             
-            # Handle -y option for auto-accept
-            use_existing = getattr(self.args, 'yes', False)
-            if not use_existing:
-                use_existing = self.confirm_yes_no("Do you want to use the existing configuration?", True)
+            # Handle --prompt-config option for forcing reconfiguration
+            force_prompt = getattr(self.args, 'prompt_config', False)
+            if force_prompt:
+                self.print_info("Forcing configuration prompt (--prompt-config flag)")
+                # Continue to prompt for new config below
             else:
-                self.print_info("Auto-accepting existing configuration (-y flag)")
-                
-            if use_existing:
+                self.print_info("Using existing configuration automatically")
                 # Ask for password again since we don't store it
                 if self.config.get('password_provided', False):
                     print()
@@ -273,16 +272,16 @@ class DeploymentManager:
         
         actions = {
             '1': {
-                'name': 'Initial Setup',
-                'description': 'First-time setup: install dependencies, configure system'
+                'name': 'Initial Raspberry PI Zero 2 W Setup',
+                'description': 'First-time setup: Update and upgrade packages, install dependencies, configure system'
             },
             '2': {
-                'name': 'Sync Files Only',
-                'description': 'Transfer only changed files to RPI (auto-deletes removed files)'
-            },
-            '3': {
                 'name': 'Full Deployment',
                 'description': 'Complete deployment: sync files + restart services'
+            },
+            '3': {
+                'name': 'Sync Files Only',
+                'description': 'Transfer only changed files to RPI (auto-deletes removed files)'
             },
             '4': {
                 'name': 'System Update',
@@ -487,12 +486,14 @@ class DeploymentManager:
         """Execute rsync command with progress display"""
         password = getattr(self, 'current_password', None)
         
-        # Modify rsync command to use sshpass if available and password provided
+        # Always use SSH with host key checking disabled
         if password and self.check_sshpass_available():
-            # Insert sshpass into the rsync command
             ssh_command = f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no"
-            rsync_cmd.insert(1, '-e')  # Add -e flag for custom SSH command
-            rsync_cmd.insert(2, ssh_command)  # Add the sshpass SSH command
+        else:
+            ssh_command = "ssh -o StrictHostKeyChecking=no"
+        
+        rsync_cmd.insert(1, '-e')
+        rsync_cmd.insert(2, ssh_command)
         
         try:
             self.print_info("Starting file transfer...")
@@ -934,6 +935,22 @@ class DeploymentManager:
             return False
         
         # Note: sync_files_to_rpi() already handles chmod automatically
+        
+        # Ensure Python virtual environment exists
+        self.print_info("Checking Python virtual environment...")
+        venv_check_cmd = "test -d ~/spotmicroai/venv"
+        if not self.execute_ssh_command(venv_check_cmd):
+            self.print_info("Virtual environment not found, creating it...")
+            if not self.setup_python_venv():
+                self.print_error("Failed to create virtual environment")
+                return False
+            
+            # Install Python packages in the new venv
+            if not self.install_python_packages():
+                self.print_error("Failed to install Python packages")
+                return False
+        else:
+            self.print_info("Virtual environment already exists")
             
         # Restart services
         self.print_info("Managing SpotMicroAI services...")
@@ -1008,10 +1025,10 @@ class DeploymentManager:
         """Execute the selected deployment action"""
         if action == '1':  # Initial Setup
             return self.perform_initial_setup()
-        elif action == '2':  # Sync Files Only
-            return self.sync_files_to_rpi()
-        elif action == '3':  # Full Deployment
+        elif action == '2':  # Full Deployment
             return self.perform_full_deployment()
+        elif action == '3':  # Sync Files Only
+            return self.sync_files_to_rpi()
         elif action == '4':  # System Update
             return self.perform_system_update()
         elif action == '5':  # Setup SSH Keys
@@ -1111,19 +1128,18 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s                    # Interactive deployment
-  %(prog)s -y                 # Use existing config without prompting
+  %(prog)s                    # Use existing config (or prompt if none exists)
+  %(prog)s --prompt-config    # Force prompting for configuration
   %(prog)s --yes-all          # Auto-confirm all actions (no prompts)
-  %(prog)s -y --yes-all       # Use existing config + auto-confirm all
   %(prog)s --clean            # Clear existing config and start fresh
   %(prog)s --clean --yes-all  # Clear config and auto-confirm all
         """
     )
     
     parser.add_argument(
-        '-y', '--yes',
+        '--prompt-config',
         action='store_true',
-        help='Automatically accept existing configuration without prompting'
+        help='Force prompting for configuration even if existing config exists'
     )
     
     parser.add_argument(
