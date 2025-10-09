@@ -76,7 +76,7 @@ class MotionController:
     _is_running = False
     _current_gait_type = 0
     _current_instinct_type = 0
-    _keyframes = []
+    _keyframes: KeyframeCollection
     instincts = None
 
     _forward_factor = 0
@@ -264,15 +264,15 @@ class MotionController:
                         y = gait[index].y
                         z = gait[index].z + z_rot
 
-                        self._keyframes.frontRight.current = Coordinate(x, y, z)
+                        self._keyframes.front_right.current = Coordinate(x, y, z)
 
                         x = gait[index].x * -self._forward_factor - x_rot
                         y = gait[index].y
                         z = gait[index].z + z_rot
                         # if (self._current_gait_type == self.GaitType.Walk.value):
-                        self._keyframes.backLeft.current = Coordinate(x, y, z)
+                        self._keyframes.rear_left.current = Coordinate(x, y, z)
                         # else:
-                        #     self._keyframes.backRight.current = Coordinate(x, y, z)
+                        #     self._keyframes.rear_right.current = Coordinate(x, y, z)
 
                         # Handle the other two legs, Front-Left and Back-Right
                         adjusted_index = (index + 3) % len(gait)
@@ -281,15 +281,15 @@ class MotionController:
                         x = gait[adjusted_index].x * -self._forward_factor - x_rot
                         y = gait[adjusted_index].y
                         z = gait[adjusted_index].z - z_rot
-                        self._keyframes.frontLeft.current = Coordinate(x, y, z)
+                        self._keyframes.front_left.current = Coordinate(x, y, z)
 
                         x = gait[adjusted_index].x * -self._forward_factor + x_rot
                         y = gait[adjusted_index].y
                         z = gait[adjusted_index].z - z_rot
                         # if (self._current_gait_type == self.GaitType.Walk.value):
-                        self._keyframes.backRight.current = Coordinate(x, y, z)
+                        self._keyframes.rear_right.current = Coordinate(x, y, z)
                         # else:
-                        #     self._keyframes.backLeft.current = Coordinate(x, y, z)
+                        #     self._keyframes.rear_left.current = Coordinate(x, y, z)
 
                         last_index = index
 
@@ -437,10 +437,10 @@ class MotionController:
         instincts_config = Config().get(Config.INSTINCTS_KEYFRAMES)
         result = []
         for key, value in instincts_config.items():
-            back_left = (value[0][0], value[0][1], value[0][2])
-            back_right = (value[1][0], value[1][1], value[1][2])
-            front_left = (value[2][0], value[2][1], value[2][2])
-            front_right = (value[3][0], value[3][1], value[3][2])
+            back_left = value[0]
+            back_right = value[1]
+            front_left = value[2]
+            front_right = value[3]
             result.append(Instinct(back_left, back_right, front_left, front_right))
         
         return result
@@ -449,21 +449,21 @@ class MotionController:
         return key in self._event and self._event[key] != 0 and key in self._prev_event and self._prev_event[key] == 0
 
     def handle_instinct(self, instinct):
-        self.servos_configurations.rearLeft.shoulder.restAngle = instinct.rearLeft[0]
-        self.servos_configurations.rearLeft.leg.restAngle = instinct.rearLeft[1]
-        self.servos_configurations.rearLeft.foot.restAngle = instinct.rearLeft[2]
+        self.servos_configurations.rearLeft.shoulder.restAngle = instinct.rear_left[0]
+        self.servos_configurations.rearLeft.leg.restAngle = instinct.rear_left[1]
+        self.servos_configurations.rearLeft.foot.restAngle = instinct.rear_left[2]
 
-        self.servos_configurations.rearRight.shoulder.restAngle = instinct.rearRight[0]
-        self.servos_configurations.rearRight.leg.restAngle = instinct.rearRight[1]
-        self.servos_configurations.rearRight.foot.restAngle = instinct.rearRight[2]
+        self.servos_configurations.rearRight.shoulder.restAngle = instinct.rear_right[0]
+        self.servos_configurations.rearRight.leg.restAngle = instinct.rear_right[1]
+        self.servos_configurations.rearRight.foot.restAngle = instinct.rear_right[2]
 
-        self.servos_configurations.frontLeft.shoulder.restAngle = instinct.frontLeft[0]
-        self.servos_configurations.frontLeft.leg.restAngle = instinct.frontLeft[1]
-        self.servos_configurations.frontLeft.foot.restAngle = instinct.frontLeft[2]
+        self.servos_configurations.frontLeft.shoulder.restAngle = instinct.front_left[0]
+        self.servos_configurations.frontLeft.leg.restAngle = instinct.front_left[1]
+        self.servos_configurations.frontLeft.foot.restAngle = instinct.front_left[2]
 
-        self.servos_configurations.frontRight.shoulder.restAngle = instinct.frontRight[0]
-        self.servos_configurations.frontRight.leg.restAngle = instinct.frontRight[1]
-        self.servos_configurations.frontRight.foot.restAngle = instinct.frontRight[2]
+        self.servos_configurations.frontRight.shoulder.restAngle = instinct.front_right[0]
+        self.servos_configurations.frontRight.leg.restAngle = instinct.front_right[1]
+        self.servos_configurations.frontRight.foot.restAngle = instinct.front_right[2]
 
     def print_diagnostics(self):
         print('self.servos_configurations.rearLeft.shoulder.restAngle: ' + str(self.servos_configurations.rearLeft.shoulder.restAngle))
@@ -563,16 +563,16 @@ class MotionController:
         ratio : float
             The ratio of each keyframe in the interpolation. Should be in the range 0.0-1.0.
         """
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.frontRight, self._height_factor, -self._lean_factor, ratio)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_right, self._height_factor, -self._lean_factor, ratio)
         self.frontRightLeg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.backLeft, self._height_factor, self._lean_factor, ratio)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_left, self._height_factor, self._lean_factor, ratio)
         self.rearLeftLeg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.frontLeft, self._height_factor, self._lean_factor, ratio)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_left, self._height_factor, self._lean_factor, ratio)
         self.frontLeftLeg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.backRight, self._height_factor, -self._lean_factor, ratio)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_right, self._height_factor, -self._lean_factor, ratio)
         self.rearRightLeg(foot, leg, shoulder)
 
     def rearLeftLeg(self, foot, leg, shoulder):
@@ -649,16 +649,16 @@ class MotionController:
         """
         if ratio > 0:
 
-            self._keyframes.backLeft.previous = self._calc_previous_keyframe(self._keyframes.backLeft, ratio)
-            self._keyframes.backRight.previous = self._calc_previous_keyframe(self._keyframes.backRight, ratio)
-            self._keyframes.frontLeft.previous = self._calc_previous_keyframe(self._keyframes.frontLeft, ratio)
-            self._keyframes.frontRight.previous = self._calc_previous_keyframe(self._keyframes.frontRight, ratio)
+            self._keyframes.rear_left.previous = self._calc_previous_keyframe(self._keyframes.rear_left, ratio)
+            self._keyframes.rear_right.previous = self._calc_previous_keyframe(self._keyframes.rear_right, ratio)
+            self._keyframes.front_left.previous = self._calc_previous_keyframe(self._keyframes.front_left, ratio)
+            self._keyframes.front_right.previous = self._calc_previous_keyframe(self._keyframes.front_right, ratio)
 
         else:
-            self._keyframes.backLeft.previous = self._keyframes.backLeft.current
-            self._keyframes.backRight.previous = self._keyframes.backRight.current
-            self._keyframes.frontLeft.previous = self._keyframes.frontLeft.current
-            self._keyframes.frontRight.previous = self._keyframes.frontRight.current
+            self._keyframes.rear_left.previous = self._keyframes.rear_left.current
+            self._keyframes.rear_right.previous = self._keyframes.rear_right.current
+            self._keyframes.front_left.previous = self._keyframes.front_left.current
+            self._keyframes.front_right.previous = self._keyframes.front_right.current
 
     def _calc_previous_keyframe(self, leg, ratio):
             prev = leg.previous

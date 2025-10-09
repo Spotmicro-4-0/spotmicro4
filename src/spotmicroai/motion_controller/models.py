@@ -1,4 +1,4 @@
-from adafruit_motor import servo
+from adafruit_motor import servo  # type: ignore
 
 class Coordinate:
     """A class the holds 3 values, x, y and z.
@@ -38,43 +38,43 @@ class KeyframeCollection:
     """A class that contains the 4 keyframes, one per leg 
 
     Attributes:
-        backLeft: The left hind leg
-        backRight: The right hind leg
-        frontLeft: The left front leg 
-        frontRight: The right front leg
+        rear_left: The left rear leg
+        rear_right: The right rear leg
+        front_left: The left front leg 
+        front_right: The right front leg
     """
 
-    backLeft: Keyframe
-    backRight: Keyframe
-    frontLeft: Keyframe
-    frontRight: Keyframe
+    rear_left: Keyframe
+    rear_right: Keyframe
+    front_left: Keyframe
+    front_right: Keyframe
 
-    def __init__(self, backLeft: Keyframe, backRight: Keyframe, frontLeft: Keyframe, frontRight: Keyframe):
-        self.backLeft = backLeft
-        self.backRight = backRight
-        self.frontLeft = frontLeft
-        self.frontRight = frontRight
+    def __init__(self, rear_left: Keyframe, rear_right: Keyframe, front_left: Keyframe, front_right: Keyframe):
+        self.rear_left = rear_left
+        self.rear_right = rear_right
+        self.front_left = front_left
+        self.front_right = front_right
 
 class Instinct:
     """A class defining an instinct 
 
     Attributes:
-        rearLeft: The left rear leg
-        rearRight: The right rear leg
-        frontLeft: The left front leg 
-        frontRight: The right front leg
+        rear_left: The left rear leg
+        rear_right: The right rear leg
+        front_left: The left front leg 
+        front_right: The right front leg
     """
 
-    rearLeft: Coordinate
-    rearRight: Coordinate
-    frontLeft: Coordinate
-    frontRight: Coordinate
+    rear_left: list[float]
+    rear_right: list[float]
+    front_left: list[float]
+    front_right: list[float]
 
-    def __init__(self, rearLeft: Coordinate, rearRight: Coordinate, frontLeft: Coordinate, frontRight: Coordinate):
-        self.rearLeft = rearLeft
-        self.rearRight = rearRight
-        self.frontLeft = frontLeft
-        self.frontRight = frontRight
+    def __init__(self, rear_left: list[float], rear_right: list[float], front_left: list[float], front_right: list[float]):
+        self.rear_left = rear_left
+        self.rear_right = rear_right
+        self.front_left = front_left
+        self.front_right = front_right
 
 class ServoConfigurations:
     """A class with variables that hold the current configurations of the servo.
