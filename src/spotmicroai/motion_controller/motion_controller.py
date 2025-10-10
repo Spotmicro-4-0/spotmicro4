@@ -1,66 +1,31 @@
-#region Standard Dependencies Imports
-from enum import Enum
 import math
 import queue
 import signal
 import sys
-from spotmicroai.motion_controller.pca9685 import PCA9685Board
-from adafruit_motor import servo  # type: ignore
-import RPi.GPIO as GPIO  # type: ignore
 import time
-from spotmicroai.motion_controller.InverseKinematics import InverseKinematics, interpolate
-from spotmicroai.motion_controller.models import Coordinate, Instinct, Keyframe, KeyframeCollection, ServoConfigurations, ServoConfigurationsCollection, ServoConfigurationsForLimb, ServoStateCollection, ServoStateForLimb
-from spotmicroai.utilities.log import Logger
-from spotmicroai.utilities.config import Config
+from adafruit_motor import servo  # type: ignore
 import spotmicroai.utilities.queues as queues
+from spotmicroai.motion_controller.InverseKinematics import (InverseKinematics, interpolate)
+from spotmicroai.motion_controller.models import (Coordinate, Instinct, Keyframe, KeyframeCollection, ServoConfigurations, ServoConfigurationsCollection, ServoConfigurationsForLimb, ServoStateCollection, ServoStateForLimb)
+from spotmicroai.motion_controller.pca9685 import PCA9685Board
+from spotmicroai.utilities.config import Config
 from spotmicroai.utilities.general import General
-
-#endregion
+from spotmicroai.utilities.log import Logger
+from .buzzer import Buzzer
 
 log = Logger().setup_logger('Motion controller')
 
 #############################################
 class MotionController:
     
-    #############################################
-    #region Enum Declarations
-    class GaitType(Enum):
-        # Enum difinition for the available gaits
-        Walk = 0
-        Trot = 1
-        Pace = 2
-        Hop = 3
-        Lope = 4
-        Gallop = 5
-        Spanish = 6
+    _servos_configurations = ServoConfigurationsCollection
+    _servos = ServoStateCollection
 
-    class JointType(Enum):
-        Shoulder = 0
-        Leg = 1
-        Foot = 2
-
-    #endregion
-
-    #############################################
-    #region Servo Variables
-    servos_configurations = ServoConfigurationsCollection
-    servos = ServoStateCollection
-    #endregion'
-
-    #############################################
-    #region Buzzer Variables
-    buzzer_pin: int
-    #endregion'
-
-    #############################################
-    #region Motion Keyframe Variables
     _is_activated = False
-
     _is_running = False
-    _current_gait_type = 0
-    _current_instinct_type = 0
+    _current_pose_type = 0
     _keyframes: KeyframeCollection
-    poses = None
+    _poses = None
 
     _forward_factor = 0
     _max_forward_factor = 0.5
@@ -74,10 +39,8 @@ class MotionController:
     LEG_SERVO_OFFSET = 120
     FOOT_SERVO_OFFSET = 0
     ROTATION_OFFSET = 40
-
     # This represents the number of seconds in which if no activity is detected, the robot shuts down
     INACTIVITY_TIME = 10
-    #endregion
 
     def __init__(self, communication_queues):
         try:
@@ -96,7 +59,7 @@ class MotionController:
             self._lcd_screen_queue.put('motion_controller_1 OK')
 
             self.init_keyframes()
-            self.setup_buzzer()
+            self.buzzer = Buzzer()
 
         except Exception as e:
             log.error('Motion controller initialization problem', e)
@@ -108,14 +71,22 @@ class MotionController:
                 sys.exit(1)
 
     def exit_gracefully(self, signum, frame):
+        log.info("Graceful shutdown initiated...")
+        
+        # Move servos to neutral (rest) first
+        self.rest_position()
+        time.sleep(0.3)
+        
         try:
-            time.sleep(0.25)
-            self.pca9685_board.deactivate()
-            self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
-            self._is_activated = False
-        finally:
-            log.info('Terminated')
-            sys.exit(0)
+            # Option A: if your PCA9685Board exposes an 'all_call' disable
+            self.pca9685_board.deactivate()  # should clear ALL_LED_ON/OFF registers or set OE pin HIGH
+        except Exception as e:
+            log.warning(f"Could not deactivate PCA9685 cleanly: {e}")
+
+        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
+        self._is_activated = False
+        log.info("Motion controller terminated safely.")
+        sys.exit(0)
 
     def init_keyframes(self):   
         self._keyframes = KeyframeCollection(Keyframe(Coordinate(0, 150, 0), Coordinate(0, 150, 0)), 
@@ -128,7 +99,7 @@ class MotionController:
         # State Variables
         elapsed = 0.0
         gait = self.load_gait_from_config()
-        self.poses = self.load_poses_from_config()
+        self._poses = self.load_poses_from_config()
         start = 0
         last_index = 0
         inactivity_counter = time.time()
@@ -160,7 +131,7 @@ class MotionController:
                     activate_debounce_time = time.time()
 
                 if self._is_activated:
-                    self.beep()
+                    self.buzzer.beep()
                     self.rest_position()
                     time.sleep(0.25)
                     self.pca9685_board.deactivate()
@@ -168,7 +139,7 @@ class MotionController:
                     self._is_activated = False
                 else:
                     log.info('Press START/OPTIONS to re-enable the servos')
-                    self.beep()
+                    self.buzzer.beep()
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
                     self.pca9685_board.activate()
                     self.activate_servos()
@@ -284,13 +255,13 @@ class MotionController:
                     #     self._current_gait_type = 0
                     
                     if self.check_event('y'):
-                        self._current_gait_type = self.GaitType.Walk.value
+                        pass
 
                     if self.check_event('b'):
-                        self._current_gait_type = self.GaitType.Trot.value
+                        pass
 
                     if self.check_event('x'):
-                        self._current_gait_type = self.GaitType.Hop.value
+                        pass
 
                     # D-Pad Left/Right
                     if self.check_event('hat0x'):
@@ -330,15 +301,15 @@ class MotionController:
                     # Right Bumper
                     if self.check_event('tr'):
                         # Next Instinct
-                        self._current_instinct_type = abs((self._current_instinct_type + 1) % len(self.poses))
+                        self._current_pose_type = abs((self._current_pose_type + 1) % len(self._poses))
                         time.sleep(1)
-                        self.handle_instinct(self.poses[self._current_instinct_type])
+                        self.handle_pose(self._poses[self._current_pose_type])
                     # Left Bumper
                     if self.check_event('tl'):
                         # Prev Instinct
-                        self._current_instinct_type = abs((self._current_instinct_type - 1) % len(self.poses))
+                        self._current_pose_type = abs((self._current_pose_type - 1) % len(self._poses))
                         time.sleep(1)
-                        self.handle_instinct(self.poses[self._current_instinct_type])
+                        self.handle_pose(self._poses[self._current_pose_type])
 
                     if self._event['hat0y']:
                         self.body_move_pitch(self._event['hat0y'])
@@ -416,36 +387,36 @@ class MotionController:
     def check_event(self, key):
         return key in self._event and self._event[key] != 0 and key in self._prev_event and self._prev_event[key] == 0
 
-    def handle_instinct(self, instinct):
-        self.servos_configurations.rear_left.shoulder.rest_angle = instinct.rear_left[0]
-        self.servos_configurations.rear_left.leg.rest_angle = instinct.rear_left[1]
-        self.servos_configurations.rear_left.foot.rest_angle = instinct.rear_left[2]
+    def handle_pose(self, pose):
+        self._servos_configurations.rear_left.shoulder.rest_angle = pose.rear_left[0]
+        self._servos_configurations.rear_left.leg.rest_angle = pose.rear_left[1]
+        self._servos_configurations.rear_left.foot.rest_angle = pose.rear_left[2]
 
-        self.servos_configurations.rear_right.shoulder.rest_angle = instinct.rear_right[0]
-        self.servos_configurations.rear_right.leg.rest_angle = instinct.rear_right[1]
-        self.servos_configurations.rear_right.foot.rest_angle = instinct.rear_right[2]
+        self._servos_configurations.rear_right.shoulder.rest_angle = pose.rear_right[0]
+        self._servos_configurations.rear_right.leg.rest_angle = pose.rear_right[1]
+        self._servos_configurations.rear_right.foot.rest_angle = pose.rear_right[2]
 
-        self.servos_configurations.front_left.shoulder.rest_angle = instinct.front_left[0]
-        self.servos_configurations.front_left.leg.rest_angle = instinct.front_left[1]
-        self.servos_configurations.front_left.foot.rest_angle = instinct.front_left[2]
+        self._servos_configurations.front_left.shoulder.rest_angle = pose.front_left[0]
+        self._servos_configurations.front_left.leg.rest_angle = pose.front_left[1]
+        self._servos_configurations.front_left.foot.rest_angle = pose.front_left[2]
 
-        self.servos_configurations.front_right.shoulder.rest_angle = instinct.front_right[0]
-        self.servos_configurations.front_right.leg.rest_angle = instinct.front_right[1]
-        self.servos_configurations.front_right.foot.rest_angle = instinct.front_right[2]
+        self._servos_configurations.front_right.shoulder.rest_angle = pose.front_right[0]
+        self._servos_configurations.front_right.leg.rest_angle = pose.front_right[1]
+        self._servos_configurations.front_right.foot.rest_angle = pose.front_right[2]
 
     def print_diagnostics(self):
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.rear_left.shoulder.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.rear_left.leg.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.rear_left.foot.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.rear_right.shoulder.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.rear_right.leg.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.rear_right.foot.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.front_left.shoulder.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.front_left.leg.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.front_left.foot.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.front_right.shoulder.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.front_right.leg.rest_angle))
-        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self.servos_configurations.front_right.foot.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.rear_left.shoulder.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.rear_left.leg.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.rear_left.foot.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.rear_right.shoulder.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.rear_right.leg.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.rear_right.foot.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.front_left.shoulder.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.front_left.leg.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.front_left.foot.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.front_right.shoulder.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.front_right.leg.rest_angle))
+        print('self.servos_configurations.rear_left.shoulder.rest_angle: ' + str(self._servos_configurations.front_right.foot.rest_angle))
         print('')
 
     def calculate_rotational_movement(self, gait, index):
@@ -531,17 +502,17 @@ class MotionController:
         ratio : float
             The ratio of each keyframe in the interpolation. Should be in the range 0.0-1.0.
         """
-    foot, leg, shoulder = self._process_keyframe(self._keyframes.front_right, self._height_factor, -self._lean_factor, ratio)
-    self.front_right_leg(foot, leg, shoulder)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_right, self._height_factor, -self._lean_factor, ratio)
+        self.front_right_leg(foot, leg, shoulder)
 
-    foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_left, self._height_factor, self._lean_factor, ratio)
-    self.rear_left_leg(foot, leg, shoulder)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_left, self._height_factor, self._lean_factor, ratio)
+        self.rear_left_leg(foot, leg, shoulder)
 
-    foot, leg, shoulder = self._process_keyframe(self._keyframes.front_left, self._height_factor, self._lean_factor, ratio)
-    self.front_left_leg(foot, leg, shoulder)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_left, self._height_factor, self._lean_factor, ratio)
+        self.front_left_leg(foot, leg, shoulder)
 
-    foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_right, self._height_factor, -self._lean_factor, ratio)
-    self.rear_right_leg(foot, leg, shoulder)
+        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_right, self._height_factor, -self._lean_factor, ratio)
+        self.rear_right_leg(foot, leg, shoulder)
 
     def rear_left_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the back left leg.
@@ -555,9 +526,9 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self.servos.rear_left.shoulder.angle = shoulder
-        self.servos.rear_left.leg.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
-        self.servos.rear_left.foot.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.rear_left.shoulder.angle = shoulder
+        self._servos.rear_left.leg.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
+        self._servos.rear_left.foot.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
 
     def rear_right_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the back right leg.
@@ -571,9 +542,9 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self.servos.rear_right.shoulder.angle = 180 - shoulder
-        self.servos.rear_right.leg.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
-        self.servos.rear_right.foot.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.rear_right.shoulder.angle = 180 - shoulder
+        self._servos.rear_right.leg.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
+        self._servos.rear_right.foot.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
 
     def front_left_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the front left leg.
@@ -587,9 +558,9 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self.servos.front_left.shoulder.angle = 180 - shoulder
-        self.servos.front_left.leg.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
-        self.servos.front_left.foot.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.front_left.shoulder.angle = 180 - shoulder
+        self._servos.front_left.leg.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
+        self._servos.front_left.foot.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
 
     def front_right_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the front right leg.
@@ -603,9 +574,9 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self.servos.front_right.shoulder.angle = shoulder
-        self.servos.front_right.leg.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
-        self.servos.front_right.foot.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.front_right.shoulder.angle = shoulder
+        self._servos.front_right.leg.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
+        self._servos.front_right.foot.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
 
     def _shift_keyframes(self, ratio = 0):
         """Shift the next keyframe to be the current keyframe.
@@ -658,10 +629,10 @@ class MotionController:
         )
 
         rear_left_foot = ServoConfigurations(
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_LEFT_CHANNEL),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_LEFT_MIN_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_LEFT_MAX_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_LEFT_REST_ANGLE)
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_LEFT_CHANNEL),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_LEFT_MIN_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_LEFT_MAX_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_LEFT_REST_ANGLE)
         )
 
         rear_left_limb = ServoConfigurationsForLimb(rear_left_shoulder, rear_left_leg, rear_left_foot)
@@ -683,10 +654,10 @@ class MotionController:
         )
 
         rear_right_foot = ServoConfigurations(
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_RIGHT_CHANNEL),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_RIGHT_MIN_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_RIGHT_MAX_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_RIGHT_REST_ANGLE)
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_RIGHT_CHANNEL),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_RIGHT_MIN_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_RIGHT_MAX_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_RIGHT_REST_ANGLE)
         )
 
         rear_right_limb = ServoConfigurationsForLimb(rear_right_shoulder, rear_right_leg, rear_right_foot)
@@ -708,10 +679,10 @@ class MotionController:
         )
 
         front_left_foot = ServoConfigurations(
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_LEFT_CHANNEL),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_LEFT_MIN_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_LEFT_MAX_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_LEFT_REST_ANGLE)
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_LEFT_CHANNEL),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_LEFT_MIN_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_LEFT_MAX_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_LEFT_REST_ANGLE)
         )
 
         front_left_limb = ServoConfigurationsForLimb(front_left_shoulder, front_left_leg, front_left_foot)
@@ -733,29 +704,29 @@ class MotionController:
         )
 
         front_right_foot = ServoConfigurations(
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_RIGHT_CHANNEL),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_RIGHT_MIN_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_RIGHT_MAX_PULSE),
-            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_RIGHT_REST_ANGLE)
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_RIGHT_CHANNEL),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_RIGHT_MIN_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_RIGHT_MAX_PULSE),
+            Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_RIGHT_REST_ANGLE)
         )
 
         front_right_limb = ServoConfigurationsForLimb(front_right_shoulder, front_right_leg, front_right_foot)
         #endregion
 
         # Servo configurations collection
-        self.servos_configurations = ServoConfigurationsCollection(rear_left_limb, rear_right_limb, front_left_limb, front_right_limb)
+        self._servos_configurations = ServoConfigurationsCollection(rear_left_limb, rear_right_limb, front_left_limb, front_right_limb)
 
     def activate_servos(self):
         #region Rear Left Limb
-        rear_left_shoulder_config = self.servos_configurations.rear_left.shoulder
+        rear_left_shoulder_config = self._servos_configurations.rear_left.shoulder
         rear_left_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(rear_left_shoulder_config.channel))
         rear_left_shoulder_servo.set_pulse_width_range(min_pulse = rear_left_shoulder_config.min_pulse , max_pulse = rear_left_shoulder_config.max_pulse)
 
-        rear_left_leg_config = self.servos_configurations.rear_left.leg
+        rear_left_leg_config = self._servos_configurations.rear_left.leg
         rear_left_leg_servo = servo.Servo(self.pca9685_board.get_channel(rear_left_leg_config.channel))
         rear_left_leg_servo.set_pulse_width_range(min_pulse = rear_left_leg_config.min_pulse , max_pulse = rear_left_leg_config.max_pulse)
 
-        rear_left_foot_config = self.servos_configurations.rear_left.foot
+        rear_left_foot_config = self._servos_configurations.rear_left.foot
         rear_left_foot_servo = servo.Servo(self.pca9685_board.get_channel(rear_left_foot_config.channel))
         rear_left_foot_servo.set_pulse_width_range(min_pulse = rear_left_foot_config.min_pulse , max_pulse = rear_left_foot_config.max_pulse)
 
@@ -763,15 +734,15 @@ class MotionController:
         #endregion
 
         #region Rear Right Limb
-        rear_right_shoulder_config = self.servos_configurations.rear_right.shoulder
+        rear_right_shoulder_config = self._servos_configurations.rear_right.shoulder
         rear_right_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(rear_right_shoulder_config.channel))
         rear_right_shoulder_servo.set_pulse_width_range(min_pulse = rear_right_shoulder_config.min_pulse , max_pulse = rear_right_shoulder_config.max_pulse)
 
-        rear_right_leg_config = self.servos_configurations.rear_right.leg
+        rear_right_leg_config = self._servos_configurations.rear_right.leg
         rear_right_leg_servo = servo.Servo(self.pca9685_board.get_channel(rear_right_leg_config.channel))
         rear_right_leg_servo.set_pulse_width_range(min_pulse = rear_right_leg_config.min_pulse , max_pulse = rear_right_leg_config.max_pulse)
 
-        rear_right_foot_config = self.servos_configurations.rear_right.foot
+        rear_right_foot_config = self._servos_configurations.rear_right.foot
         rear_right_foot_servo = servo.Servo(self.pca9685_board.get_channel(rear_right_foot_config.channel))
         rear_right_foot_servo.set_pulse_width_range(min_pulse = rear_right_foot_config.min_pulse , max_pulse = rear_right_foot_config.max_pulse)
 
@@ -779,15 +750,15 @@ class MotionController:
         #endregion
 
         #region Front Left Limb
-        front_left_shoulder_config = self.servos_configurations.front_left.shoulder
+        front_left_shoulder_config = self._servos_configurations.front_left.shoulder
         front_left_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(front_left_shoulder_config.channel))
         front_left_shoulder_servo.set_pulse_width_range(min_pulse = front_left_shoulder_config.min_pulse , max_pulse = front_left_shoulder_config.max_pulse)
 
-        front_left_leg_config = self.servos_configurations.front_left.leg
+        front_left_leg_config = self._servos_configurations.front_left.leg
         front_left_leg_servo = servo.Servo(self.pca9685_board.get_channel(front_left_leg_config.channel))
         front_left_leg_servo.set_pulse_width_range(min_pulse = front_left_leg_config.min_pulse , max_pulse = front_left_leg_config.max_pulse)
 
-        front_left_foot_config = self.servos_configurations.front_left.foot
+        front_left_foot_config = self._servos_configurations.front_left.foot
         front_left_foot_servo = servo.Servo(self.pca9685_board.get_channel(front_left_foot_config.channel))
         front_left_foot_servo.set_pulse_width_range(min_pulse = front_left_foot_config.min_pulse , max_pulse = front_left_foot_config.max_pulse)
 
@@ -795,101 +766,101 @@ class MotionController:
         #endregion
 
         #region Front right Limb
-        front_right_shoulder_config = self.servos_configurations.front_right.shoulder
+        front_right_shoulder_config = self._servos_configurations.front_right.shoulder
         front_right_shoulder_servo = servo.Servo(self.pca9685_board.get_channel(front_right_shoulder_config.channel))
         front_right_shoulder_servo.set_pulse_width_range(min_pulse = front_right_shoulder_config.min_pulse , max_pulse = front_right_shoulder_config.max_pulse)
 
-        front_right_leg_config = self.servos_configurations.front_right.leg
+        front_right_leg_config = self._servos_configurations.front_right.leg
         front_right_leg_servo = servo.Servo(self.pca9685_board.get_channel(front_right_leg_config.channel))
         front_right_leg_servo.set_pulse_width_range(min_pulse = front_right_leg_config.min_pulse , max_pulse = front_right_leg_config.max_pulse)
 
-        front_right_foot_config = self.servos_configurations.front_right.foot
+        front_right_foot_config = self._servos_configurations.front_right.foot
         front_right_foot_servo = servo.Servo(self.pca9685_board.get_channel(front_right_foot_config.channel))
         front_right_foot_servo.set_pulse_width_range(min_pulse = front_right_foot_config.min_pulse , max_pulse = front_right_foot_config.max_pulse)
 
         front_right_limb_servo = ServoStateForLimb(front_right_shoulder_servo, front_right_leg_servo, front_right_foot_servo)
         #endregion
 
-        self.servos = ServoStateCollection(rear_left_limb_servo, rear_right_limb_servo, front_left_limb_servo, front_right_limb_servo)
+        self._servos = ServoStateCollection(rear_left_limb_servo, rear_right_limb_servo, front_left_limb_servo, front_right_limb_servo)
 
     def move(self):
         # Rear Left Limb
         try:
-            self.servos.rear_left.shoulder.angle = self.servos_configurations.rear_left.shoulder.rest_angle
+            self._servos.rear_left.shoulder.angle = self._servos_configurations.rear_left.shoulder.rest_angle
         except ValueError as e:
-            log.error('Impossible rear left shoulder angle requested: ' + str(self.servos_configurations.rear_left.shoulder.rest_angle))
+            log.error('Impossible rear left shoulder angle requested: ' + str(self._servos_configurations.rear_left.shoulder.rest_angle))
 
         try:
-            self.servos.rear_left.leg.angle = self.servos_configurations.rear_left.leg.rest_angle
+            self._servos.rear_left.leg.angle = self._servos_configurations.rear_left.leg.rest_angle
         except ValueError as e:
-            log.error('Impossible rear left leg angle requested: ' + str(self.servos_configurations.rear_left.leg.rest_angle))
+            log.error('Impossible rear left leg angle requested: ' + str(self._servos_configurations.rear_left.leg.rest_angle))
 
         try:
-            self.servos.rear_left.foot.angle = self.servos_configurations.rear_left.foot.rest_angle
+            self._servos.rear_left.foot.angle = self._servos_configurations.rear_left.foot.rest_angle
         except ValueError as e:
-            log.error('Impossible rear left foot angle requested: ' + str(self.servos_configurations.rear_left.foot.rest_angle))
+            log.error('Impossible rear left foot angle requested: ' + str(self._servos_configurations.rear_left.foot.rest_angle))
 
         # Rear Right Limb
         try:
-            self.servos.rear_right.shoulder.angle = self.servos_configurations.rear_right.shoulder.rest_angle
+            self._servos.rear_right.shoulder.angle = self._servos_configurations.rear_right.shoulder.rest_angle
         except ValueError as e:
-            log.error('Impossible rear right shoulder angle requested: ' + str(self.servos_configurations.rear_right.shoulder.rest_angle))
+            log.error('Impossible rear right shoulder angle requested: ' + str(self._servos_configurations.rear_right.shoulder.rest_angle))
 
         try:
-            self.servos.rear_right.leg.angle = self.servos_configurations.rear_right.leg.rest_angle
+            self._servos.rear_right.leg.angle = self._servos_configurations.rear_right.leg.rest_angle
         except ValueError as e:
-            log.error('Impossible rear right leg angle requested: ' + str(self.servos_configurations.rear_right.leg.rest_angle))
+            log.error('Impossible rear right leg angle requested: ' + str(self._servos_configurations.rear_right.leg.rest_angle))
 
         try:
-            self.servos.rear_right.foot.angle = self.servos_configurations.rear_right.foot.rest_angle
+            self._servos.rear_right.foot.angle = self._servos_configurations.rear_right.foot.rest_angle
         except ValueError as e:
-            log.error('Impossible rear right foot angle requested: ' + str(self.servos_configurations.rear_right.foot.rest_angle))
+            log.error('Impossible rear right foot angle requested: ' + str(self._servos_configurations.rear_right.foot.rest_angle))
 
         # Front Left Limb
         try:
-            self.servos.front_left.shoulder.angle = self.servos_configurations.front_left.shoulder.rest_angle
+            self._servos.front_left.shoulder.angle = self._servos_configurations.front_left.shoulder.rest_angle
         except ValueError as e:
-            log.error('Impossible front left shoulder angle requested: ' + str(self.servos_configurations.front_left.shoulder.rest_angle))
+            log.error('Impossible front left shoulder angle requested: ' + str(self._servos_configurations.front_left.shoulder.rest_angle))
 
         try:
-            self.servos.front_left.leg.angle = self.servos_configurations.front_left.leg.rest_angle
+            self._servos.front_left.leg.angle = self._servos_configurations.front_left.leg.rest_angle
         except ValueError as e:
-            log.error('Impossible front left leg angle requested: ' + str(self.servos_configurations.front_left.leg.rest_angle))
+            log.error('Impossible front left leg angle requested: ' + str(self._servos_configurations.front_left.leg.rest_angle))
 
         try:
-            self.servos.front_left.foot.angle = self.servos_configurations.front_left.foot.rest_angle
+            self._servos.front_left.foot.angle = self._servos_configurations.front_left.foot.rest_angle
         except ValueError as e:
-            log.error('Impossible front left foot angle requested: ' + str(self.servos_configurations.front_left.foot.rest_angle))
+            log.error('Impossible front left foot angle requested: ' + str(self._servos_configurations.front_left.foot.rest_angle))
 
         # Front Right Limb
         try:
-            self.servos.front_right.shoulder.angle = self.servos_configurations.front_right.shoulder.rest_angle
+            self._servos.front_right.shoulder.angle = self._servos_configurations.front_right.shoulder.rest_angle
         except ValueError as e:
-            log.error('Impossible front right shoulder angle requested: ' + str(self.servos_configurations.front_right.shoulder.rest_angle))
+            log.error('Impossible front right shoulder angle requested: ' + str(self._servos_configurations.front_right.shoulder.rest_angle))
 
         try:
-            self.servos.front_right.leg.angle = self.servos_configurations.front_right.leg.rest_angle
+            self._servos.front_right.leg.angle = self._servos_configurations.front_right.leg.rest_angle
         except ValueError as e:
-            log.error('Impossible front right leg angle requested: ' + str(self.servos_configurations.front_right.leg.rest_angle))
+            log.error('Impossible front right leg angle requested: ' + str(self._servos_configurations.front_right.leg.rest_angle))
 
         try:
-            self.servos.front_right.foot.angle = self.servos_configurations.front_right.foot.rest_angle
+            self._servos.front_right.foot.angle = self._servos_configurations.front_right.foot.rest_angle
         except ValueError as e:
-            log.error('Impossible front right foot angle requested: ' + str(self.servos_configurations.front_right.foot.rest_angle))
+            log.error('Impossible front right foot angle requested: ' + str(self._servos_configurations.front_right.foot.rest_angle))
 
     def rest_position(self):
-        self.servos.rear_left.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_SHOULDER_LEFT_REST_ANGLE)
-        self.servos.rear_left.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_LEG_LEFT_REST_ANGLE)
-        self.servos.rear_left.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_LEFT_REST_ANGLE)
-        self.servos.rear_right.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_SHOULDER_RIGHT_REST_ANGLE)
-        self.servos.rear_right.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_LEG_RIGHT_REST_ANGLE)
-        self.servos.rear_right.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FEET_RIGHT_REST_ANGLE)
-        self.servos.front_left.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_SHOULDER_LEFT_REST_ANGLE)
-        self.servos.front_left.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_LEG_LEFT_REST_ANGLE)
-        self.servos.front_left.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_LEFT_REST_ANGLE)
-        self.servos.front_right.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_SHOULDER_RIGHT_REST_ANGLE)
-        self.servos.front_right.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_LEG_RIGHT_REST_ANGLE)
-        self.servos.front_right.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FEET_RIGHT_REST_ANGLE)
+        self._servos.rear_left.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_SHOULDER_LEFT_REST_ANGLE)
+        self._servos.rear_left.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_LEG_LEFT_REST_ANGLE)
+        self._servos.rear_left.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_LEFT_REST_ANGLE)
+        self._servos.rear_right.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_SHOULDER_RIGHT_REST_ANGLE)
+        self._servos.rear_right.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_LEG_RIGHT_REST_ANGLE)
+        self._servos.rear_right.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_REAR_FOOT_RIGHT_REST_ANGLE)
+        self._servos.front_left.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_SHOULDER_LEFT_REST_ANGLE)
+        self._servos.front_left.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_LEG_LEFT_REST_ANGLE)
+        self._servos.front_left.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_LEFT_REST_ANGLE)
+        self._servos.front_right.shoulder.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_SHOULDER_RIGHT_REST_ANGLE)
+        self._servos.front_right.leg.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_LEG_RIGHT_REST_ANGLE)
+        self._servos.front_right.foot.rest_angle = Config().get(Config.MOTION_CONTROLLER_SERVOS_FRONT_FOOT_RIGHT_REST_ANGLE)
 
     def body_move_pitch(self, raw_value):
 
@@ -897,24 +868,24 @@ class MotionController:
         foot_increment = 15
 
         if raw_value < 0:
-            self.servos_configurations.rear_left.leg.rest_angle -= leg_increment
-            self.servos_configurations.rear_left.foot.rest_angle += foot_increment
-            self.servos_configurations.rear_right.leg.rest_angle += leg_increment
-            self.servos_configurations.rear_right.foot.rest_angle -= foot_increment
-            self.servos_configurations.front_left.leg.rest_angle -= leg_increment
-            self.servos_configurations.front_left.foot.rest_angle += foot_increment
-            self.servos_configurations.front_right.leg.rest_angle += leg_increment
-            self.servos_configurations.front_right.foot.rest_angle -= foot_increment
+            self._servos_configurations.rear_left.leg.rest_angle -= leg_increment
+            self._servos_configurations.rear_left.foot.rest_angle += foot_increment
+            self._servos_configurations.rear_right.leg.rest_angle += leg_increment
+            self._servos_configurations.rear_right.foot.rest_angle -= foot_increment
+            self._servos_configurations.front_left.leg.rest_angle -= leg_increment
+            self._servos_configurations.front_left.foot.rest_angle += foot_increment
+            self._servos_configurations.front_right.leg.rest_angle += leg_increment
+            self._servos_configurations.front_right.foot.rest_angle -= foot_increment
 
         elif raw_value > 0:
-            self.servos_configurations.rear_left.leg.rest_angle += leg_increment
-            self.servos_configurations.rear_left.foot.rest_angle -= foot_increment
-            self.servos_configurations.rear_right.leg.rest_angle -= leg_increment
-            self.servos_configurations.rear_right.foot.rest_angle += foot_increment
-            self.servos_configurations.front_left.leg.rest_angle += leg_increment
-            self.servos_configurations.front_left.foot.rest_angle -= foot_increment
-            self.servos_configurations.front_right.leg.rest_angle -= leg_increment
-            self.servos_configurations.front_right.foot.rest_angle += foot_increment
+            self._servos_configurations.rear_left.leg.rest_angle += leg_increment
+            self._servos_configurations.rear_left.foot.rest_angle -= foot_increment
+            self._servos_configurations.rear_right.leg.rest_angle -= leg_increment
+            self._servos_configurations.rear_right.foot.rest_angle += foot_increment
+            self._servos_configurations.front_left.leg.rest_angle += leg_increment
+            self._servos_configurations.front_left.foot.rest_angle -= foot_increment
+            self._servos_configurations.front_right.leg.rest_angle -= leg_increment
+            self._servos_configurations.front_right.foot.rest_angle += foot_increment
 
 
         else:
@@ -926,16 +897,16 @@ class MotionController:
         range = 1
 
         if raw_value < 0:
-            self.servos_configurations.rear_left.shoulder.rest_angle = max(self.servos_configurations.rear_left.shoulder.rest_angle - range, 0)
-            self.servos_configurations.rear_right.shoulder.rest_angle = max(self.servos_configurations.rear_right.shoulder.rest_angle - range, 0)
-            self.servos_configurations.front_left.shoulder.rest_angle = min(self.servos_configurations.front_left.shoulder.rest_angle + range, 180)
-            self.servos_configurations.front_right.shoulder.rest_angle = min(self.servos_configurations.front_right.shoulder.rest_angle + range, 180)
+            self._servos_configurations.rear_left.shoulder.rest_angle = max(self._servos_configurations.rear_left.shoulder.rest_angle - range, 0)
+            self._servos_configurations.rear_right.shoulder.rest_angle = max(self._servos_configurations.rear_right.shoulder.rest_angle - range, 0)
+            self._servos_configurations.front_left.shoulder.rest_angle = min(self._servos_configurations.front_left.shoulder.rest_angle + range, 180)
+            self._servos_configurations.front_right.shoulder.rest_angle = min(self._servos_configurations.front_right.shoulder.rest_angle + range, 180)
 
         elif raw_value > 0:
-            self.servos_configurations.rear_left.shoulder.rest_angle = min(self.servos_configurations.rear_left.shoulder.rest_angle + range, 180)
-            self.servos_configurations.rear_right.shoulder.rest_angle = min(self.servos_configurations.rear_right.shoulder.rest_angle + range, 180)
-            self.servos_configurations.front_left.shoulder.rest_angle = max(self.servos_configurations.front_left.shoulder.rest_angle - range, 0)
-            self.servos_configurations.front_right.shoulder.rest_angle = max(self.servos_configurations.front_right.shoulder.rest_angle - range, 0)
+            self._servos_configurations.rear_left.shoulder.rest_angle = min(self._servos_configurations.rear_left.shoulder.rest_angle + range, 180)
+            self._servos_configurations.rear_right.shoulder.rest_angle = min(self._servos_configurations.rear_right.shoulder.rest_angle + range, 180)
+            self._servos_configurations.front_left.shoulder.rest_angle = max(self._servos_configurations.front_left.shoulder.rest_angle - range, 0)
+            self._servos_configurations.front_right.shoulder.rest_angle = max(self._servos_configurations.front_right.shoulder.rest_angle - range, 0)
 
         else:
             self.rest_position()
@@ -946,23 +917,23 @@ class MotionController:
         variation_leg = 30
         variation_foot = 50
 
-        self.servos_configurations.rear_left.shoulder.rest_angle = self.servos_configurations.rear_left.shoulder.rest_angle + 10
-        self.servos_configurations.rear_left.leg.rest_angle = self.servos_configurations.rear_left.leg.rest_angle - variation_leg
-        self.servos_configurations.rear_left.foot.rest_angle = self.servos_configurations.rear_left.foot.rest_angle + variation_foot
+        self._servos_configurations.rear_left.shoulder.rest_angle = self._servos_configurations.rear_left.shoulder.rest_angle + 10
+        self._servos_configurations.rear_left.leg.rest_angle = self._servos_configurations.rear_left.leg.rest_angle - variation_leg
+        self._servos_configurations.rear_left.foot.rest_angle = self._servos_configurations.rear_left.foot.rest_angle + variation_foot
 
-        self.servos_configurations.rear_right.shoulder.rest_angle = self.servos_configurations.rear_right.shoulder.rest_angle - 10
-        self.servos_configurations.rear_right.leg.rest_angle = self.servos_configurations.rear_right.leg.rest_angle + variation_leg
-        self.servos_configurations.rear_right.foot.rest_angle = self.servos_configurations.rear_right.foot.rest_angle - variation_foot
+        self._servos_configurations.rear_right.shoulder.rest_angle = self._servos_configurations.rear_right.shoulder.rest_angle - 10
+        self._servos_configurations.rear_right.leg.rest_angle = self._servos_configurations.rear_right.leg.rest_angle + variation_leg
+        self._servos_configurations.rear_right.foot.rest_angle = self._servos_configurations.rear_right.foot.rest_angle - variation_foot
 
         time.sleep(0.05)
 
-        self.servos_configurations.front_left.shoulder.rest_angle = self.servos_configurations.front_left.shoulder.rest_angle - 10
-        self.servos_configurations.front_left.leg.rest_angle = self.servos_configurations.front_left.leg.rest_angle - variation_leg + 5
-        self.servos_configurations.front_left.foot.rest_angle = self.servos_configurations.front_left.foot.rest_angle + variation_foot - 5
+        self._servos_configurations.front_left.shoulder.rest_angle = self._servos_configurations.front_left.shoulder.rest_angle - 10
+        self._servos_configurations.front_left.leg.rest_angle = self._servos_configurations.front_left.leg.rest_angle - variation_leg + 5
+        self._servos_configurations.front_left.foot.rest_angle = self._servos_configurations.front_left.foot.rest_angle + variation_foot - 5
 
-        self.servos_configurations.front_right.shoulder.rest_angle = self.servos_configurations.front_right.shoulder.rest_angle + 10
-        self.servos_configurations.front_right.leg.rest_angle = self.servos_configurations.front_right.leg.rest_angle + variation_leg - 5
-        self.servos_configurations.front_right.foot.rest_angle = self.servos_configurations.front_right.foot.rest_angle - variation_foot + 5
+        self._servos_configurations.front_right.shoulder.rest_angle = self._servos_configurations.front_right.shoulder.rest_angle + 10
+        self._servos_configurations.front_right.leg.rest_angle = self._servos_configurations.front_right.leg.rest_angle + variation_leg - 5
+        self._servos_configurations.front_right.foot.rest_angle = self._servos_configurations.front_right.foot.rest_angle - variation_foot + 5
 
         self.print_diagnostics()
 
@@ -1023,57 +994,44 @@ class MotionController:
     def body_move_pitch_analog(self, raw_value):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self.servos_configurations.rear_left.leg.rest_angle = int(General().maprange((5, -5), (180, 180), raw_value))
-        self.servos_configurations.rear_left.foot.rest_angle = int(General().maprange((5, -5), (10, 50), raw_value))
-        self.servos_configurations.rear_right.leg.rest_angle = int(General().maprange((5, -5), (0, 0), raw_value))
-        self.servos_configurations.rear_right.foot.rest_angle = int(General().maprange((5, -5), (170, 130), raw_value))
+        self._servos_configurations.rear_left.leg.rest_angle = int(General().maprange((5, -5), (180, 180), raw_value))
+        self._servos_configurations.rear_left.foot.rest_angle = int(General().maprange((5, -5), (10, 50), raw_value))
+        self._servos_configurations.rear_right.leg.rest_angle = int(General().maprange((5, -5), (0, 0), raw_value))
+        self._servos_configurations.rear_right.foot.rest_angle = int(General().maprange((5, -5), (170, 130), raw_value))
 
-        self.servos_configurations.front_left.leg.rest_angle = int(General().maprange((-5, 5), (160, 180), raw_value))
-        self.servos_configurations.front_left.foot.rest_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
-        self.servos_configurations.front_right.leg.rest_angle = int(General().maprange((-5, 5), (20, 0), raw_value))
-        self.servos_configurations.front_right.foot.rest_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
+        self._servos_configurations.front_left.leg.rest_angle = int(General().maprange((-5, 5), (160, 180), raw_value))
+        self._servos_configurations.front_left.foot.rest_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
+        self._servos_configurations.front_right.leg.rest_angle = int(General().maprange((-5, 5), (20, 0), raw_value))
+        self._servos_configurations.front_right.foot.rest_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
 
     def body_move_roll_analog(self, raw_value):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self.servos_configurations.rear_left.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        self.servos_configurations.rear_right.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servos_configurations.rear_left.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servos_configurations.rear_right.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
         
-        self.servos_configurations.front_left.shoulder.rest_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
-        self.servos_configurations.front_right.shoulder.rest_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
+        self._servos_configurations.front_left.shoulder.rest_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
+        self._servos_configurations.front_right.shoulder.rest_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
 
     def body_move_height_analog(self, raw_value):
 
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self.servos_configurations.rear_left.leg.rest_angle = int(General().maprange((5, -5), (160, 180), raw_value))
-        self.servos_configurations.rear_left.foot.rest_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
-        self.servos_configurations.rear_right.leg.rest_angle = int(General().maprange((5, -5), (20, 0), raw_value))
-        self.servos_configurations.rear_right.foot.rest_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
+        self._servos_configurations.rear_left.leg.rest_angle = int(General().maprange((5, -5), (160, 180), raw_value))
+        self._servos_configurations.rear_left.foot.rest_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
+        self._servos_configurations.rear_right.leg.rest_angle = int(General().maprange((5, -5), (20, 0), raw_value))
+        self._servos_configurations.rear_right.foot.rest_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
 
-        self.servos_configurations.front_left.leg.rest_angle = int(General().maprange((5, -5), (160, 180), raw_value))
-        self.servos_configurations.front_left.foot.rest_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
-        self.servos_configurations.front_right.leg.rest_angle = int(General().maprange((5, -5), (20, 0), raw_value))
-        self.servos_configurations.front_right.foot.rest_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
+        self._servos_configurations.front_left.leg.rest_angle = int(General().maprange((5, -5), (160, 180), raw_value))
+        self._servos_configurations.front_left.foot.rest_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
+        self._servos_configurations.front_right.leg.rest_angle = int(General().maprange((5, -5), (20, 0), raw_value))
+        self._servos_configurations.front_right.foot.rest_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
 
     def body_move_yaw_analog(self, raw_value):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self.servos_configurations.rear_left.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        self.servos_configurations.rear_right.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servos_configurations.rear_left.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servos_configurations.rear_right.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
         
-        self.servos_configurations.front_left.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        self.servos_configurations.front_right.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-
-    def setup_buzzer(self):
-        self.buzzer_pin = int(Config().get(Config.MOTION_CONTROLLER_BUZZER_GPIO_PORT))
-
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.buzzer_pin, GPIO.OUT)
-        GPIO.output(self.buzzer_pin, False)
-
-    def beep(self):
-        GPIO.output(self.buzzer_pin, True)
-        time.sleep(0.5)
-        GPIO.output(self.buzzer_pin, False)
+        self._servos_configurations.front_left.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servos_configurations.front_right.shoulder.rest_angle = int(General().maprange((5, -5), (145, 35), raw_value))
