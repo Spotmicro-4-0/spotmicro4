@@ -2,21 +2,12 @@ import json
 import sys
 import os
 from spotmicroai.utilities.log import Logger
+from spotmicroai.singleton import Singleton
 import jmespath  # http://jmespath.org/tutorial.html
 import shutil
 from pathlib import Path
 
 log = Logger().setup_logger('Configuration')
-
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
 
 class Config(metaclass=Singleton):
     ABORT_CONTROLLER_GPIO_PORT = 'abort_controller[0].gpio_port'

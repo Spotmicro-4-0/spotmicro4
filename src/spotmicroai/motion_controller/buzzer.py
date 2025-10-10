@@ -1,8 +1,9 @@
 import time
 from RPi import GPIO  # type: ignore
 from spotmicroai.utilities.config import Config
+from spotmicroai.singleton import Singleton
 
-class Buzzer:
+class Buzzer(metaclass=Singleton):
     def __init__(self):
         self.port = Config().get(Config.MOTION_CONTROLLER_BUZZER_GPIO_PORT)
         GPIO.setwarnings(False)

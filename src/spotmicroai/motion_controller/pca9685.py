@@ -1,9 +1,10 @@
 from board import SCL, SDA  # type: ignore
 import busio  # type: ignore
-from adafruit_pca9685 import PCA9685  # type: ignore
+from adafruit_pca9685 import PCA9685 # type: ignore
+from spotmicroai.singleton import Singleton
 from spotmicroai.utilities.config import Config
 
-class PCA9685Board:
+class PCA9685Board(metaclass=Singleton):
     def __init__(self):
         self.i2c = busio.I2C(SCL, SDA)
         self.pca9685 = None
