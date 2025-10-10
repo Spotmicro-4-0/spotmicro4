@@ -1,7 +1,5 @@
 import math
 
-from spotmicroai.motion_controller.models import Coordinate
-
 def InverseKinematics(x, y, z):
     """Main Inverse Kinematic function.
 
