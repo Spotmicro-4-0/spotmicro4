@@ -1,5 +1,8 @@
+from dataclasses import dataclass
+from spotmicroai.singleton import Singleton
 from spotmicroai.utilities.config import Config
 
+@dataclass
 class ServoConfig:
     """A class with variables that hold the current configurations of the servo.
 
@@ -16,13 +19,7 @@ class ServoConfig:
     max_pulse: int
     rest_angle: float
 
-    def __init__(self, channel: int, min_pulse: int, max_pulse: int, rest_angle: float):
-        self.channel = channel
-        self.min_pulse = min_pulse
-        self.max_pulse = max_pulse
-        self.rest_angle = rest_angle
-
-class ServoConfigSet:
+class ServoConfigSet(metaclass=Singleton):
     """A class containing the configurations for all the 12 servos.
 
     Used to track the configurations of all servos

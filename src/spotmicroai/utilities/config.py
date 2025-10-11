@@ -92,7 +92,7 @@ class Config(metaclass=Singleton):
     MOTION_CONTROLLER_SERVOS_FRONT_FOOT_RIGHT_MAX_PULSE = 'motion_controller[0].servos[0].front_foot_right[0].max_pulse'
     MOTION_CONTROLLER_SERVOS_FRONT_FOOT_RIGHT_REST_ANGLE = 'motion_controller[0].servos[0].front_foot_right[0].rest_angle'
 
-    MOTION_CONTROLLER_GAIT = 'motion_controller[0].gait'
+    MOTION_CONTROLLER_WALKING_CYCLE = 'motion_controller[0].walking_cycle'
     MOTION_CONTROLLER_POSES = 'motion_controller[0].poses'
 
     values = {}

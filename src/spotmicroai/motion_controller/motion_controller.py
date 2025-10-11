@@ -3,12 +3,13 @@ import queue
 import signal
 import sys
 import time
-from adafruit_motor import servo  # type: ignore
+from spotmicroai.motion_controller.coordinate import Coordinate
+from spotmicroai.motion_controller.keyframe import KeyframeTransition
+from spotmicroai.motion_controller.poses import Poses
 from spotmicroai.motion_controller.servo_config import ServoConfigSet
 from spotmicroai.motion_controller.servo_set import ServoSet
+from spotmicroai.motion_controller.walking_cycle import WalkingCycle
 import spotmicroai.utilities.queues as queues
-from spotmicroai.motion_controller.InverseKinematics import (InverseKinematics, interpolate)
-from spotmicroai.motion_controller.models import (FootPosition, Pose, Keyframe, KeyframeCollection)
 from spotmicroai.motion_controller.pca9685 import PCA9685Board
 from spotmicroai.utilities.config import Config
 from spotmicroai.utilities.general import General
@@ -19,13 +20,16 @@ log = Logger().setup_logger('Motion controller')
 
 class MotionController:
     
+    _pca9685_board: PCA9685Board
+    _servo_config_set: ServoConfigSet
     _servos: ServoSet
+    _poses: Poses
+    _buzzer: Buzzer
+    _walking_cycle: WalkingCycle
 
     _is_activated = False
     _is_running = False
-    _current_pose_type = 0
-    _keyframes: KeyframeCollection
-    _poses = None
+    _keyframeTransition: KeyframeTransition
 
     _forward_factor = 0
     _max_forward_factor = 0.5
@@ -44,21 +48,20 @@ class MotionController:
 
     def __init__(self, communication_queues):
         try:
-            print('Starting controller...')
-
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
             self._pca9685_board = PCA9685Board()
             self._servo_config_set = ServoConfigSet()
+            self._buzzer = Buzzer()
+            self._poses = Poses()
+            self._keyframeTransition = KeyframeTransition()
+            self._walking_cycle = WalkingCycle()
+            
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
             self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
-
             self._lcd_screen_queue.put(queues.MOTION_CONTROLLER + ' OK')
-
-            self.init_keyframes()
-            self.buzzer = Buzzer()
 
         except Exception as e:
             log.error('Motion controller initialization problem', e)
@@ -87,23 +90,13 @@ class MotionController:
         log.info("Motion controller terminated safely.")
         sys.exit(0)
 
-    def init_keyframes(self):   
-        self._keyframes = KeyframeCollection(Keyframe(FootPosition(0, 150, 0), FootPosition(0, 150, 0)), 
-                                             Keyframe(FootPosition(0, 150, 0), FootPosition(0, 150, 0)), 
-                                             Keyframe(FootPosition(0, 150, 0), FootPosition(0, 150, 0)), 
-                                             Keyframe(FootPosition(0, 150, 0), FootPosition(0, 150, 0)))
-
     def do_process_events_from_queues(self):
 
         # State Variables
         elapsed = 0.0
-        gait = self.load_gait_from_config()
-        self._poses = self.load_poses_from_config()
         start = 0
         last_index = 0
         inactivity_counter = time.time()
-        log.info('Press START/OPTIONS to enable the servos')
-
         activate_debounce_time = 0
         gait_debounce_time = 0
 
@@ -125,7 +118,7 @@ class MotionController:
                     activate_debounce_time = time.time()
 
                 if self._is_activated:
-                    self.buzzer.beep()
+                    self._buzzer.beep()
                     self.rest_position()
                     time.sleep(0.25)
                     self._pca9685_board.deactivate()
@@ -133,10 +126,11 @@ class MotionController:
                     self._is_activated = False
                 else:
                     log.info('Press START/OPTIONS to re-enable the servos')
-                    self.buzzer.beep()
+                    self._buzzer.beep()
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
                     self._pca9685_board.activate()
-                    self.activate_servos()
+                    time.sleep(0.25)
+                    self._servos = ServoSet()
                     self.rest_position()
                     start = time.time()
                     # Reset inactivity counter on activation so timer starts now
@@ -169,7 +163,7 @@ class MotionController:
 
                     # This logic counts from 0 to 6 (length of the gait array)
                     elapsed += (time.time() - start) * self._gait_speed
-                    elapsed = elapsed % len(gait)
+                    elapsed = elapsed % len(self._walking_cycle.values)
 
                     start = time.time()
                     index = math.floor(elapsed)
@@ -178,49 +172,45 @@ class MotionController:
                     if last_index != index:
                         # There are 4 entries in the keyframes array, one per leg. Each contains two states, current and previous
                         # Shifting the keyframes moves the second entry into the first entry making it the 'current' state 
-                        self._shift_keyframes()
+                        self._keyframeTransition.createNextKeyframe()
 
                         # Calculate Lateral Movement - Sideway movement
-                        x_rot, z_rot = self.calculate_rotational_movement(gait, index)
+                        x_rot, z_rot = self.calculate_rotational_movement(index)
                         
+                        current_coordinate = self._walking_cycle.values[index]
                         # Handle Front-Right and Back-Left legs first
                         # Here, we replace the second entry for each leg with newly calculated
-                        x = gait[index].x * -self._forward_factor + x_rot
-                        y = gait[index].y
-                        z = gait[index].z + z_rot
+                        x = current_coordinate.x * -self._forward_factor + x_rot
+                        y = current_coordinate.y
+                        z = current_coordinate.z + z_rot
 
-                        self._keyframes.front_right.current = FootPosition(x, y, z)
+                        self._keyframeTransition.current.front_right = Coordinate(x, y, z)
 
-                        x = gait[index].x * -self._forward_factor - x_rot
-                        y = gait[index].y
-                        z = gait[index].z + z_rot
-                        # if (self._current_gait_type == self.GaitType.Walk.value):
-                        self._keyframes.rear_left.current = FootPosition(x, y, z)
-                        # else:
-                        #     self._keyframes.rear_right.current = Coordinate(x, y, z)
+                        x = current_coordinate.x * -self._forward_factor - x_rot
+                        y = current_coordinate.y
+                        z = current_coordinate.z + z_rot
+                        self._keyframeTransition.current.rear_left = Coordinate(x, y, z)
 
+                        adjusted_index = (index + 3) % len(self._walking_cycle.values)
+                        x_rot, z_rot = self.calculate_rotational_movement(adjusted_index)
                         # Handle the other two legs, Front-Left and Back-Right
-                        adjusted_index = (index + 3) % len(gait)
-                        x_rot, z_rot = self.calculate_rotational_movement(gait, adjusted_index)
+                        current_coordinate = self._walking_cycle.values[adjusted_index]
                         
-                        x = gait[adjusted_index].x * -self._forward_factor - x_rot
-                        y = gait[adjusted_index].y
-                        z = gait[adjusted_index].z - z_rot
-                        self._keyframes.front_left.current = FootPosition(x, y, z)
+                        x = current_coordinate.x * -self._forward_factor - x_rot
+                        y = current_coordinate.y
+                        z = current_coordinate.z - z_rot
+                        self._keyframeTransition.current.front_left = Coordinate(x, y, z)
 
-                        x = gait[adjusted_index].x * -self._forward_factor + x_rot
-                        y = gait[adjusted_index].y
-                        z = gait[adjusted_index].z - z_rot
-                        # if (self._current_gait_type == self.GaitType.Walk.value):
-                        self._keyframes.rear_right.current = FootPosition(x, y, z)
-                        # else:
-                        #     self._keyframes.rear_left.current = Coordinate(x, y, z)
+                        x = current_coordinate.x * -self._forward_factor + x_rot
+                        y = current_coordinate.y
+                        z = current_coordinate.z - z_rot
+                        self._keyframeTransition.current.rear_right = Coordinate(x, y, z)
 
                         last_index = index
 
                     # The call below interpolates the next frame. Basically, it checks what fraction of a second has elapsed since the last frame to calculate a ratio
                     # Then it uses the ratio to adjust the values of the last frame accordingly. 
-                    self.interpolate_keyframes(ratio)
+                    self.interpolate_next_keyframe(ratio)
 
                 if self._event['a']:
                     self._is_running = False
@@ -282,15 +272,13 @@ class MotionController:
                     # Right Bumper
                     if self.check_event('tr'):
                         # Next Pose
-                        self._current_pose_type = abs((self._current_pose_type + 1) % len(self._poses))
-                        time.sleep(1)
-                        self.handle_pose(self._poses[self._current_pose_type])
+                        time.sleep(0.5)
+                        self.handle_pose(self._poses.next)
                     # Left Bumper
                     if self.check_event('tl'):
                         # Prev Pose
-                        self._current_pose_type = abs((self._current_pose_type - 1) % len(self._poses))
                         time.sleep(1)
-                        self.handle_pose(self._poses[self._current_pose_type])
+                        self.handle_pose(self._poses.previous)
 
                     if self._event['hat0y']:
                         self.body_move_pitch(self._event['hat0y'])
@@ -343,27 +331,6 @@ class MotionController:
             if elapsed_time < FRAME_DURATION:
                 time.sleep(FRAME_DURATION - elapsed_time)
 
-    def load_gait_from_config(self):
-        raw_gait = Config().get(Config.MOTION_CONTROLLER_GAIT)
-        gait = []
-
-        for keyframe in raw_gait:
-            gait.append(FootPosition(keyframe[0], keyframe[1], keyframe[2]))
-        
-        return gait
-    
-    def load_poses_from_config(self):
-        instincts_config = Config().get(Config.MOTION_CONTROLLER_POSES)
-        result = []
-        for key, value in instincts_config.items():
-            back_left = value[0]
-            back_right = value[1]
-            front_left = value[2]
-            front_right = value[3]
-            result.append(Pose(back_left, back_right, front_left, front_right))
-        
-        return result
-
     def check_event(self, key):
         return key in self._event and self._event[key] != 0 and key in self._prev_event and self._prev_event[key] == 0
 
@@ -399,13 +366,13 @@ class MotionController:
         print('self.servos_configurations.front_foot_right.rest_angle: ' + str(self._servo_config_set.front_foot_right.rest_angle))
         print('')
 
-    def calculate_rotational_movement(self, gait, index):
+    def calculate_rotational_movement(self, index):
         # This angle calculation is only used when rotating the bot clockwise or counter clockwise
         angle = 45.0 / 180.0 * math.pi
         x_rot = math.sin(angle) * self._rotation_factor * self.ROTATION_OFFSET
         z_rot = math.cos(angle) * self._rotation_factor * self.ROTATION_OFFSET
 
-        angle = (45 + gait[index].x) / 180.0 * math.pi
+        angle = (45 + self._walking_cycle.values[index].x) / 180.0 * math.pi
         x_rot = x_rot - math.sin(angle) * self._rotation_factor * self.ROTATION_OFFSET
         z_rot = z_rot - math.cos(angle) * self._rotation_factor * self.ROTATION_OFFSET
         
@@ -461,16 +428,7 @@ class MotionController:
         """
         self._height_factor = height * 40
 
-    def _process_keyframe(self, leg: Keyframe, height_factor, lean_factor, ratio):
-        start_coord = FootPosition(leg.previous.x, leg.previous.y + height_factor, leg.previous.z + lean_factor)
-        end_coord = FootPosition(leg.current.x, leg.current.y + height_factor, leg.current.z + lean_factor)
-
-        return InverseKinematics(
-            interpolate(start_coord.x, end_coord.x, ratio),
-            interpolate(start_coord.y, end_coord.y, ratio),
-            interpolate(start_coord.z, end_coord.z, ratio))
-
-    def interpolate_keyframes(self, ratio):
+    def interpolate_next_keyframe(self, ratio):
         """Interpolate between the current and next keyframes for each leg and apply the servo positions.
 
         Parameters
@@ -478,16 +436,28 @@ class MotionController:
         ratio : float
             The ratio of each keyframe in the interpolation. Should be in the range 0.0-1.0.
         """
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_right, self._height_factor, -self._lean_factor, ratio)
+        # Front Right
+        start_coord = Coordinate(self._keyframeTransition.previous.front_right.x, self._keyframeTransition.previous.front_right.y + self._height_factor, self._keyframeTransition.previous.front_right.z - self._lean_factor)
+        end_coord = Coordinate(self._keyframeTransition.current.front_right.x, self._keyframeTransition.current.front_right.y + self._height_factor, self._keyframeTransition.current.front_right.z - self._lean_factor)
+        foot, leg, shoulder = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
         self.front_right_leg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_left, self._height_factor, self._lean_factor, ratio)
+        # Rear Left
+        start_coord = Coordinate(self._keyframeTransition.previous.rear_left.x, self._keyframeTransition.previous.rear_left.y + self._height_factor, self._keyframeTransition.previous.rear_left.z + self._lean_factor)
+        end_coord = Coordinate(self._keyframeTransition.current.rear_left.x, self._keyframeTransition.current.rear_left.y + self._height_factor, self._keyframeTransition.current.rear_left.z + self._lean_factor)
+        foot, leg, shoulder = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
         self.rear_left_leg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.front_left, self._height_factor, self._lean_factor, ratio)
+        # Front Left
+        start_coord = Coordinate(self._keyframeTransition.previous.front_left.x, self._keyframeTransition.previous.front_left.y + self._height_factor, self._keyframeTransition.previous.front_left.z + self._lean_factor)
+        end_coord = Coordinate(self._keyframeTransition.current.front_left.x, self._keyframeTransition.current.front_left.y + self._height_factor, self._keyframeTransition.current.front_left.z + self._lean_factor)
+        foot, leg, shoulder = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
         self.front_left_leg(foot, leg, shoulder)
 
-        foot, leg, shoulder = self._process_keyframe(self._keyframes.rear_right, self._height_factor, -self._lean_factor, ratio)
+        # Rear Right
+        start_coord = Coordinate(self._keyframeTransition.previous.rear_right.x, self._keyframeTransition.previous.rear_right.y + self._height_factor, self._keyframeTransition.previous.rear_right.z - self._lean_factor)
+        end_coord = Coordinate(self._keyframeTransition.current.rear_right.x, self._keyframeTransition.current.rear_right.y + self._height_factor, self._keyframeTransition.current.rear_right.z - self._lean_factor)
+        foot, leg, shoulder = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
         self.rear_right_leg(foot, leg, shoulder)
 
     def rear_left_leg(self, foot, leg, shoulder):
@@ -553,91 +523,6 @@ class MotionController:
         self._servos.front_shoulder_right.angle = shoulder
         self._servos.front_leg_right.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
         self._servos.front_foot_right.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
-
-    def _shift_keyframes(self, ratio = 0):
-        """Shift the next keyframe to be the current keyframe.
-        
-        Parameters
-        ----------
-        ratio : float
-            Ratio for interpolating keyframes if shifting between keyframe transitions.
-        """
-        if ratio > 0:
-
-            self._keyframes.rear_left.previous = self._calc_previous_keyframe(self._keyframes.rear_left, ratio)
-            self._keyframes.rear_right.previous = self._calc_previous_keyframe(self._keyframes.rear_right, ratio)
-            self._keyframes.front_left.previous = self._calc_previous_keyframe(self._keyframes.front_left, ratio)
-            self._keyframes.front_right.previous = self._calc_previous_keyframe(self._keyframes.front_right, ratio)
-
-        else:
-            self._keyframes.rear_left.previous = self._keyframes.rear_left.current
-            self._keyframes.rear_right.previous = self._keyframes.rear_right.current
-            self._keyframes.front_left.previous = self._keyframes.front_left.current
-            self._keyframes.front_right.previous = self._keyframes.front_right.current
-
-    def _calc_previous_keyframe(self, leg, ratio):
-            prev = leg.previous
-            curr = leg.current
-            
-            x = interpolate(prev.x, curr.x, ratio)
-            y = interpolate(prev.y, curr.y, ratio)
-            z = interpolate(prev.z, curr.z, ratio)
-
-            return FootPosition(x, y, z)
-
-    def activate_servos(self):
-        rear_left_shoulder_config = self._servo_config_set.rear_shoulder_left
-        rear_left_shoulder_servo = servo.Servo(self._pca9685_board.get_channel(rear_left_shoulder_config.channel))
-        rear_left_shoulder_servo.set_pulse_width_range(min_pulse = rear_left_shoulder_config.min_pulse , max_pulse = rear_left_shoulder_config.max_pulse)
-
-        rear_left_leg_config = self._servo_config_set.rear_leg_left
-        rear_left_leg_servo = servo.Servo(self._pca9685_board.get_channel(rear_left_leg_config.channel))
-        rear_left_leg_servo.set_pulse_width_range(min_pulse = rear_left_leg_config.min_pulse , max_pulse = rear_left_leg_config.max_pulse)
-
-        rear_left_foot_config = self._servo_config_set.rear_foot_left
-        rear_left_foot_servo = servo.Servo(self._pca9685_board.get_channel(rear_left_foot_config.channel))
-        rear_left_foot_servo.set_pulse_width_range(min_pulse = rear_left_foot_config.min_pulse , max_pulse = rear_left_foot_config.max_pulse)
-
-        rear_right_shoulder_config = self._servo_config_set.rear_shoulder_right
-        rear_right_shoulder_servo = servo.Servo(self._pca9685_board.get_channel(rear_right_shoulder_config.channel))
-        rear_right_shoulder_servo.set_pulse_width_range(min_pulse = rear_right_shoulder_config.min_pulse , max_pulse = rear_right_shoulder_config.max_pulse)
-
-        rear_right_leg_config = self._servo_config_set.rear_leg_right
-        rear_right_leg_servo = servo.Servo(self._pca9685_board.get_channel(rear_right_leg_config.channel))
-        rear_right_leg_servo.set_pulse_width_range(min_pulse = rear_right_leg_config.min_pulse , max_pulse = rear_right_leg_config.max_pulse)
-
-        rear_right_foot_config = self._servo_config_set.rear_foot_right
-        rear_right_foot_servo = servo.Servo(self._pca9685_board.get_channel(rear_right_foot_config.channel))
-        rear_right_foot_servo.set_pulse_width_range(min_pulse = rear_right_foot_config.min_pulse , max_pulse = rear_right_foot_config.max_pulse)
-
-        front_left_shoulder_config = self._servo_config_set.front_shoulder_left
-        front_left_shoulder_servo = servo.Servo(self._pca9685_board.get_channel(front_left_shoulder_config.channel))
-        front_left_shoulder_servo.set_pulse_width_range(min_pulse = front_left_shoulder_config.min_pulse , max_pulse = front_left_shoulder_config.max_pulse)
-
-        front_left_leg_config = self._servo_config_set.front_leg_left
-        front_left_leg_servo = servo.Servo(self._pca9685_board.get_channel(front_left_leg_config.channel))
-        front_left_leg_servo.set_pulse_width_range(min_pulse = front_left_leg_config.min_pulse , max_pulse = front_left_leg_config.max_pulse)
-
-        front_left_foot_config = self._servo_config_set.front_foot_left
-        front_left_foot_servo = servo.Servo(self._pca9685_board.get_channel(front_left_foot_config.channel))
-        front_left_foot_servo.set_pulse_width_range(min_pulse = front_left_foot_config.min_pulse , max_pulse = front_left_foot_config.max_pulse)
-
-        front_right_shoulder_config = self._servo_config_set.front_shoulder_right
-        front_right_shoulder_servo = servo.Servo(self._pca9685_board.get_channel(front_right_shoulder_config.channel))
-        front_right_shoulder_servo.set_pulse_width_range(min_pulse = front_right_shoulder_config.min_pulse , max_pulse = front_right_shoulder_config.max_pulse)
-
-        front_right_leg_config = self._servo_config_set.front_leg_right
-        front_right_leg_servo = servo.Servo(self._pca9685_board.get_channel(front_right_leg_config.channel))
-        front_right_leg_servo.set_pulse_width_range(min_pulse = front_right_leg_config.min_pulse , max_pulse = front_right_leg_config.max_pulse)
-
-        front_right_foot_config = self._servo_config_set.front_foot_right
-        front_right_foot_servo = servo.Servo(self._pca9685_board.get_channel(front_right_foot_config.channel))
-        front_right_foot_servo.set_pulse_width_range(min_pulse = front_right_foot_config.min_pulse , max_pulse = front_right_foot_config.max_pulse)
-
-        self._servos = ServoSet(rear_left_shoulder_servo, rear_left_leg_servo, rear_left_foot_servo,
-                                rear_right_shoulder_servo, rear_right_leg_servo, rear_right_foot_servo,
-                                front_left_shoulder_servo, front_left_leg_servo, front_left_foot_servo,
-                                front_right_shoulder_servo, front_right_leg_servo, front_right_foot_servo)
 
     def move(self):
         # Rear Left Limb
