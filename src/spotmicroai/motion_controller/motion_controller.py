@@ -16,6 +16,7 @@ from spotmicroai.utilities.general import General
 from spotmicroai.utilities.log import Logger
 from .buzzer import Buzzer
 from .constants import LEG_SERVO_OFFSET, FOOT_SERVO_OFFSET, ROTATION_OFFSET, INACTIVITY_TIME
+from .controller_event import ControllerEvent
 
 log = Logger().setup_logger('Motion controller')
 
@@ -38,8 +39,6 @@ class MotionController:
     _lean_factor = 0.0
     _height_factor = 1
     _walking_speed = 10
-    _event = {}
-    _prev_event = {}
 
     def __init__(self, communication_queues):
         try:
@@ -97,16 +96,18 @@ class MotionController:
         FRAME_RATE_HZ = 50
         FRAME_DURATION = 1.0 / FRAME_RATE_HZ
 
+        event = {}
+        prev_event = {}
+
         while True:
             frame_start = time.time()
 
             try:
-                self._event = self._motion_queue.get(block=False)
-
+                event = self._motion_queue.get(block=False)
             except queue.Empty:
-                self._event = {}
+                event = {}
             
-            if 'start' in self._event and self._event['start'] == 1:
+            if ControllerEvent.START in event and event[ControllerEvent.START] == 1:
                 if time.time() - activate_debounce_time < 1:
                     continue
                 else:
@@ -136,7 +137,7 @@ class MotionController:
                 time.sleep(0.1)
                 continue
 
-            if self._event == {}:
+            if event == {}:
                 # if there is no user input, check to see if it have been long enough to warn the user
                 if (time.time() - inactivity_counter) >= INACTIVITY_TIME:
                     log.info(f'Inactivity lasted {INACTIVITY_TIME} seconds. Press start to reactivate')
@@ -208,107 +209,107 @@ class MotionController:
                     # Then it uses the ratio to adjust the values of the last frame accordingly. 
                     self.interpolate_next_keyframe(ratio)
 
-                if self._event['a']:
+                if event[ControllerEvent.A]:
                     self._is_running = False
                     self.rest_position()
 
                 # Handle cases when robot is running
                 if self._is_running:
                     # Right Trigger
-                    # if self.check_event('gas'):
+                    # if self.check_event(ControllerEvent.RIGHT_TRIGGER, event, prev_event):
                     #     self._current_gait_type = 0
                     # Left Trigger
-                    # if self.check_event('brake'):
+                    # if self.check_event(ControllerEvent.LEFT_TRIGGER, event, prev_event):
                     #     self._current_gait_type = 0
                     
-                    if self.check_event('y'):
+                    if self.check_event(ControllerEvent.Y, event, prev_event):
                         pass
 
-                    if self.check_event('b'):
+                    if self.check_event(ControllerEvent.B, event, prev_event):
                         pass
 
-                    if self.check_event('x'):
+                    if self.check_event(ControllerEvent.X, event, prev_event):
                         pass
 
                     # D-Pad Left/Right
-                    if self.check_event('hat0x'):
+                    if self.check_event(ControllerEvent.DPAD_HORIZONTAL, event, prev_event):
                         pass                
                     # D-Pad Up/Down
-                    if self.check_event('hat0y'):
-                        if self._event['hat0y'] > 0:
+                    if self.check_event(ControllerEvent.DPAD_VERTICAL, event, prev_event):
+                        if event[ControllerEvent.DPAD_VERTICAL] > 0:
                             self._walking_speed = min(max(self._walking_speed - 1, 0), 15)
                         else:
                             self._walking_speed = max(min(self._walking_speed + 1, 15), 0)
                     
                     # Left Thumbstick Up/Down
-                    if self._event['ly']:
-                        self.set_forward_factor(self._event['ly'])
+                    if event[ControllerEvent.LEFT_STICK_Y]:
+                        self.set_forward_factor(event[ControllerEvent.LEFT_STICK_Y])
                     
                     # Left Thumbstick Left/Right
-                    if self._event['lx']:
-                        self.set_rotation_factor(self._event['lx'])
+                    if event[ControllerEvent.LEFT_STICK_X]:
+                        self.set_rotation_factor(event[ControllerEvent.LEFT_STICK_X])
 
                     # Left Thumbstick Click
-                    if self._event['thumbl']:
+                    if event[ControllerEvent.LEFT_STICK_CLICK]:
                         self._rotation_factor = 0
                         self._forward_factor = 0
 
                     # Right Thumbstick Up/Down
-                    if self._event['lz']:
-                        self.set_lean(self._event['lz'])
+                    if event[ControllerEvent.RIGHT_STICK_Y]:
+                        self.set_lean(event[ControllerEvent.RIGHT_STICK_Y])
                     # Right Thumbstick Left/Right
-                    if self._event['rz']:
-                        self.set_height_offset(self._event['rz'])
-                        # self.set_lean(self._event['rz'])
+                    if event[ControllerEvent.RIGHT_STICK_X]:
+                        self.set_height_offset(event[ControllerEvent.RIGHT_STICK_X])
+                        # self.set_lean(event[ControllerEvent.RIGHT_STICK_X])
                     # Right Thumbstick Click
-                    if self._event['thumbr']:
+                    if event[ControllerEvent.RIGHT_STICK_CLICK]:
                         self.set_height_offset(0)
                         self.set_lean(0)
                 else:
                     # Right Bumper
-                    if self.check_event('tr'):
+                    if self.check_event(ControllerEvent.RIGHT_BUMPER, event, prev_event):
                         # Next Pose
                         time.sleep(0.5)
                         self.handle_pose(self._poses.next)
                     # Left Bumper
-                    if self.check_event('tl'):
+                    if self.check_event(ControllerEvent.LEFT_BUMPER, event, prev_event):
                         # Prev Pose
                         time.sleep(1)
                         self.handle_pose(self._poses.previous)
 
-                    if self._event['hat0y']:
-                        self.body_move_pitch(self._event['hat0y'])
+                    if event[ControllerEvent.DPAD_VERTICAL]:
+                        self.body_move_pitch(event[ControllerEvent.DPAD_VERTICAL])
 
-                    if self._event['hat0x']:
-                        self.body_move_roll(self._event['hat0x'])
+                    if event[ControllerEvent.DPAD_HORIZONTAL]:
+                        self.body_move_roll(event[ControllerEvent.DPAD_HORIZONTAL])
 
-                    if self._event['ly']:
-                        self.body_move_pitch_analog(self._event['ly'])
+                    if event[ControllerEvent.LEFT_STICK_Y]:
+                        self.body_move_pitch_analog(event[ControllerEvent.LEFT_STICK_Y])
 
-                    if self._event['lx']:
-                        self.body_move_roll_analog(self._event['lx'])
+                    if event[ControllerEvent.LEFT_STICK_X]:
+                        self.body_move_roll_analog(event[ControllerEvent.LEFT_STICK_X])
 
-                    if self._event['lz']:
-                        self.body_move_yaw_analog(self._event['lz'])
+                    if event[ControllerEvent.RIGHT_STICK_Y]:
+                        self.body_move_yaw_analog(event[ControllerEvent.RIGHT_STICK_Y])
 
-                    if self._event['rz']:
-                        self.body_move_height_analog(self._event['rz'])
+                    if event[ControllerEvent.RIGHT_STICK_X]:
+                        self.body_move_height_analog(event[ControllerEvent.RIGHT_STICK_X])
 
-                    # if self._event['y']:
+                    # if event[ControllerEvent.Y]:
                     #     self.standing_position()
 
-                    # if self._event['b']:
+                    # if event[ControllerEvent.B]:
                     #     self.handle_instinct(self._instincts['pushUp'])
 
-                    # if self._event['x']:
+                    # if event[ControllerEvent.X]:
                     #     self.handle_instinct(self._instincts['sit'])
                     
-                    # if self._event['y']:
+                    # if event[ControllerEvent.Y]:
                     #     self.handle_instinct(self._instincts['sleep'])
                     
                     self.move()
 
-                if self._event['select'] == 1:
+                if event[ControllerEvent.BACK] == 1:
                     if time.time() - gait_debounce_time < 1:
                         continue
                     else:
@@ -318,7 +319,7 @@ class MotionController:
                     self._is_running = not self._is_running
                     time.sleep(0.5)
 
-                self._prev_event = self._event
+                prev_event = event
             finally:
                 #continue
                 pass
@@ -327,8 +328,8 @@ class MotionController:
             if elapsed_time < FRAME_DURATION:
                 time.sleep(FRAME_DURATION - elapsed_time)
 
-    def check_event(self, key):
-        return key in self._event and self._event[key] != 0 and key in self._prev_event and self._prev_event[key] == 0
+    def check_event(self, key, event, prev_event):
+        return key in event and event[key] != 0 and key in prev_event and prev_event[key] == 0
 
     def handle_pose(self, pose):
         self._servo_config_set.rear_shoulder_left.rest_angle = pose.rear_left[0]
