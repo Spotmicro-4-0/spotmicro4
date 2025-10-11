@@ -2,9 +2,14 @@ from adafruit_motor import servo # type: ignore
 from spotmicroai.motion_controller.pca9685 import PCA9685Board
 from spotmicroai.motion_controller.servo_config import ServoConfigSet
 from spotmicroai.singleton import Singleton
+from typing import Optional
 
 class ServoSet(metaclass=Singleton):
-    """A class containing all the 12 servos.
+    """A singleton class containing all 12 Adafruit servo objects that control the robot's movements.
+
+    This class initializes and manages the 12 servos (3 per leg: shoulder, leg, and foot for front and rear, left and right),
+    each configured with pulse width ranges from the ServoConfigSet. These servo objects are used to control
+    the physical movements of the SpotMicro robot.
 
     Used to track all 12 servos
 
@@ -40,50 +45,61 @@ class ServoSet(metaclass=Singleton):
         _servo_config_set = ServoConfigSet()
         _pca9685_board = PCA9685Board()
 
-        rear_left_shoulder_config = _servo_config_set.rear_shoulder_left
-        self.rear_shoulder_left = servo.Servo(_pca9685_board.get_channel(rear_left_shoulder_config.channel))
-        self.rear_shoulder_left.set_pulse_width_range(min_pulse = rear_left_shoulder_config.min_pulse , max_pulse = rear_left_shoulder_config.max_pulse)
+        # --- Initialize physical servo objects ---
+        self.rear_shoulder_left = self._make_servo(_pca9685_board, _servo_config_set.rear_shoulder_left)
+        self.rear_leg_left = self._make_servo(_pca9685_board, _servo_config_set.rear_leg_left)
+        self.rear_foot_left = self._make_servo(_pca9685_board, _servo_config_set.rear_foot_left)
 
-        rear_left_leg_config = _servo_config_set.rear_leg_left
-        self.rear_leg_left = servo.Servo(_pca9685_board.get_channel(rear_left_leg_config.channel))
-        self.rear_leg_left.set_pulse_width_range(min_pulse = rear_left_leg_config.min_pulse , max_pulse = rear_left_leg_config.max_pulse)
+        self.rear_shoulder_right = self._make_servo(_pca9685_board, _servo_config_set.rear_shoulder_right)
+        self.rear_leg_right = self._make_servo(_pca9685_board, _servo_config_set.rear_leg_right)
+        self.rear_foot_right = self._make_servo(_pca9685_board, _servo_config_set.rear_foot_right)
 
-        rear_left_foot_config = _servo_config_set.rear_foot_left
-        self.rear_foot_left = servo.Servo(_pca9685_board.get_channel(rear_left_foot_config.channel))
-        self.rear_foot_left.set_pulse_width_range(min_pulse = rear_left_foot_config.min_pulse , max_pulse = rear_left_foot_config.max_pulse)
+        self.front_shoulder_left = self._make_servo(_pca9685_board, _servo_config_set.front_shoulder_left)
+        self.front_leg_left = self._make_servo(_pca9685_board, _servo_config_set.front_leg_left)
+        self.front_foot_left = self._make_servo(_pca9685_board, _servo_config_set.front_foot_left)
 
-        rear_right_shoulder_config = _servo_config_set.rear_shoulder_right
-        self.rear_shoulder_right = servo.Servo(_pca9685_board.get_channel(rear_right_shoulder_config.channel))
-        self.rear_shoulder_right.set_pulse_width_range(min_pulse = rear_right_shoulder_config.min_pulse , max_pulse = rear_right_shoulder_config.max_pulse)
+        self.front_shoulder_right = self._make_servo(_pca9685_board, _servo_config_set.front_shoulder_right)
+        self.front_leg_right = self._make_servo(_pca9685_board, _servo_config_set.front_leg_right)
+        self.front_foot_right = self._make_servo(_pca9685_board, _servo_config_set.front_foot_right)
 
-        rear_right_leg_config = _servo_config_set.rear_leg_right
-        self.rear_leg_right = servo.Servo(_pca9685_board.get_channel(rear_right_leg_config.channel))
-        self.rear_leg_right.set_pulse_width_range(min_pulse = rear_right_leg_config.min_pulse , max_pulse = rear_right_leg_config.max_pulse)
+        from typing import Optional
 
-        rear_right_foot_config = _servo_config_set.rear_foot_right
-        self.rear_foot_right = servo.Servo(_pca9685_board.get_channel(rear_right_foot_config.channel))
-        self.rear_foot_right.set_pulse_width_range(min_pulse = rear_right_foot_config.min_pulse , max_pulse = rear_right_foot_config.max_pulse)
+        self._staged_angles: dict[str, Optional[float]] = {
+            "rear_shoulder_left": None,
+            "rear_leg_left": None,
+            "rear_foot_left": None,
+            "rear_shoulder_right": None,
+            "rear_leg_right": None,
+            "rear_foot_right": None,
+            "front_shoulder_left": None,
+            "front_leg_left": None,
+            "front_foot_left": None,
+            "front_shoulder_right": None,
+            "front_leg_right": None,
+            "front_foot_right": None,
+        }
 
-        front_left_shoulder_config = _servo_config_set.front_shoulder_left
-        self.front_shoulder_left = servo.Servo(_pca9685_board.get_channel(front_left_shoulder_config.channel))
-        self.front_shoulder_left.set_pulse_width_range(min_pulse = front_left_shoulder_config.min_pulse , max_pulse = front_left_shoulder_config.max_pulse)
+    def _make_servo(self, board, config):
+        s = servo.Servo(board.get_channel(config.channel))
+        s.set_pulse_width_range(min_pulse=config.min_pulse, max_pulse=config.max_pulse)
+        return s
+    
+     # --- Public API ---
+    def stage_angle(self, name: str, angle: float):
+        """Stage a servo angle without moving the servo yet."""
+        if name not in self._staged_angles:
+            raise ValueError(f"Invalid servo name: {name}")
+        self._staged_angles[name] = angle
 
-        front_left_leg_config = _servo_config_set.front_leg_left
-        self.front_leg_left = servo.Servo(_pca9685_board.get_channel(front_left_leg_config.channel))
-        self.front_leg_left.set_pulse_width_range(min_pulse = front_left_leg_config.min_pulse , max_pulse = front_left_leg_config.max_pulse)
+    def commit(self):
+        """Apply all staged servo angles to their respective servos."""
+        for name, angle in self._staged_angles.items():
+            if angle is not None:
+                servo_obj = getattr(self, name)
+                servo_obj.angle = angle
+        self.clear_staged()
 
-        front_left_foot_config = _servo_config_set.front_foot_left
-        self.front_foot_left = servo.Servo(_pca9685_board.get_channel(front_left_foot_config.channel))
-        self.front_foot_left.set_pulse_width_range(min_pulse = front_left_foot_config.min_pulse , max_pulse = front_left_foot_config.max_pulse)
-
-        front_right_shoulder_config = _servo_config_set.front_shoulder_right
-        self.front_shoulder_right = servo.Servo(_pca9685_board.get_channel(front_right_shoulder_config.channel))
-        self.front_shoulder_right.set_pulse_width_range(min_pulse = front_right_shoulder_config.min_pulse , max_pulse = front_right_shoulder_config.max_pulse)
-
-        front_right_leg_config = _servo_config_set.front_leg_right
-        self.front_leg_right = servo.Servo(_pca9685_board.get_channel(front_right_leg_config.channel))
-        self.front_leg_right.set_pulse_width_range(min_pulse = front_right_leg_config.min_pulse , max_pulse = front_right_leg_config.max_pulse)
-
-        front_right_foot_config = _servo_config_set.front_foot_right
-        self.front_foot_right = servo.Servo(_pca9685_board.get_channel(front_right_foot_config.channel))
-        self.front_foot_right.set_pulse_width_range(min_pulse = front_right_foot_config.min_pulse , max_pulse = front_right_foot_config.max_pulse)
+    def clear_staged(self):
+        """Reset all staged servo angles."""
+        for k in self._staged_angles:
+            self._staged_angles[k] = None

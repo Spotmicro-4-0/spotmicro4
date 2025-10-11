@@ -4,7 +4,11 @@ from spotmicroai.utilities.config import Config
 
 @dataclass
 class ServoConfig:
-    """A class with variables that hold the current configurations of the servo.
+    """A class with variables that hold the static configurations of the servo.
+
+    These configurations are predefined and configured in the spotmicroai.json file,
+    and do not change during runtime. This class carries these static values
+    for each servo, providing immutable settings used throughout the application.
 
     Used to track the configurations of a servo
 
@@ -21,6 +25,10 @@ class ServoConfig:
 
 class ServoConfigSet(metaclass=Singleton):
     """A class containing the configurations for all the 12 servos.
+
+    This singleton class loads the static servo configurations from the spotmicroai.json file
+    and serves as an abstraction layer in front of the Config utility class, providing
+    easy access to immutable servo settings for the entire application.
 
     Used to track the configurations of all servos
 
