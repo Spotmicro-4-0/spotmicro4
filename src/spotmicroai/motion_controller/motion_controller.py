@@ -15,6 +15,7 @@ from spotmicroai.utilities.config import Config
 from spotmicroai.utilities.general import General
 from spotmicroai.utilities.log import Logger
 from .buzzer import Buzzer
+from .constants import LEG_SERVO_OFFSET, FOOT_SERVO_OFFSET, ROTATION_OFFSET, INACTIVITY_TIME
 
 log = Logger().setup_logger('Motion controller')
 
@@ -36,15 +37,9 @@ class MotionController:
     _rotation_factor = 0.0
     _lean_factor = 0.0
     _height_factor = 1
-    _gait_speed = 10
+    _walking_speed = 10
     _event = {}
     _prev_event = {}
-
-    LEG_SERVO_OFFSET = 120
-    FOOT_SERVO_OFFSET = 0
-    ROTATION_OFFSET = 40
-    # This represents the number of seconds in which if no activity is detected, the robot shuts down
-    INACTIVITY_TIME = 10
 
     def __init__(self, communication_queues):
         try:
@@ -80,8 +75,7 @@ class MotionController:
         time.sleep(0.3)
         
         try:
-            # Option A: if your PCA9685Board exposes an 'all_call' disable
-            self._pca9685_board.deactivate()  # should clear ALL_LED_ON/OFF registers or set OE pin HIGH
+            self._pca9685_board.deactivate()
         except Exception as e:
             log.warning(f"Could not deactivate PCA9685 cleanly: {e}")
 
@@ -111,6 +105,7 @@ class MotionController:
 
             except queue.Empty:
                 self._event = {}
+            
             if 'start' in self._event and self._event['start'] == 1:
                 if time.time() - activate_debounce_time < 1:
                     continue
@@ -136,14 +131,15 @@ class MotionController:
                     # Reset inactivity counter on activation so timer starts now
                     inactivity_counter = time.time()
                     self._is_activated = True
+            
             if not self._is_activated:
                 time.sleep(0.1)
                 continue
 
             if self._event == {}:
                 # if there is no user input, check to see if it have been long enough to warn the user
-                if (time.time() - inactivity_counter) >= self.INACTIVITY_TIME:
-                    log.info(f'Inactivity lasted {self.INACTIVITY_TIME} seconds. Press start to reactivate')
+                if (time.time() - inactivity_counter) >= INACTIVITY_TIME:
+                    log.info(f'Inactivity lasted {INACTIVITY_TIME} seconds. Press start to reactivate')
                     log.info('Shutting down the servos.')
                     log.info('Press START/OPTIONS to enable the servos')
                     
@@ -161,8 +157,8 @@ class MotionController:
             try:
                 if self._is_running:
 
-                    # This logic counts from 0 to 6 (length of the gait array)
-                    elapsed += (time.time() - start) * self._gait_speed
+                    # This logic counts from 0 to 6 (length of the walking cycle)
+                    elapsed += (time.time() - start) * self._walking_speed
                     elapsed = elapsed % len(self._walking_cycle.values)
 
                     start = time.time()
@@ -240,9 +236,9 @@ class MotionController:
                     # D-Pad Up/Down
                     if self.check_event('hat0y'):
                         if self._event['hat0y'] > 0:
-                            self._gait_speed = min(max(self._gait_speed - 1, 0), 15)
+                            self._walking_speed = min(max(self._walking_speed - 1, 0), 15)
                         else:
-                            self._gait_speed = max(min(self._gait_speed + 1, 15), 0)
+                            self._walking_speed = max(min(self._walking_speed + 1, 15), 0)
                     
                     # Left Thumbstick Up/Down
                     if self._event['ly']:
@@ -369,12 +365,12 @@ class MotionController:
     def calculate_rotational_movement(self, index):
         # This angle calculation is only used when rotating the bot clockwise or counter clockwise
         angle = 45.0 / 180.0 * math.pi
-        x_rot = math.sin(angle) * self._rotation_factor * self.ROTATION_OFFSET
-        z_rot = math.cos(angle) * self._rotation_factor * self.ROTATION_OFFSET
+        x_rot = math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
+        z_rot = math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
 
         angle = (45 + self._walking_cycle.values[index].x) / 180.0 * math.pi
-        x_rot = x_rot - math.sin(angle) * self._rotation_factor * self.ROTATION_OFFSET
-        z_rot = z_rot - math.cos(angle) * self._rotation_factor * self.ROTATION_OFFSET
+        x_rot = x_rot - math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
+        z_rot = z_rot - math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
         
         return x_rot, z_rot
 
@@ -473,8 +469,8 @@ class MotionController:
             Servo angle for shoulder in degrees.
         """
         self._servos.rear_shoulder_left.angle = shoulder
-        self._servos.rear_leg_left.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
-        self._servos.rear_foot_left.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.rear_leg_left.angle = min(leg + LEG_SERVO_OFFSET, 180)
+        self._servos.rear_foot_left.angle = max(foot - FOOT_SERVO_OFFSET, 0)
 
     def rear_right_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the back right leg.
@@ -489,8 +485,8 @@ class MotionController:
             Servo angle for shoulder in degrees.
         """
         self._servos.rear_shoulder_right.angle = 180 - shoulder
-        self._servos.rear_leg_right.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
-        self._servos.rear_foot_right.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.rear_leg_right.angle = max(180 - (leg + LEG_SERVO_OFFSET), 0)
+        self._servos.rear_foot_right.angle = 180 - max(foot - FOOT_SERVO_OFFSET, 0)
 
     def front_left_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the front left leg.
@@ -505,8 +501,8 @@ class MotionController:
             Servo angle for shoulder in degrees.
         """
         self._servos.front_shoulder_left.angle = 180 - shoulder
-        self._servos.front_leg_left.angle = min(leg + self.LEG_SERVO_OFFSET, 180)
-        self._servos.front_foot_left.angle = max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.front_leg_left.angle = min(leg + LEG_SERVO_OFFSET, 180)
+        self._servos.front_foot_left.angle = max(foot - FOOT_SERVO_OFFSET, 0)
 
     def front_right_leg(self, foot, leg, shoulder):
         """Helper function for setting servo angles for the front right leg.
@@ -521,8 +517,8 @@ class MotionController:
             Servo angle for shoulder in degrees.
         """
         self._servos.front_shoulder_right.angle = shoulder
-        self._servos.front_leg_right.angle = max(180 - (leg + self.LEG_SERVO_OFFSET), 0)
-        self._servos.front_foot_right.angle = 180 - max(foot - self.FOOT_SERVO_OFFSET, 0)
+        self._servos.front_leg_right.angle = max(180 - (leg + LEG_SERVO_OFFSET), 0)
+        self._servos.front_foot_right.angle = 180 - max(foot - FOOT_SERVO_OFFSET, 0)
 
     def move(self):
         # Rear Left Limb
