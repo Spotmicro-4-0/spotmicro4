@@ -1,9 +1,9 @@
 from adafruit_motor import servo # type: ignore
-from spotmicroai.motion_controller.pca9685 import PCA9685Board
-from spotmicroai.motion_controller.servo_config import ServoConfigSet
+from spotmicroai.motion_controller.services.servo_config_service import ServoConfigService
+from spotmicroai.motion_controller.wrappers.pca9685 import PCA9685Board
 from spotmicroai.singleton import Singleton
 
-class ServoSet(metaclass=Singleton):
+class ServoService(metaclass=Singleton):
     """A singleton class containing all 12 Adafruit servo objects that control the robot's movements.
 
     This class initializes and manages the 12 servos (3 per leg: shoulder, leg, and foot for front and rear, left and right),
@@ -44,7 +44,7 @@ class ServoSet(metaclass=Singleton):
     front_foot_right_angle: float
 
     def __init__(self):
-        self._servo_config_set = ServoConfigSet()
+        self._servo_config_set = ServoConfigService()
         _pca9685_board = PCA9685Board()
 
         # --- Initialize physical servo objects ---
