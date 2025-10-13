@@ -1,14 +1,14 @@
 #!/home/pi/spotmicroai/venv/bin/python3 -u
 
-import busio
-from board import SCL, SDA
-from adafruit_pca9685 import PCA9685
-from adafruit_motor import servo
-from pick import pick
+import busio # type: ignore
+from board import SCL, SDA # type: ignore
+from adafruit_pca9685 import PCA9685 # type: ignore
+from adafruit_motor import servo # type: ignore
+from pick import pick # type: ignore
 import time
 import os
 import sys
-import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO # type: ignore
 
 from spotmicroai.utilities.log import Logger
 from spotmicroai.utilities.config import Config
