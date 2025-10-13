@@ -22,42 +22,6 @@
 			"frequency": 50
 		}],
 		"servos": [{
-			"rear_shoulder_left": [{
-				"channel": 3,
-				"min_pulse": 1500,
-				"max_pulse": 1850,
-				"rest_angle": 90
-			}],
-			"rear_leg_left": [{
-				"channel": 4,
-				"min_pulse": 980,
-				"max_pulse": 2300,
-				"rest_angle": 180
-			}],
-			"rear_foot_left": [{
-				"channel": 5,
-				"min_pulse": 1000,
-				"max_pulse": 1850,
-				"rest_angle": 20
-			}],
-			"rear_shoulder_right": [{
-				"channel": 0,
-				"min_pulse": 1480,
-				"max_pulse": 1830,
-				"rest_angle": 90
-			}],
-			"rear_leg_right": [{
-				"channel": 1,
-				"min_pulse": 930,
-				"max_pulse": 2325,
-				"rest_angle": 0
-			}],
-			"rear_foot_right": [{
-				"channel": 2,
-				"min_pulse": 1380,
-				"max_pulse": 2240,
-				"rest_angle": 160
-			}],
 			"front_shoulder_left": [{
 				"channel": 6,
 				"min_pulse": 1420,
@@ -93,6 +57,42 @@
 				"channel": 11,
 				"min_pulse": 1350,
 				"max_pulse": 2190,
+				"rest_angle": 160
+			}],
+			"rear_shoulder_left": [{
+				"channel": 3,
+				"min_pulse": 1500,
+				"max_pulse": 1850,
+				"rest_angle": 90
+			}],
+			"rear_leg_left": [{
+				"channel": 4,
+				"min_pulse": 980,
+				"max_pulse": 2300,
+				"rest_angle": 180
+			}],
+			"rear_foot_left": [{
+				"channel": 5,
+				"min_pulse": 1000,
+				"max_pulse": 1850,
+				"rest_angle": 20
+			}],
+			"rear_shoulder_right": [{
+				"channel": 0,
+				"min_pulse": 1480,
+				"max_pulse": 1830,
+				"rest_angle": 90
+			}],
+			"rear_leg_right": [{
+				"channel": 1,
+				"min_pulse": 930,
+				"max_pulse": 2325,
+				"rest_angle": 0
+			}],
+			"rear_foot_right": [{
+				"channel": 2,
+				"min_pulse": 1380,
+				"max_pulse": 2240,
 				"rest_angle": 160
 			}]
 		}],
