@@ -148,20 +148,20 @@ class MotionController:
                     leg_positions = self._keyframe_service.get_interpolated_leg_positions(ratio)
                     
                     # Front Right
-                    foot, leg, shoulder = leg_positions['front_right'].inverse_kinematics()
-                    self.set_front_right_servos(foot, leg, shoulder)
+                    foot_angle, leg_angle, shoulder_angle = leg_positions['front_right'].inverse_kinematics()
+                    self.set_front_right_servos(foot_angle, leg_angle, shoulder_angle)
                     
                     # Rear Left
-                    foot, leg, shoulder = leg_positions['rear_left'].inverse_kinematics()
-                    self.set_rear_left_servos(foot, leg, shoulder)
+                    foot_angle, leg_angle, shoulder_angle = leg_positions['rear_left'].inverse_kinematics()
+                    self.set_rear_left_servos(foot_angle, leg_angle, shoulder_angle)
                     
                     # Front Left
-                    foot, leg, shoulder = leg_positions['front_left'].inverse_kinematics()
-                    self.set_front_left_servos(foot, leg, shoulder)
+                    foot_angle, leg_angle, shoulder_angle = leg_positions['front_left'].inverse_kinematics()
+                    self.set_front_left_servos(foot_angle, leg_angle, shoulder_angle)
                     
                     # Rear Right
-                    foot, leg, shoulder = leg_positions['rear_right'].inverse_kinematics()
-                    self.set_rear_right_servos(foot, leg, shoulder)
+                    foot_angle, leg_angle, shoulder_angle = leg_positions['rear_right'].inverse_kinematics()
+                    self.set_rear_right_servos(foot_angle, leg_angle, shoulder_angle)
 
                 if event[ControllerEvent.A]:
                     self._is_running = False
@@ -302,55 +302,55 @@ class MotionController:
         self._servo_service.front_leg_right_angle = pose.front_right.leg_angle
         self._servo_service.front_foot_right_angle = pose.front_right.foot_angle
 
-    def set_rear_left_servos(self, foot: float, leg: float, shoulder: float):
+    def set_rear_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the back left leg.
 
         Parameters
         ----------
-        foot : float
+        foot_angle : float
             Servo angle for foot in degrees.
-        leg : float
+        leg_angle : float
             Servo angle for leg in degrees.
-        shoulder : float
+        shoulder_angle : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.rear_shoulder_left_angle = shoulder
-        self._servo_service.rear_leg_left_angle = min(leg + LEG_SERVO_OFFSET, 180)
-        self._servo_service.rear_foot_left_angle = max(foot - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.rear_shoulder_left_angle = shoulder_angle
+        self._servo_service.rear_leg_left_angle = min(leg_angle + LEG_SERVO_OFFSET, 180)
+        self._servo_service.rear_foot_left_angle = max(foot_angle - FOOT_SERVO_OFFSET, 0)
 
-    def set_rear_right_servos(self, foot: float, leg: float, shoulder: float):
+    def set_rear_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the back right leg.
 
         Parameters
         ----------
-        foot : float
+        foot_angle : float
             Servo angle for foot in degrees.
-        leg : float
+        leg_angle : float
             Servo angle for leg in degrees.
-        shoulder : float
+        shoulder_angle : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.rear_shoulder_right_angle = 180 - shoulder
-        self._servo_service.rear_leg_right_angle = max(180 - (leg + LEG_SERVO_OFFSET), 0)
-        self._servo_service.rear_foot_right_angle = 180 - max(foot - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.rear_shoulder_right_angle = 180 - shoulder_angle
+        self._servo_service.rear_leg_right_angle = max(180 - (leg_angle + LEG_SERVO_OFFSET), 0)
+        self._servo_service.rear_foot_right_angle = 180 - max(foot_angle - FOOT_SERVO_OFFSET, 0)
 
-    def set_front_left_servos(self, foot: float, leg: float, shoulder: float):
+    def set_front_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the front left leg.
 
         Parameters
         ----------
-        foot : float
+        foot_angle : float
             Servo angle for foot in degrees.
-        leg : float
+        leg_angle : float
             Servo angle for leg in degrees.
-        shoulder : float
+        shoulder_angle : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.front_shoulder_left_angle = 180 - shoulder
-        self._servo_service.front_leg_left_angle = min(leg + LEG_SERVO_OFFSET, 180)
-        self._servo_service.front_foot_left_angle = max(foot - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.front_shoulder_left_angle = 180 - shoulder_angle
+        self._servo_service.front_leg_left_angle = min(leg_angle + LEG_SERVO_OFFSET, 180)
+        self._servo_service.front_foot_left_angle = max(foot_angle - FOOT_SERVO_OFFSET, 0)
 
-    def set_front_right_servos(self, foot: float, leg: float, shoulder: float):
+    def set_front_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the front right leg.
 
         Parameters
@@ -362,9 +362,9 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.front_shoulder_right_angle = shoulder
-        self._servo_service.front_leg_right_angle = max(180 - (leg + LEG_SERVO_OFFSET), 0)
-        self._servo_service.front_foot_right_angle = 180 - max(foot - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.front_shoulder_right_angle = shoulder_angle
+        self._servo_service.front_leg_right_angle = max(180 - (leg_angle + LEG_SERVO_OFFSET), 0)
+        self._servo_service.front_foot_right_angle = 180 - max(foot_angle - FOOT_SERVO_OFFSET, 0)
 
     def body_move_pitch(self, raw_value: float):
 
