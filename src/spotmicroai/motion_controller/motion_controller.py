@@ -3,6 +3,7 @@ import queue
 import signal
 import sys
 import time
+from spotmicroai.motion_controller.models.pose import Pose
 from spotmicroai.motion_controller.services.keyframe_service import KeyframeService
 from spotmicroai.motion_controller.models.coordinate import Coordinate
 from spotmicroai.motion_controller.services.pose_service import PoseService
@@ -27,13 +28,6 @@ class MotionController:
     _is_activated = False
     _is_running = False
     _keyframe_service: KeyframeService
-
-    _forward_factor = 0
-    _max_forward_factor = 0.5
-    _rotation_factor = 0.0
-    _lean_factor = 0.0
-    _height_factor = 1
-    _walking_speed = 10
 
     def __init__(self, communication_queues):
         try:
@@ -79,9 +73,6 @@ class MotionController:
     def do_process_events_from_queues(self):
 
         # State Variables
-        elapsed = 0.0
-        start = 0
-        last_index = 0
         inactivity_counter = time.time()
         activate_debounce_time = 0
         walking_debounce_time = 0
@@ -122,7 +113,6 @@ class MotionController:
                     self._servo_service = ServoService()
                     time.sleep(0.25)
                     self._servo_service.rest_position()
-                    start = time.time()
                     # Reset inactivity counter on activation so timer starts now
                     inactivity_counter = time.time()
             
@@ -151,57 +141,27 @@ class MotionController:
             
             try:
                 if self._is_running:
-
-                    # This logic counts from 0 to 6 (length of the walking cycle)
-                    elapsed += (time.time() - start) * self._walking_speed
-                    elapsed = elapsed % self._keyframe_service.walking_cycle_length
-
-                    start = time.time()
-                    index = math.floor(elapsed)
-                    ratio = elapsed - index
-
-                    if last_index != index:
-                        # There are 4 entries in the keyframes array, one per leg. Each contains two states, current and previous
-                        # Shifting the keyframes moves the second entry into the first entry making it the 'current' state 
-                        self._keyframe_service.createNextKeyframe()
-
-                        # Calculate Lateral Movement - Sideway movement
-                        x_rot, z_rot = self.calculate_rotational_movement(index)
-                        
-                        current_coordinate = self._keyframe_service.walking_cycle[index]
-                        # Handle Front-Right and Back-Left legs first
-                        # Here, we replace the second entry for each leg with newly calculated
-                        x = current_coordinate.x * -self._forward_factor + x_rot
-                        y = current_coordinate.y
-                        z = current_coordinate.z + z_rot
-
-                        self._keyframe_service.current.front_right = Coordinate(x, y, z)
-
-                        x = current_coordinate.x * -self._forward_factor - x_rot
-                        y = current_coordinate.y
-                        z = current_coordinate.z + z_rot
-                        self._keyframe_service.current.rear_left = Coordinate(x, y, z)
-
-                        adjusted_index = (index + 3) % self._keyframe_service.walking_cycle_length
-                        x_rot, z_rot = self.calculate_rotational_movement(adjusted_index)
-                        # Handle the other two legs, Front-Left and Back-Right
-                        current_coordinate = self._keyframe_service.walking_cycle[adjusted_index]
-                        
-                        x = current_coordinate.x * -self._forward_factor - x_rot
-                        y = current_coordinate.y
-                        z = current_coordinate.z - z_rot
-                        self._keyframe_service.current.front_left = Coordinate(x, y, z)
-
-                        x = current_coordinate.x * -self._forward_factor + x_rot
-                        y = current_coordinate.y
-                        z = current_coordinate.z - z_rot
-                        self._keyframe_service.current.rear_right = Coordinate(x, y, z)
-
-                        last_index = index
-
-                    # The call below interpolates the next frame. Basically, it checks what fraction of a second has elapsed since the last frame to calculate a ratio
-                    # Then it uses the ratio to adjust the values of the last frame accordingly. 
-                    self.interpolate_next_keyframe(ratio)
+                    # Update walking cycle and get current position
+                    index, ratio = self._keyframe_service.update_walking_keyframes()
+                    
+                    # Get interpolated leg positions and apply to servos
+                    leg_positions = self._keyframe_service.get_interpolated_leg_positions(ratio)
+                    
+                    # Front Right
+                    foot, leg, shoulder = leg_positions['front_right'].inverse_kinematics()
+                    self.set_front_right_servos(foot, leg, shoulder)
+                    
+                    # Rear Left
+                    foot, leg, shoulder = leg_positions['rear_left'].inverse_kinematics()
+                    self.set_rear_left_servos(foot, leg, shoulder)
+                    
+                    # Front Left
+                    foot, leg, shoulder = leg_positions['front_left'].inverse_kinematics()
+                    self.set_front_left_servos(foot, leg, shoulder)
+                    
+                    # Rear Right
+                    foot, leg, shoulder = leg_positions['rear_right'].inverse_kinematics()
+                    self.set_rear_right_servos(foot, leg, shoulder)
 
                 if event[ControllerEvent.A]:
                     self._is_running = False
@@ -231,45 +191,43 @@ class MotionController:
                     # D-Pad Up/Down
                     if self.check_event(ControllerEvent.DPAD_VERTICAL, event, prev_event):
                         if event[ControllerEvent.DPAD_VERTICAL] > 0:
-                            self._walking_speed = min(max(self._walking_speed - 1, 0), 15)
+                            self._keyframe_service.adjust_walking_speed(-1)
                         else:
-                            self._walking_speed = max(min(self._walking_speed + 1, 15), 0)
+                            self._keyframe_service.adjust_walking_speed(1)
                     
                     # Left Thumbstick Up/Down
                     if event[ControllerEvent.LEFT_STICK_Y]:
-                        self.set_forward_factor(event[ControllerEvent.LEFT_STICK_Y])
+                        self._keyframe_service.set_forward_factor(event[ControllerEvent.LEFT_STICK_Y])
                     
                     # Left Thumbstick Left/Right
                     if event[ControllerEvent.LEFT_STICK_X]:
-                        self.set_rotation_factor(event[ControllerEvent.LEFT_STICK_X])
+                        self._keyframe_service.set_rotation_factor(event[ControllerEvent.LEFT_STICK_X])
 
                     # Left Thumbstick Click
                     if event[ControllerEvent.LEFT_STICK_CLICK]:
-                        self._rotation_factor = 0
-                        self._forward_factor = 0
+                        self._keyframe_service.reset_movement()
 
                     # Right Thumbstick Up/Down
                     if event[ControllerEvent.RIGHT_STICK_Y]:
-                        self.set_lean(event[ControllerEvent.RIGHT_STICK_Y])
+                        self._keyframe_service.set_lean(event[ControllerEvent.RIGHT_STICK_Y])
                     # Right Thumbstick Left/Right
                     if event[ControllerEvent.RIGHT_STICK_X]:
-                        self.set_height_offset(event[ControllerEvent.RIGHT_STICK_X])
+                        self._keyframe_service.set_height_offset(event[ControllerEvent.RIGHT_STICK_X])
                         # self.set_lean(event[ControllerEvent.RIGHT_STICK_X])
                     # Right Thumbstick Click
                     if event[ControllerEvent.RIGHT_STICK_CLICK]:
-                        self.set_height_offset(0)
-                        self.set_lean(0)
+                        self._keyframe_service.reset_body_adjustments()
                 else:
                     # Right Bumper
                     if self.check_event(ControllerEvent.RIGHT_BUMPER, event, prev_event):
                         # Next Pose
                         time.sleep(0.5)
-                        self.handle_pose(self._pose_service.next)
+                        self.handle_pose(self._pose_service.next())
                     # Left Bumper
                     if self.check_event(ControllerEvent.LEFT_BUMPER, event, prev_event):
                         # Prev Pose
                         time.sleep(1)
-                        self.handle_pose(self._pose_service.previous)
+                        self.handle_pose(self._pose_service.previous())
 
                     if event[ControllerEvent.DPAD_VERTICAL]:
                         self.body_move_pitch(event[ControllerEvent.DPAD_VERTICAL])
@@ -307,8 +265,10 @@ class MotionController:
                     else:
                         walking_debounce_time = time.time()
 
-                    start = time.time()
                     self._is_running = not self._is_running
+                    if self._is_running:
+                        # Reset walking state when starting to walk
+                        self._keyframe_service.reset_walking_state()
                     time.sleep(0.5)
 
                 self._servo_service.commit()
@@ -325,118 +285,24 @@ class MotionController:
     def check_event(self, key, event, prev_event):
         return key in event and event[key] != 0 and key in prev_event and prev_event[key] == 0
 
-    def handle_pose(self, pose):
-        self._servo_service.rear_shoulder_left_angle = pose.rear_left[0]
-        self._servo_service.rear_leg_left_angle = pose.rear_left[1]
-        self._servo_service.rear_foot_left_angle = pose.rear_left[2]
+    def handle_pose(self, pose: Pose):
+        self._servo_service.rear_shoulder_left_angle = pose.rear_left.shoulder_angle
+        self._servo_service.rear_leg_left_angle = pose.rear_left.leg_angle
+        self._servo_service.rear_foot_left_angle = pose.rear_left.foot_angle
 
-        self._servo_service.rear_shoulder_right_angle = pose.rear_right[0]
-        self._servo_service.rear_leg_right_angle = pose.rear_right[1]
-        self._servo_service.rear_foot_right_angle = pose.rear_right[2]
+        self._servo_service.rear_shoulder_right_angle = pose.rear_right.shoulder_angle
+        self._servo_service.rear_leg_right_angle = pose.rear_right.leg_angle
+        self._servo_service.rear_foot_right_angle = pose.rear_right.foot_angle
 
-        self._servo_service.front_shoulder_left_angle = pose.front_left[0]
-        self._servo_service.front_leg_left_angle = pose.front_left[1]
-        self._servo_service.front_foot_left_angle = pose.front_left[2]
+        self._servo_service.front_shoulder_left_angle = pose.front_left.shoulder_angle
+        self._servo_service.front_leg_left_angle = pose.front_left.leg_angle
+        self._servo_service.front_foot_left_angle = pose.front_left.foot_angle
 
-        self._servo_service.front_shoulder_right_angle = pose.front_right[0]
-        self._servo_service.front_leg_right_angle = pose.front_right[1]
-        self._servo_service.front_foot_right_angle = pose.front_right[2]
+        self._servo_service.front_shoulder_right_angle = pose.front_right.shoulder_angle
+        self._servo_service.front_leg_right_angle = pose.front_right.leg_angle
+        self._servo_service.front_foot_right_angle = pose.front_right.foot_angle
 
-    def calculate_rotational_movement(self, index):
-        # This angle calculation is only used when rotating the bot clockwise or counter clockwise
-        angle = 45.0 / 180.0 * math.pi
-        x_rot = math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
-        z_rot = math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
-
-        angle = (45 + self._keyframe_service.walking_cycle[index].x) / 180.0 * math.pi
-        x_rot = x_rot - math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
-        z_rot = z_rot - math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
-        
-        return x_rot, z_rot
-
-    def set_forward_factor(self, factor):
-        """Set forward and backward movement.
-
-        Parameters
-        ----------
-        factor : float
-            Positive values move forward, negative values move back. Should be in the range -1.0 - 1.0.
-        """
-        self._forward_factor = factor
-
-    def set_rotation_factor(self, factor):
-        """Set rotation movement.
-
-        Parameters
-        ----------
-        factor : float
-            Positive values rotate right, negative values rotate left. Should be in the range -1.0 - 1.0.
-        """
-        if self._rotation_factor >= 0 and factor >= self._rotation_factor:
-            self._rotation_factor = min(self._rotation_factor + 0.025, 1)
-
-        if self._rotation_factor > 0 and factor < 0:
-            self._rotation_factor = max(self._rotation_factor - 0.025, -1)
-
-        if self._rotation_factor < 0 and factor > 0:
-            self._rotation_factor = min(self._rotation_factor + 0.025, 1)
-
-        if self._rotation_factor < 0 and factor < self._rotation_factor:
-            self._rotation_factor = max(self._rotation_factor - 0.025, -1)
-
-    def set_lean(self, lean):
-        """Set the distance that it should lean left to right.
-
-        Parameters
-        ----------
-        lean : float
-            Positive values lean right, negative values lean left. Should be in the range -1.0 - 1.0.
-        """
-        self._lean_factor = lean * 50
-
-    def set_height_offset(self, height):
-        """Set the extra distance for the chassis to be off the ground.
-
-        Parameters
-        ----------
-        height : float
-            Should be in the range 0.0-1.0.
-        """
-        self._height_factor = height * 40
-
-    def interpolate_next_keyframe(self, ratio):
-        """Interpolate between the current and next keyframes for each leg and apply the servo positions.
-
-        Parameters
-        ----------
-        ratio : float
-            The ratio of each keyframe in the interpolation. Should be in the range 0.0-1.0.
-        """
-        # Front Right
-        start_coord = Coordinate(self._keyframe_service.previous.front_right.x, self._keyframe_service.previous.front_right.y + self._height_factor, self._keyframe_service.previous.front_right.z - self._lean_factor)
-        end_coord = Coordinate(self._keyframe_service.current.front_right.x, self._keyframe_service.current.front_right.y + self._height_factor, self._keyframe_service.current.front_right.z - self._lean_factor)
-        phi, theta, omega = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
-        self.set_front_right_servos(phi, theta, omega)
-
-        # Rear Left
-        start_coord = Coordinate(self._keyframe_service.previous.rear_left.x, self._keyframe_service.previous.rear_left.y + self._height_factor, self._keyframe_service.previous.rear_left.z + self._lean_factor)
-        end_coord = Coordinate(self._keyframe_service.current.rear_left.x, self._keyframe_service.current.rear_left.y + self._height_factor, self._keyframe_service.current.rear_left.z + self._lean_factor)
-        phi, theta, omega = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
-        self.set_rear_left_servos(phi, theta, omega)
-
-        # Front Left
-        start_coord = Coordinate(self._keyframe_service.previous.front_left.x, self._keyframe_service.previous.front_left.y + self._height_factor, self._keyframe_service.previous.front_left.z + self._lean_factor)
-        end_coord = Coordinate(self._keyframe_service.current.front_left.x, self._keyframe_service.current.front_left.y + self._height_factor, self._keyframe_service.current.front_left.z + self._lean_factor)
-        phi, theta, omega = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
-        self.set_front_left_servos(phi, theta, omega)
-
-        # Rear Right
-        start_coord = Coordinate(self._keyframe_service.previous.rear_right.x, self._keyframe_service.previous.rear_right.y + self._height_factor, self._keyframe_service.previous.rear_right.z - self._lean_factor)
-        end_coord = Coordinate(self._keyframe_service.current.rear_right.x, self._keyframe_service.current.rear_right.y + self._height_factor, self._keyframe_service.current.rear_right.z - self._lean_factor)
-        phi, theta, omega = start_coord.interpolate_to(end_coord, ratio).inverse_kinematics()
-        self.set_rear_right_servos(phi, theta, omega)
-
-    def set_rear_left_servos(self, phi, theta, omega):
+    def set_rear_left_servos(self, foot: float, leg: float, shoulder: float):
         """Helper function for setting servo angles for the back left leg.
 
         Parameters
@@ -448,11 +314,11 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.rear_shoulder_left_angle = omega
-        self._servo_service.rear_leg_left_angle = min(theta + LEG_SERVO_OFFSET, 180)
-        self._servo_service.rear_foot_left_angle = max(phi - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.rear_shoulder_left_angle = shoulder
+        self._servo_service.rear_leg_left_angle = min(leg + LEG_SERVO_OFFSET, 180)
+        self._servo_service.rear_foot_left_angle = max(foot - FOOT_SERVO_OFFSET, 0)
 
-    def set_rear_right_servos(self, phi, theta, omega):
+    def set_rear_right_servos(self, foot: float, leg: float, shoulder: float):
         """Helper function for setting servo angles for the back right leg.
 
         Parameters
@@ -464,11 +330,11 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.rear_shoulder_right_angle = 180 - omega
-        self._servo_service.rear_leg_right_angle = max(180 - (theta + LEG_SERVO_OFFSET), 0)
-        self._servo_service.rear_foot_right_angle = 180 - max(phi - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.rear_shoulder_right_angle = 180 - shoulder
+        self._servo_service.rear_leg_right_angle = max(180 - (leg + LEG_SERVO_OFFSET), 0)
+        self._servo_service.rear_foot_right_angle = 180 - max(foot - FOOT_SERVO_OFFSET, 0)
 
-    def set_front_left_servos(self, phi, theta, omega):
+    def set_front_left_servos(self, foot: float, leg: float, shoulder: float):
         """Helper function for setting servo angles for the front left leg.
 
         Parameters
@@ -480,11 +346,11 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.front_shoulder_left_angle = 180 - omega
-        self._servo_service.front_leg_left_angle = min(theta + LEG_SERVO_OFFSET, 180)
-        self._servo_service.front_foot_left_angle = max(phi - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.front_shoulder_left_angle = 180 - shoulder
+        self._servo_service.front_leg_left_angle = min(leg + LEG_SERVO_OFFSET, 180)
+        self._servo_service.front_foot_left_angle = max(foot - FOOT_SERVO_OFFSET, 0)
 
-    def set_front_right_servos(self, phi, theta, omega):
+    def set_front_right_servos(self, foot: float, leg: float, shoulder: float):
         """Helper function for setting servo angles for the front right leg.
 
         Parameters
@@ -496,11 +362,11 @@ class MotionController:
         shoulder : float
             Servo angle for shoulder in degrees.
         """
-        self._servo_service.front_shoulder_right_angle = omega
-        self._servo_service.front_leg_right_angle = max(180 - (theta + LEG_SERVO_OFFSET), 0)
-        self._servo_service.front_foot_right_angle = 180 - max(phi - FOOT_SERVO_OFFSET, 0)
+        self._servo_service.front_shoulder_right_angle = shoulder
+        self._servo_service.front_leg_right_angle = max(180 - (leg + LEG_SERVO_OFFSET), 0)
+        self._servo_service.front_foot_right_angle = 180 - max(foot - FOOT_SERVO_OFFSET, 0)
 
-    def body_move_pitch(self, raw_value):
+    def body_move_pitch(self, raw_value: float):
 
         leg_increment = 10
         foot_increment = 15
@@ -529,7 +395,7 @@ class MotionController:
         else:
             self._servo_service.rest_position()
 
-    def body_move_roll(self, raw_value):
+    def body_move_roll(self, raw_value: float):
 
         range = 1
 
