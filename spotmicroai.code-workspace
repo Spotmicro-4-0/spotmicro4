@@ -1,110 +1,73 @@
 {
-	"folders": [
-		{
-			"name": "spotmicroai4",
-			"path": "."
-		}
-	],
-	"settings": {
-		"python.defaultInterpreterPath": "python3",
-		"python.analysis.autoSearchPaths": true,
-		"python.analysis.extraPaths": [
-			"./spotmicroai",
-			"./utilities",
-			"./calibration",
-			"./integration_tests"
-		],
-		"python.analysis.typeCheckingMode": "basic",
-		"python.linting.enabled": true,
-		"python.linting.pylintEnabled": true,
-		"python.linting.flake8Enabled": false,
-		"python.linting.pycodestyleEnabled": false,
-		"python.formatting.provider": "black",
-		"python.testing.pytestEnabled": true,
-		"python.testing.unittestEnabled": false,
-		"python.testing.pytestArgs": [
-			"integration_tests"
-		],
-		"files.exclude": {
-			"**/__pycache__": true,
-			"**/*.pyc": true,
-			"**/*.pyo": true,
-			"**/*.pyd": true,
-			"**/.Python": true,
-			"**/env": true,
-			"**/venv": true,
-			"**/.venv": true,
-			"**/pip-log.txt": true,
-			"**/pip-delete-this-directory.txt": true,
-			"**/.tox": true,
-			"**/.coverage": true,
-			"**/.pytest_cache": true,
-			"**/*.cover": true,
-			"**/*.log": false,
-			"**/htmlcov": true,
-			"**/.git": true,
-			"**/.svn": true,
-			"**/.hg": true,
-			"**/CVS": true,
-			"**/.DS_Store": true,
-			"**/Thumbs.db": true
-		},
-		"files.watcherExclude": {
-			"**/__pycache__/**": true,
-			"**/node_modules/**": true,
-			"**/.git/**": true,
-			"**/.pytest_cache/**": true,
-			"**/logs/**": true
-		},
-		"editor.tabSize": 4,
-		"editor.insertSpaces": true,
-		"editor.rulers": [
-			79,
-			120
-		],
-		"editor.formatOnSave": true,
-		"editor.codeActionsOnSave": {
-			"source.organizeImports": "explicit"
-		},
-		"editor.cursorBlinking": "expand",
-		"editor.cursorSmoothCaretAnimation": "on",
-		"files.associations": {
-			"*.py": "python",
-			"*.sh": "shellscript",
-			"*.service": "systemd",
-			"*.default": "properties",
-			"*.log": "log"
-		},
-		"terminal.integrated.cwd": "${workspaceFolder}",
-		"terminal.integrated.env.windows": {
-			"PYTHONPATH": "${workspaceFolder};${workspaceFolder}\\spotmicroai;${workspaceFolder}\\utilities;${workspaceFolder}\\calibration"
-		},
-		"terminal.integrated.env.linux": {
-			"PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/spotmicroai:${workspaceFolder}/utilities:${workspaceFolder}/calibration"
-		},
-		"terminal.integrated.env.osx": {
-			"PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/spotmicroai:${workspaceFolder}/utilities:${workspaceFolder}/calibration"
-		},
-		"search.exclude": {
-			"**/logs": true,
-			"**/backups": true,
-			"**/__pycache__": true,
-			"**/*.pyc": true
-		}
-	},
-	"extensions": {
-		"recommendations": [
-			"njpwerner.autodocstring",
-			"ms-python.black-formatter",
-			"ms-python.flake8",
-			"ms-python.isort",
-			"ms-python.pylint",
-			"ms-python.vscode-pylance",
-			"ms-python.python",
-			"ms-python.python-environments",
-			"ms-vscode.hexeditor",
-			"github.copilot",
-			"github.copilot-chat"
-		]
-	}
+    "folders": [
+        {
+            "name": "spotmicro4",
+            "path": "."
+        }
+    ],
+    "settings": {
+        // 🧠 --- Python Environment ---
+        "python.defaultInterpreterPath": "venv/bin/python3",
+        "python.analysis.autoSearchPaths": true,
+        "python.analysis.extraPaths": [
+            "./src",
+            "./src/spotmicroai",
+            "./src/utilities",
+            "./src/calibration",
+            "./src/integration_tests"
+        ],
+        "python.analysis.typeCheckingMode": "basic",
+        "python.analysis.diagnosticSeverityOverrides": {
+            "reportMissingImports": "none",
+            "reportMissingModuleSource": "none"
+        },
+
+        // 🧹 --- Linting & Formatting ---
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+
+        // 🧪 --- Testing ---
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": ["src/integration_tests"],
+
+        // 📁 --- File & Folder Hygiene ---
+        "files.exclude": {
+            "**/__pycache__": true,
+            "**/*.pyc": true,
+            "**/.venv": true,
+            "**/venv": true,
+            "**/.pytest_cache": true,
+            "**/.git": true,
+            "**/logs": false
+        },
+        "files.watcherExclude": {
+            "**/__pycache__/**": true,
+            "**/.pytest_cache/**": true,
+            "**/logs/**": true,
+            "**/.git/**": true
+        },
+
+        // 🧩 --- Editor & UX ---
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.rulers": [88, 120],
+        "editor.cursorBlinking": "expand",
+        "editor.cursorSmoothCaretAnimation": "on",
+        "files.associations": {
+            "*.py": "python",
+            "*.sh": "shellscript",
+            "*.service": "systemd",
+            "*.default": "properties",
+            "*.log": "log"
+        },
+
+        // 🧭 --- Terminal ---
+        "terminal.integrated.cwd": "${workspaceFolder}",
+        "terminal.integrated.env.linux": {
+            "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}/src/spotmicroai"
+        }
+    }
 }
