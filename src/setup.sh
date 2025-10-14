@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# SpotMicroAI Deployment Script
-# This script validates the host environment and initiates the deployment process
+# SpotmicroAI Setup Tool
+# This tool validates the host environment and initiates the setup process
 
 set -e  # Exit on any error
 
@@ -19,20 +19,15 @@ print_info() {
 print_usage() {
     echo "Usage: $0 [OPTIONS]"
     echo
-    echo "SpotMicroAI Deployment Script"
+    echo "SpotmicroAI Setup Tool"
     echo
     echo "OPTIONS:"
-    echo "  -y, --yes     Automatically accept existing configuration"
-    echo "  --yes-all     Auto-confirm all actions (no Y/n prompts)"
     echo "  --clean       Clear existing configuration and start fresh"
     echo "  --version     Show version information"
     echo "  -h, --help    Show this help message"
     echo
     echo "Examples:"
-    echo "  $0                # Interactive deployment"
-    echo "  $0 -y             # Use existing config without prompting"
-    echo "  $0 --yes-all      # Auto-confirm all actions (no prompts)"
-    echo "  $0 -y --yes-all   # Use existing config + auto-confirm all"
+    echo "  $0                # Interactive setup"
     echo "  $0 --clean        # Clear existing config and start fresh"
 }
 
@@ -69,7 +64,7 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     exit 0
 fi
 
-print_info "SpotMicroAI Deployment Script"
+print_info "SpotmicroAI Setup Tool"
 print_info "=============================="
 
 # Check if Python is installed
@@ -129,25 +124,25 @@ if [ ${#missing_modules[@]} -ne 0 ]; then
     done
 fi
 
-# Check if deployment directory exists
-DEPLOY_DIR="$(dirname "$0")/deployment"
-if [ ! -d "$DEPLOY_DIR" ]; then
-    print_error "Deployment directory not found: $DEPLOY_DIR"
+# Check if setup directory exists
+SETUP_DIR="$(dirname "$0")/setup"
+if [ ! -d "$SETUP_DIR" ]; then
+    print_error "Setup directory not found: $SETUP_DIR"
     exit 1
 fi
 
-# Check if deploy.py exists
-DEPLOY_SCRIPT="$DEPLOY_DIR/deploy.py"
-if [ ! -f "$DEPLOY_SCRIPT" ]; then
-    print_error "Deploy script not found: $DEPLOY_SCRIPT"
+# Check if setup.py exists
+SETUP_TOOL="$SETUP_DIR/setup.py"
+if [ ! -f "$SETUP_TOOL" ]; then
+    print_error "Setup tool not found: $SETUP_TOOL"
     exit 1
 fi
 
 print_info "All validation checks passed!"
-print_info "Launching deployment script..."
+print_info "Launching setup tool..."
 
 # Change to the source directory
 cd "$(dirname "$0")"
 
-# Execute the Python deployment script
-exec $PYTHON_CMD deployment/deploy.py "$@"
+# Execute the Python setup tool
+exec $PYTHON_CMD setup/setup.py "$@"

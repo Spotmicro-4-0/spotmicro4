@@ -1,10 +1,18 @@
-# SpotMicroAI runtime source code
+# Spotmicro4 Source Code
 
-This repo contains a basic os that let you move SpotMicroAI with a remote controller and a RaspberryPi
+This directory contains the source code for the Spotmicro4 robot project.
 
-## Start
+## Setup Tool
 
-- Setup your Raspberry pi zero with SD Card. Configure wifi and host name.
-- 
+The `setup_tool` folder contains a command-line utility that can connect to the robot over WiFi and SSH. It performs various operations, including:
 
-Refer to the instructions here to install the software: https://gitlab.com/custom_robots/spotmicroai/basic
+- Packaging the runtime code
+- Deploying the packaged code to the Raspberry Pi (RPi)
+
+To use the setup tool, navigate to the `setup_tool` directory and run the appropriate commands. Refer to the tool's documentation for detailed instructions.
+
+## Robot Folder
+
+The `robot` folder contains the runtime code that is packaged as an artifact and sent to the Raspberry Pi for execution on the robot.
+
+This code includes the main application logic, controllers, and utilities necessary for the robot's operation.
