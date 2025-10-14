@@ -561,8 +561,9 @@ class SetupTool:
         username = self.config.get('username')
         ssh_key_path = self.config.get('ssh_key_path')
         
-        self.print_info(f"Syncing files from {robot_dir} to Raspberry Pi...")
-        self.print_info("Using rsync to copy only changed files...")
+        self.print_info(f"Source: {robot_dir}")
+        self.print_info(f"Target: {username}@{hostname}:~/spotmicroai/")
+        self.print_info("Using rsync (transfers only file changes/deltas, not full copies)...")
         
         # Build rsync command
         # -a: archive mode (preserves permissions, timestamps, etc.)
@@ -575,7 +576,7 @@ class SetupTool:
             rsync_cmd = (
                 f'rsync -avz --delete '
                 f'--exclude="__pycache__" --exclude="*.pyc" --exclude=".git" '
-                f'--exclude="venv" --exclude="*.log" '
+                f'--exclude="venv" --exclude="*.log" --exclude="logs/" '
                 f'-e "ssh -i \'{ssh_key_path}\' -o StrictHostKeyChecking=no" '
                 f'{robot_dir}/ {username}@{hostname}:~/spotmicroai/'
             )
@@ -583,17 +584,19 @@ class SetupTool:
             rsync_cmd = (
                 f'rsync -avz --delete '
                 f'--exclude="__pycache__" --exclude="*.pyc" --exclude=".git" '
-                f'--exclude="venv" --exclude="*.log" '
+                f'--exclude="venv" --exclude="*.log" --exclude="logs/" '
                 f'-e "ssh -o StrictHostKeyChecking=no" '
                 f'{robot_dir}/ {username}@{hostname}:~/spotmicroai/'
             )
         
         try:
             self.print_info("Running rsync...")
-            result = subprocess.run(rsync_cmd, shell=True, capture_output=True, text=True)
+            print()  # Add blank line for readability
             
-            if result.stdout:
-                print(result.stdout)
+            # Run rsync without capturing output so it streams in real-time
+            result = subprocess.run(rsync_cmd, shell=True, text=True)
+            
+            print()  # Add blank line after rsync output
             
             if result.returncode == 0:
                 self.print_info("✓ Files synced successfully")
@@ -606,8 +609,6 @@ class SetupTool:
                 return True
             else:
                 self.print_error("Failed to sync files")
-                if result.stderr:
-                    print(result.stderr)
                 return False
                 
         except FileNotFoundError:
@@ -707,29 +708,13 @@ class SetupTool:
                 
                 if self.config.get('setup_completed'):
                     self.print_info("Setup was previously completed")
+                    print()
+                    self.print_info("Syncing code changes to Raspberry Pi...")
+                    print("\nTip: Use './setup.sh --clean' to reconfigure from scratch")
+                    print()
                     
-                    # Check if --deploy flag is used or user wants to sync
-                    if getattr(self.args, 'deploy', False):
-                        self.print_info("Deploy mode: Syncing code changes...")
-                        return self.sync_code_changes()
-                    
-                    # Ask if user wants to deploy/sync changes
-                    print("\nOptions:")
-                    print("  1. Sync code changes to Raspberry Pi (recommended for development)")
-                    print("  2. Run full setup again")
-                    print("  3. Exit")
-                    print("  (You can also use --clean to start fresh or --deploy to sync directly)")
-                    
-                    choice = self.get_user_input("\nSelect option [1/2/3]", default="1")
-                    
-                    if choice == "1":
-                        return self.sync_code_changes()
-                    elif choice == "2":
-                        self.print_info("Running full setup...")
-                        # Continue to full setup below
-                    else:
-                        self.print_info("Exiting...")
-                        return True
+                    # Automatically sync code changes
+                    return self.sync_code_changes()
                 else:
                     # Ask for password for incomplete setup
                     self.print_question("Please enter SSH password to continue")

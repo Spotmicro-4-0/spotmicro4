@@ -20,9 +20,14 @@ This will:
 
 ### 2. Development Mode (Sync Changes)
 ```bash
+./setup.sh
+```
+or explicitly:
+```bash
 ./setup.sh --deploy
 ```
-Or simply run `./setup.sh` and select option 1 when prompted.
+
+After initial setup is complete, running `./setup.sh` will automatically sync your changes.
 
 This will:
 - Sync only changed files using `rsync`
@@ -66,11 +71,21 @@ This will clear all saved configuration and start from scratch.
 
 ## Benefits of rsync
 
-- **Speed**: Only transfers changed files
+- **Delta Sync**: Only transfers the **changed parts** of files (not full copies!)
+- **Speed**: Skips unchanged files entirely
 - **Efficiency**: Compresses data during transfer
 - **Safety**: Preserves file attributes and permissions
 - **Clean**: Automatically removes deleted files on remote
 - **Smart**: Excludes development artifacts automatically
+
+### How Delta Sync Works
+
+rsync uses a sophisticated algorithm to:
+1. Compare file checksums between local and remote
+2. Only transfer the **byte-level differences** (deltas)
+3. Skip files that haven't changed at all
+
+This means if you change one line in a 1000-line file, rsync only transfers that change, not the entire file!
 
 ## What Gets Synced
 
