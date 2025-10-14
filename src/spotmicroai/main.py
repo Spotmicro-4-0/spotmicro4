@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
+import multiprocessing
 import sys
 
-from spotmicroai.utilities.log import Logger
-
-import multiprocessing
-
-from spotmicroai.motion_controller.motion_controller import MotionController
 from spotmicroai.abort_controller.abort_controller import AbortController
 from spotmicroai.lcd_screen_controller.lcd_screen_controller import LCDScreenController
+from spotmicroai.motion_controller.motion_controller import MotionController
 from spotmicroai.remote_controller.remote_controller import RemoteControllerController
+from spotmicroai.utilities.log import Logger
 
 log = Logger().setup_logger()
 
@@ -35,11 +33,13 @@ def process_output_lcd_screen_controller(communication_queues):
 
 
 def create_controllers_queues():
-    communication_queues = {'abort_controller': multiprocessing.Queue(10),
-                            'motion_controller': multiprocessing.Queue(1),
-                            'lcd_screen_controller': multiprocessing.Queue(10)}
+    communication_queues = {
+        'abort_controller': multiprocessing.Queue(10),
+        'motion_controller': multiprocessing.Queue(1),
+        'lcd_screen_controller': multiprocessing.Queue(10),
+    }
 
-    log.info('Created the communication queues: ' + ', '.join(communication_queues.keys()))
+    log.info('Created the communication queues: %s', ", ".join(communication_queues.keys()))
 
     return communication_queues
 
@@ -67,14 +67,16 @@ def main():
 
     # Activate Bluetooth controller
     # Let you move the dog using the bluetooth paired device
-    remote_controller_controller = multiprocessing.Process(target=process_remote_controller_controller,
-                                                           args=(communication_queues,))
+    remote_controller_controller = multiprocessing.Process(
+        target=process_remote_controller_controller, args=(communication_queues,)
+    )
     remote_controller_controller.daemon = True
 
     # Screen
     # Show status of the components in the screen
-    lcd_screen_controller = multiprocessing.Process(target=process_output_lcd_screen_controller,
-                                                    args=(communication_queues,))
+    lcd_screen_controller = multiprocessing.Process(
+        target=process_output_lcd_screen_controller, args=(communication_queues,)
+    )
     lcd_screen_controller.daemon = True
 
     # Start the threads, queues messages are produced and consumed in those

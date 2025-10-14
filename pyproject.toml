@@ -1,0 +1,41 @@
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 0
+combine_as_imports = true
+include_trailing_comma = true
+use_parentheses = true
+
+[tool.pylint.main]
+ignore = ["venv"]
+extension-pkg-whitelist = ["RPi.GPIO"]
+
+[tool.pylint.typecheck]
+ignored-modules = [
+    "board",
+    "adafruit_pca9685",
+    "adafruit_motor",
+    "RPI.GPIO",
+    "busio"
+]
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "E0401"   # import-error (e.g., when running outside Pi hardware)
+]
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.flake8]
+max-line-length = 120
+ignore = ["E203", "W503"]
+exclude = ["venv", "__pycache__", "build", "dist"]

@@ -1,5 +1,3 @@
-import os
-
 report_template = """
 Spotmicro Robot
 
@@ -177,11 +175,13 @@ servo_rear_shoulder_left = None
 """
 # clear = lambda: os.system('cls')
 
+
 def print_report(data):
     # clear()
     print("", flush=True)
-    print(report_template.format(
-        leg_servo_offset=data['leg_servo_offset'],
-        foot_servo_offset=data['foot_servo_offset'],
-
-    ))    
+    print(
+        report_template.format(
+            leg_servo_offset=data['leg_servo_offset'],
+            foot_servo_offset=data['foot_servo_offset'],
+        )
+    )

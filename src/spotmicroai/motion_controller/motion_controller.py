@@ -3,22 +3,25 @@ import queue
 import signal
 import sys
 import time
+
+import spotmicroai.utilities.queues as queues
 from spotmicroai.motion_controller.models.pose import Pose
 from spotmicroai.motion_controller.services.keyframe_service import KeyframeService
 from spotmicroai.motion_controller.services.pose_service import PoseService
 from spotmicroai.motion_controller.services.servo_service import ServoService
-import spotmicroai.utilities.queues as queues
 from spotmicroai.motion_controller.wrappers.pca9685 import PCA9685Board
 from spotmicroai.utilities.general import General
 from spotmicroai.utilities.log import Logger
-from .wrappers.buzzer import Buzzer
-from .constants import LEG_SERVO_OFFSET, FOOT_SERVO_OFFSET, ROTATION_OFFSET, INACTIVITY_TIME
+
+from .constants import FOOT_SERVO_OFFSET, INACTIVITY_TIME, LEG_SERVO_OFFSET
 from .enums import ControllerEvent
+from .wrappers.buzzer import Buzzer
 
 log = Logger().setup_logger('Motion controller')
 
+
 class MotionController:
-    
+
     _pca9685_board: PCA9685Board
     _servo_service: ServoService
     _pose_service: PoseService
@@ -37,7 +40,7 @@ class MotionController:
             self._buzzer = Buzzer()
             self._pose_service = PoseService()
             self._keyframe_service = KeyframeService()
-            
+
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
             self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
@@ -54,11 +57,11 @@ class MotionController:
 
     def exit_gracefully(self, signum, frame):
         log.info("Graceful shutdown initiated...")
-        
+
         # Move servos to neutral (rest) first
         self._servo_service.rest_position()
         time.sleep(0.3)
-        
+
         try:
             self._pca9685_board.deactivate()
         except Exception as e:
@@ -89,7 +92,7 @@ class MotionController:
                 event = self._motion_queue.get(block=False)
             except queue.Empty:
                 event = {}
-            
+
             if ControllerEvent.START in event and event[ControllerEvent.START] == 1:
                 if time.time() - activate_debounce_time < 1:
                     continue
@@ -114,7 +117,7 @@ class MotionController:
                     self._servo_service.rest_position()
                     # Reset inactivity counter on activation so timer starts now
                     inactivity_counter = time.time()
-            
+
             if not self._is_activated:
                 time.sleep(0.1)
                 continue
@@ -125,7 +128,7 @@ class MotionController:
                     log.info(f'Inactivity lasted {INACTIVITY_TIME} seconds. Press start to reactivate')
                     log.info('Shutting down the servos.')
                     log.info('Press START/OPTIONS to enable the servos')
-                    
+
                     self._servo_service.rest_position()
                     time.sleep(0.1)
                     self._pca9685_board.deactivate()
@@ -137,27 +140,27 @@ class MotionController:
             else:
                 # If there activity, reset the timer
                 inactivity_counter = time.time()
-            
+
             try:
                 if self._is_running:
                     # Update walking cycle and get current position
                     index, ratio = self._keyframe_service.update_walking_keyframes()
-                    
+
                     # Get interpolated leg positions and apply to servos
                     leg_positions = self._keyframe_service.get_interpolated_leg_positions(ratio)
-                    
+
                     # Front Right
                     foot_angle, leg_angle, shoulder_angle = leg_positions['front_right'].inverse_kinematics()
                     self.set_front_right_servos(foot_angle, leg_angle, shoulder_angle)
-                    
+
                     # Rear Left
                     foot_angle, leg_angle, shoulder_angle = leg_positions['rear_left'].inverse_kinematics()
                     self.set_rear_left_servos(foot_angle, leg_angle, shoulder_angle)
-                    
+
                     # Front Left
                     foot_angle, leg_angle, shoulder_angle = leg_positions['front_left'].inverse_kinematics()
                     self.set_front_left_servos(foot_angle, leg_angle, shoulder_angle)
-                    
+
                     # Rear Right
                     foot_angle, leg_angle, shoulder_angle = leg_positions['rear_right'].inverse_kinematics()
                     self.set_rear_right_servos(foot_angle, leg_angle, shoulder_angle)
@@ -174,7 +177,7 @@ class MotionController:
                     # Left Trigger
                     # if self.check_event(ControllerEvent.LEFT_TRIGGER, event, prev_event):
                     #     self._current_gait_type = 0
-                    
+
                     if self.check_event(ControllerEvent.Y, event, prev_event):
                         pass
 
@@ -186,18 +189,18 @@ class MotionController:
 
                     # D-Pad Left/Right
                     if self.check_event(ControllerEvent.DPAD_HORIZONTAL, event, prev_event):
-                        pass                
+                        pass
                     # D-Pad Up/Down
                     if self.check_event(ControllerEvent.DPAD_VERTICAL, event, prev_event):
                         if event[ControllerEvent.DPAD_VERTICAL] > 0:
                             self._keyframe_service.adjust_walking_speed(-1)
                         else:
                             self._keyframe_service.adjust_walking_speed(1)
-                    
+
                     # Left Thumbstick Up/Down
                     if event[ControllerEvent.LEFT_STICK_Y]:
                         self._keyframe_service.set_forward_factor(event[ControllerEvent.LEFT_STICK_Y])
-                    
+
                     # Left Thumbstick Left/Right
                     if event[ControllerEvent.LEFT_STICK_X]:
                         self._keyframe_service.set_rotation_factor(event[ControllerEvent.LEFT_STICK_X])
@@ -254,10 +257,10 @@ class MotionController:
 
                     # if event[ControllerEvent.X]:
                     #     self.handle_instinct(self._instincts['sit'])
-                    
+
                     # if event[ControllerEvent.Y]:
                     #     self.handle_instinct(self._instincts['sleep'])
-                    
+
                 if event[ControllerEvent.BACK] == 1:
                     if time.time() - walking_debounce_time < 1:
                         continue
@@ -274,10 +277,10 @@ class MotionController:
 
                 prev_event = event
             finally:
-                #continue
+                # continue
                 pass
             elapsed_time = time.time() - frame_start
-            
+
             if elapsed_time < FRAME_DURATION:
                 time.sleep(FRAME_DURATION - elapsed_time)
 
@@ -390,7 +393,6 @@ class MotionController:
             self._servo_service.front_leg_right_angle -= leg_increment
             self._servo_service.front_foot_right_angle += foot_increment
 
-
         else:
             self._servo_service.rest_position()
 
@@ -400,15 +402,29 @@ class MotionController:
 
         if raw_value < 0:
             self._servo_service.rear_shoulder_left_angle = max(self._servo_service.rear_shoulder_left_angle - range, 0)
-            self._servo_service.rear_shoulder_right_angle = max(self._servo_service.rear_shoulder_right_angle - range, 0)
-            self._servo_service.front_shoulder_left_angle = min(self._servo_service.front_shoulder_left_angle + range, 180)
-            self._servo_service.front_shoulder_right_angle = min(self._servo_service.front_shoulder_right_angle + range, 180)
+            self._servo_service.rear_shoulder_right_angle = max(
+                self._servo_service.rear_shoulder_right_angle - range, 0
+            )
+            self._servo_service.front_shoulder_left_angle = min(
+                self._servo_service.front_shoulder_left_angle + range, 180
+            )
+            self._servo_service.front_shoulder_right_angle = min(
+                self._servo_service.front_shoulder_right_angle + range, 180
+            )
 
         elif raw_value > 0:
-            self._servo_service.rear_shoulder_left_angle = min(self._servo_service.rear_shoulder_left_angle + range, 180)
-            self._servo_service.rear_shoulder_right_angle = min(self._servo_service.rear_shoulder_right_angle + range, 180)
-            self._servo_service.front_shoulder_left_angle = max(self._servo_service.front_shoulder_left_angle - range, 0)
-            self._servo_service.front_shoulder_right_angle = max(self._servo_service.front_shoulder_right_angle - range, 0)
+            self._servo_service.rear_shoulder_left_angle = min(
+                self._servo_service.rear_shoulder_left_angle + range, 180
+            )
+            self._servo_service.rear_shoulder_right_angle = min(
+                self._servo_service.rear_shoulder_right_angle + range, 180
+            )
+            self._servo_service.front_shoulder_left_angle = max(
+                self._servo_service.front_shoulder_left_angle - range, 0
+            )
+            self._servo_service.front_shoulder_right_angle = max(
+                self._servo_service.front_shoulder_right_angle - range, 0
+            )
 
         else:
             self._servo_service.rest_position()
@@ -508,7 +524,7 @@ class MotionController:
 
         self._servo_service.rear_shoulder_left_angle = int(General().maprange((5, -5), (145, 35), raw_value))
         self._servo_service.rear_shoulder_right_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        
+
         self._servo_service.front_shoulder_left_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
         self._servo_service.front_shoulder_right_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
 
@@ -531,6 +547,6 @@ class MotionController:
 
         self._servo_service.rear_shoulder_left_angle = int(General().maprange((5, -5), (145, 35), raw_value))
         self._servo_service.rear_shoulder_right_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        
+
         self._servo_service.front_shoulder_left_angle = int(General().maprange((5, -5), (145, 35), raw_value))
         self._servo_service.front_shoulder_right_angle = int(General().maprange((5, -5), (145, 35), raw_value))
