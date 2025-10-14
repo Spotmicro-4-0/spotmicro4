@@ -22,12 +22,14 @@ print_usage() {
     echo "SpotmicroAI Setup Tool"
     echo
     echo "OPTIONS:"
+    echo "  --deploy      Sync code changes to Raspberry Pi (for development)"
     echo "  --clean       Clear existing configuration and start fresh"
     echo "  --version     Show version information"
     echo "  -h, --help    Show this help message"
     echo
     echo "Examples:"
     echo "  $0                # Interactive setup"
+    echo "  $0 --deploy       # Sync code changes to Pi"
     echo "  $0 --clean        # Clear existing config and start fresh"
 }
 

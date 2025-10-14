@@ -544,6 +544,82 @@ class SetupTool:
         self.print_info("✓ Permissions set and configuration copied")
         return True
 
+    def sync_code_changes(self):
+        """Sync code changes to Raspberry Pi using rsync (for development)"""
+        print("\n" + "=" * 60)
+        self.print_info("Syncing Code Changes to Raspberry Pi")
+        print("=" * 60)
+
+        # Determine source directory (robot folder)
+        robot_dir = self.script_dir.parent / "robot"
+        
+        if not robot_dir.exists():
+            self.print_error(f"Robot directory not found: {robot_dir}")
+            return False
+
+        hostname = self.config.get('hostname')
+        username = self.config.get('username')
+        ssh_key_path = self.config.get('ssh_key_path')
+        
+        self.print_info(f"Syncing files from {robot_dir} to Raspberry Pi...")
+        self.print_info("Using rsync to copy only changed files...")
+        
+        # Build rsync command
+        # -a: archive mode (preserves permissions, timestamps, etc.)
+        # -v: verbose
+        # -z: compress during transfer
+        # --delete: delete files on remote that don't exist locally
+        # --exclude: exclude certain files/directories
+        
+        if ssh_key_path:
+            rsync_cmd = (
+                f'rsync -avz --delete '
+                f'--exclude="__pycache__" --exclude="*.pyc" --exclude=".git" '
+                f'--exclude="venv" --exclude="*.log" '
+                f'-e "ssh -i \'{ssh_key_path}\' -o StrictHostKeyChecking=no" '
+                f'{robot_dir}/ {username}@{hostname}:~/spotmicroai/'
+            )
+        else:
+            rsync_cmd = (
+                f'rsync -avz --delete '
+                f'--exclude="__pycache__" --exclude="*.pyc" --exclude=".git" '
+                f'--exclude="venv" --exclude="*.log" '
+                f'-e "ssh -o StrictHostKeyChecking=no" '
+                f'{robot_dir}/ {username}@{hostname}:~/spotmicroai/'
+            )
+        
+        try:
+            self.print_info("Running rsync...")
+            result = subprocess.run(rsync_cmd, shell=True, capture_output=True, text=True)
+            
+            if result.stdout:
+                print(result.stdout)
+            
+            if result.returncode == 0:
+                self.print_info("✓ Files synced successfully")
+                
+                # Set executable permissions on shell scripts
+                self.print_info("Setting executable permissions on scripts...")
+                chmod_cmd = "cd ~/spotmicroai && find . -name '*.sh' -exec chmod +x {} \\;"
+                self.execute_ssh_command(chmod_cmd, show_output=False)
+                
+                return True
+            else:
+                self.print_error("Failed to sync files")
+                if result.stderr:
+                    print(result.stderr)
+                return False
+                
+        except FileNotFoundError:
+            self.print_error("rsync command not found. Please install rsync:")
+            self.print_info("  Ubuntu/Debian: sudo apt-get install rsync")
+            self.print_info("  macOS: brew install rsync")
+            self.print_info("  Windows: Install rsync via WSL or Git Bash")
+            return False
+        except Exception as e:
+            self.print_error(f"Error syncing files: {e}")
+            return False
+
     def run_complete_setup(self):
         """Run the complete setup process"""
         print("\n" + "=" * 70)
@@ -631,10 +707,29 @@ class SetupTool:
                 
                 if self.config.get('setup_completed'):
                     self.print_info("Setup was previously completed")
-                    print("\nYou can:")
-                    print("  - Run with --clean to start fresh")
-                    print("  - Manually deploy files using the utilities")
-                    return True
+                    
+                    # Check if --deploy flag is used or user wants to sync
+                    if getattr(self.args, 'deploy', False):
+                        self.print_info("Deploy mode: Syncing code changes...")
+                        return self.sync_code_changes()
+                    
+                    # Ask if user wants to deploy/sync changes
+                    print("\nOptions:")
+                    print("  1. Sync code changes to Raspberry Pi (recommended for development)")
+                    print("  2. Run full setup again")
+                    print("  3. Exit")
+                    print("  (You can also use --clean to start fresh or --deploy to sync directly)")
+                    
+                    choice = self.get_user_input("\nSelect option [1/2/3]", default="1")
+                    
+                    if choice == "1":
+                        return self.sync_code_changes()
+                    elif choice == "2":
+                        self.print_info("Running full setup...")
+                        # Continue to full setup below
+                    else:
+                        self.print_info("Exiting...")
+                        return True
                 else:
                     # Ask for password for incomplete setup
                     self.print_question("Please enter SSH password to continue")
@@ -666,6 +761,7 @@ This tool will guide you through the initial setup of your SpotmicroAI robot.
 
 Examples:
   %(prog)s              # Run initial setup
+  %(prog)s --deploy     # Sync code changes to Pi (for development)
   %(prog)s --clean      # Clear existing config and start fresh
   %(prog)s --version    # Show version information
 
@@ -678,6 +774,7 @@ Prerequisites:
     )
 
     parser.add_argument('--clean', action='store_true', help='Clear existing configuration and start fresh')
+    parser.add_argument('--deploy', action='store_true', help='Deploy/sync code changes to Raspberry Pi (for development)')
     parser.add_argument('--version', action='version', version='SpotmicroAI Setup Tool v2.0')
     args = parser.parse_args()
     
