@@ -94,14 +94,17 @@
 	},
 	"extensions": {
 		"recommendations": [
-			"ms-python.python",
-			"ms-python.pylint",
+			"njpwerner.autodocstring",
+			"ms-python.black-formatter",
+			"ms-python.flake8",
 			"ms-python.isort",
-			"ms-vscode.vscode-json",
-			"ms-vscode-remote.remote-ssh",
+			"ms-python.pylint",
+			"ms-python.vscode-pylance",
+			"ms-python.python",
+			"ms-python.python-environments",
+			"ms-vscode.hexeditor",
 			"github.copilot",
-			"github.copilot-chat",
-			"whizkydee.material-palenight-theme"
+			"github.copilot-chat"
 		]
 	}
 }
