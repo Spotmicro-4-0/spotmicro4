@@ -30,6 +30,7 @@ disable = [
     "C0115",  # missing-class-docstring
     "C0116",  # missing-function-docstring
     "E0401"   # import-error (e.g., when running outside Pi hardware)
+    "W0718"   # broad-exception-caught
 ]
 
 [tool.pylint.format]

@@ -46,7 +46,7 @@ class RemoteControllerController:
 
         except Exception as e:
             self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_NOK)
-            log.error('Remote controller controller initialization problem', e)
+            log.error('Remote controller controller initialization problem: %s', e)
             sys.exit(1)
 
     def exit_gracefully(self, signum, frame):
@@ -82,7 +82,7 @@ class RemoteControllerController:
                     evbuf = self.jsdev.read(8)  # type: ignore
 
                     if evbuf:
-                        buftime, value, type, number = struct.unpack('IhBB', evbuf)
+                        _, value, type, number = struct.unpack('IhBB', evbuf)
 
                         # Skip initialization events
                         if type & 0x80:
@@ -117,7 +117,7 @@ class RemoteControllerController:
                     time.sleep(READ_LOOP_SLEEP)
 
                 except Exception as e:
-                    log.error('Unknown problem while processing the queue of the remote controller', e)
+                    log.error('Unknown problem while processing the queue of the remote controller: %s', e)
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                     remote_controller_connected_already = False
                     self.check_for_connected_devices()
@@ -210,21 +210,20 @@ class RemoteControllerController:
 
                 while True:
                     try:
-                        log.debug(f'Attempting to open {fn}...')
+                        log.debug('Attempting to open %s...', fn)
                         self.jsdev = open(fn, 'rb')
                         os.set_blocking(self.jsdev.fileno(), False)
-                        log.info(f'{fn} opened successfully.')
+                        log.info('%s opened successfully.', fn)
                         break
                     except Exception:
-                        log.warning(f'Unable to access {fn} yet. Will retry in {RECONNECT_RETRY_DELAY} seconds...')
+                        log.warning('Unable to access %s yet. Will retry in %s seconds...', fn, RECONNECT_RETRY_DELAY)
                         time.sleep(RECONNECT_RETRY_DELAY)
 
                 # Get the device name
                 buf = array.array('B', [0] * 64)
                 ioctl(self.jsdev, 0x80006A13 + (0x10000 * len(buf)), buf)
                 js_name = buf.tobytes().rstrip(b'\x00').decode('utf-8')
-                log.info(f'Connected to device: {js_name}')
-
+                log.info('Connected to device: %s', js_name)
                 # Get number of axes and buttons
                 buf = array.array('B', [0])
                 ioctl(self.jsdev, 0x80016A11, buf)
@@ -250,7 +249,7 @@ class RemoteControllerController:
                     self.button_map.append(btn_name)
                     self.button_states[btn_name] = 0
 
-                log.info(f'{num_axes} axes found: {", ".join(self.axis_map)}')
+                log.info('%d axes found: %s', num_axes, ", ".join(self.axis_map))
                 log.info('%d buttons found: %s', num_buttons, ", ".join(self.button_map))
 
                 break

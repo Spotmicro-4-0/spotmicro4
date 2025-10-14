@@ -35,7 +35,8 @@
         ],
         "python.analysis.diagnosticSeverityOverrides": {
             "reportMissingImports": "none",
-            "reportMissingModuleSource": "none"
+            "reportMissingModuleSource": "none",
+            "reportAttributeAccessIssue": "none"
         },
         // LINTING & FORMATTING
         "editor.formatOnSave": true,
