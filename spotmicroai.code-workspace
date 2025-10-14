@@ -2,7 +2,7 @@
     "folders": [
         {
             "name": "spotmicro4",
-            "path": "."
+            "path": "./src/robot"
         }
     ],
     "extensions": {
@@ -23,15 +23,15 @@
     },
     "settings": {
         // PYTHON ANALYSIS & INTERPRETER
-        "python.defaultInterpreterPath": "venv/bin/python3",
+        "python.defaultInterpreterPath": "./src/.venv/bin/python",
         "python.analysis.typeCheckingMode": "basic",
         "python.analysis.autoSearchPaths": true,
         "python.analysis.extraPaths": [
-            "./src",
-            "./src/spotmicroai",
-            "./src/utilities",
-            "./src/calibration",
-            "./src/integration_tests"
+            "./src/robot",
+            "./src/robot/spotmicroai",
+            "./src/robot/spotmicroai/utilities",
+            "./src/robot/spotmicroai/calibration",
+            "./src/robot/spotmicroai/integration_tests"
         ],
         "python.analysis.diagnosticSeverityOverrides": {
             "reportMissingImports": "none",
