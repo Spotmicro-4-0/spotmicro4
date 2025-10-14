@@ -1,10 +1,12 @@
 import logging
 from pathlib import Path
 
+from spotmicroai.singleton import Singleton
+
 SPOTMICRO = 'SpotMicro'
 
 
-class Logger:
+class Logger(metaclass=Singleton):
 
     def __init__(self):
         logs_folder = 'logs/'

@@ -1,6 +1,8 @@
 import math
 
-from spotmicroai.motion_controller.constants import FOOT_LENGTH, SAFE_NEUTRAL, SHOULDER_OFFSET, UPPER_LEG_LENGTH
+from spotmicroai.motion_controller.constants import (FOOT_LENGTH, SAFE_NEUTRAL,
+                                                     SHOULDER_OFFSET,
+                                                     UPPER_LEG_LENGTH)
 from spotmicroai.utilities.log import Logger
 
 log = Logger().setup_logger('Motion controller')
