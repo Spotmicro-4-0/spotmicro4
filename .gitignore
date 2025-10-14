@@ -149,4 +149,4 @@ Thumbs.db
 .project
 
 ######### Deployment Configuration
-src/deployment/deployment_config.json
+src/setup_tool/setup_config.json
