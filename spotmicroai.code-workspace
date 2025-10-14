@@ -5,9 +5,26 @@
             "path": "."
         }
     ],
+    "extensions": {
+        "recommendations": [
+            // 🧠 Core Python environment
+            "ms-python.python",
+            "ms-python.vscode-python-envs",
+            "ms-python.python-debugger",
+            "ms-python.vscode-pylance",
+            // 🧹 Linting & formatting
+            "ms-python.pylint",
+            "ms-python.flake8",
+            "ms-python.black-formatter",
+            "ms-python.isort",
+            // 🧪 Testing
+            "ms-python.python-test-adapter"
+        ]
+    },
     "settings": {
-        // 🧠 --- Python Environment ---
+        // 🧠 PYTHON ANALYSIS & INTERPRETER
         "python.defaultInterpreterPath": "venv/bin/python3",
+        "python.analysis.typeCheckingMode": "basic",
         "python.analysis.autoSearchPaths": true,
         "python.analysis.extraPaths": [
             "./src",
@@ -16,58 +33,69 @@
             "./src/calibration",
             "./src/integration_tests"
         ],
-        "python.analysis.typeCheckingMode": "basic",
         "python.analysis.diagnosticSeverityOverrides": {
             "reportMissingImports": "none",
             "reportMissingModuleSource": "none"
         },
-
-        // 🧹 --- Linting & Formatting ---
+        // LINTING & FORMATTING
+        // Pylint uses your .pylintrc automatically
+        "pylint.configFile": "${workspaceFolder}/.pylintrc",
+        // Enable formatters
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit"
         },
-
-        // 🧪 --- Testing ---
+        "[python]": {
+            "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "[json]": {
+            "editor.defaultFormatter": "vscode.json-language-features",
+            "editor.formatOnSave": true
+        },
+        "[jsonc]": {
+            "editor.defaultFormatter": "vscode.json-language-features",
+            "editor.formatOnSave": true
+        },
+        // TESTING
         "python.testing.pytestEnabled": true,
         "python.testing.unittestEnabled": false,
-        "python.testing.pytestArgs": ["src/integration_tests"],
-
-        // 📁 --- File & Folder Hygiene ---
+        "python.testing.autoTestDiscoverOnSaveEnabled": true,
+        "python.testing.pytestArgs": [
+            "src/integration_tests"
+        ],
+        // TERMINAL & ENVIRONMENT
+        "terminal.integrated.cwd": "${workspaceFolder}",
+        "terminal.integrated.env.linux": {
+            "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}/src/spotmicroai"
+        },
+        // EDITOR UX
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.rulers": [
+            88,
+            120
+        ],
+        "editor.cursorBlinking": "expand",
+        "editor.cursorSmoothCaretAnimation": "on",
         "files.exclude": {
             "**/__pycache__": true,
             "**/*.pyc": true,
-            "**/.venv": true,
-            "**/venv": true,
             "**/.pytest_cache": true,
             "**/.git": true,
-            "**/logs": false
+            "**/.venv": true,
+            "**/venv": true
         },
         "files.watcherExclude": {
             "**/__pycache__/**": true,
             "**/.pytest_cache/**": true,
-            "**/logs/**": true,
             "**/.git/**": true
         },
-
-        // 🧩 --- Editor & UX ---
-        "editor.tabSize": 4,
-        "editor.insertSpaces": true,
-        "editor.rulers": [88, 120],
-        "editor.cursorBlinking": "expand",
-        "editor.cursorSmoothCaretAnimation": "on",
         "files.associations": {
             "*.py": "python",
             "*.sh": "shellscript",
             "*.service": "systemd",
             "*.default": "properties",
             "*.log": "log"
-        },
-
-        // 🧭 --- Terminal ---
-        "terminal.integrated.cwd": "${workspaceFolder}",
-        "terminal.integrated.env.linux": {
-            "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}/src/spotmicroai"
         }
     }
 }
