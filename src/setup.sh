@@ -125,14 +125,14 @@ if [ ${#missing_modules[@]} -ne 0 ]; then
 fi
 
 # Check if setup directory exists
-SETUP_DIR="$(dirname "$0")/setup"
+SETUP_DIR="$(dirname "$0")/setup_tool"
 if [ ! -d "$SETUP_DIR" ]; then
     print_error "Setup directory not found: $SETUP_DIR"
     exit 1
 fi
 
 # Check if setup.py exists
-SETUP_TOOL="$SETUP_DIR/setup.py"
+SETUP_TOOL="$SETUP_DIR/setup_tool.py"
 if [ ! -f "$SETUP_TOOL" ]; then
     print_error "Setup tool not found: $SETUP_TOOL"
     exit 1
@@ -145,4 +145,4 @@ print_info "Launching setup tool..."
 cd "$(dirname "$0")"
 
 # Execute the Python setup tool
-exec $PYTHON_CMD setup/setup.py "$@"
+exec $PYTHON_CMD setup_tool/setup_tool.py "$@"

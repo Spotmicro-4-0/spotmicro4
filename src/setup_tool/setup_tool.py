@@ -291,15 +291,26 @@ class SetupTool:
 
         self.print_info("✓ SSH key copied successfully")
         self.print_info("You can now connect without a password!")
+        
+        # Store SSH key path and clear password for key-based authentication
+        ssh_key_path = str(Path.home() / ".ssh" / "id_rsa")
+        self.config['ssh_key_path'] = ssh_key_path
+        self.current_password = None  # Clear password to use key-based auth
+        self.save_config()
+        
         return True
 
     def execute_ssh_command(self, command, interactive=False, show_output=True):
         """Execute a command via SSH on the Raspberry Pi"""
         hostname = self.config.get('hostname')
         username = self.config.get('username')
+        ssh_key_path = self.config.get('ssh_key_path')
 
-        # Build SSH command
-        ssh_base = f'ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no {username}@{hostname}'
+        # Build SSH command with key if available
+        if ssh_key_path:
+            ssh_base = f'ssh -i "{ssh_key_path}" -o ConnectTimeout=30 -o StrictHostKeyChecking=no {username}@{hostname}'
+        else:
+            ssh_base = f'ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no {username}@{hostname}'
         
         if self.current_password:
             # Use echo with pipe for password on Windows
@@ -449,12 +460,16 @@ class SetupTool:
 
         hostname = self.config.get('hostname')
         username = self.config.get('username')
+        ssh_key_path = self.config.get('ssh_key_path')
         
         # Use SCP to copy files
         self.print_info(f"Copying files from {robot_dir} to Raspberry Pi...")
         
-        # Build scp command
-        scp_cmd = f'scp -r -o StrictHostKeyChecking=no "{robot_dir}/*" {username}@{hostname}:~/spotmicroai/'
+        # Build scp command - copy directory contents directly (use SSH key if available)
+        if ssh_key_path:
+            scp_cmd = f'scp -i "{ssh_key_path}" -r -o StrictHostKeyChecking=no {robot_dir}/* {username}@{hostname}:~/spotmicroai/'
+        else:
+            scp_cmd = f'scp -r -o StrictHostKeyChecking=no {robot_dir}/* {username}@{hostname}:~/spotmicroai/'
         
         try:
             result = subprocess.run(scp_cmd, shell=True, text=True)
@@ -508,8 +523,12 @@ class SetupTool:
             
             hostname = self.config.get('hostname')
             username = self.config.get('username')
+            ssh_key_path = self.config.get('ssh_key_path')
             
-            scp_cmd = f'scp -o StrictHostKeyChecking=no "{json_file}" {username}@{hostname}:~/'
+            if ssh_key_path:
+                scp_cmd = f'scp -i "{ssh_key_path}" -o StrictHostKeyChecking=no "{json_file}" {username}@{hostname}:~/'
+            else:
+                scp_cmd = f'scp -o StrictHostKeyChecking=no "{json_file}" {username}@{hostname}:~/'
             
             try:
                 result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
