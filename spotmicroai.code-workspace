@@ -18,7 +18,9 @@
             "ms-python.python-test-adapter",
             // Other
             "misiekhardcore.stl-previewer",
-            "aaron-bond.better-comments"
+            "aaron-bond.better-comments",
+            // Formatters
+            "esbenp.prettier-vscode"
         ]
     },
     "settings": {
@@ -47,11 +49,11 @@
             "editor.defaultFormatter": "ms-python.black-formatter"
         },
         "[json]": {
-            "editor.defaultFormatter": "vscode.json-language-features",
+            "editor.defaultFormatter": "esbenp.prettier-vscode",
             "editor.formatOnSave": true
         },
         "[jsonc]": {
-            "editor.defaultFormatter": "vscode.json-language-features",
+            "editor.defaultFormatter": "esbenp.prettier-vscode",
             "editor.formatOnSave": true
         },
         "flake8.args": [
