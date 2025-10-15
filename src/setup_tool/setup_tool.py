@@ -606,6 +606,32 @@ class SetupTool:
                 chmod_cmd = "cd ~/spotmicroai && find . -name '*.sh' -exec chmod +x {} \\;"
                 self.execute_ssh_command(chmod_cmd, show_output=False)
                 
+                # Copy spotmicroai.json to home directory root
+                json_file = self.script_dir.parent / "robot" / "spotmicroai.json"
+                
+                if json_file.exists():
+                    self.print_info("Copying spotmicroai.json to home directory...")
+                    
+                    hostname = self.config.get('hostname')
+                    username = self.config.get('username')
+                    ssh_key_path = self.config.get('ssh_key_path')
+                    
+                    if ssh_key_path:
+                        scp_cmd = f'scp -i "{ssh_key_path}" -o StrictHostKeyChecking=no "{json_file}" {username}@{hostname}:~/'
+                    else:
+                        scp_cmd = f'scp -o StrictHostKeyChecking=no "{json_file}" {username}@{hostname}:~/'
+                    
+                    try:
+                        scp_result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
+                        if scp_result.returncode == 0:
+                            self.print_info("✓ Config file copied to ~/spotmicroai.json")
+                        else:
+                            self.print_warning("Could not copy config file")
+                    except Exception as e:
+                        self.print_warning(f"Error copying config file: {e}")
+                else:
+                    self.print_warning("spotmicroai.json not found in robot directory")
+                
                 return True
             else:
                 self.print_error("Failed to sync files")
