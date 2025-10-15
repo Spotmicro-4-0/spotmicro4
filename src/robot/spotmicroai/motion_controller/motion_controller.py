@@ -6,7 +6,8 @@ import time
 
 import spotmicroai.utilities.queues as queues
 from spotmicroai.motion_controller.models.pose import Pose
-from spotmicroai.motion_controller.services.keyframe_service import KeyframeService
+from spotmicroai.motion_controller.services.keyframe_service import \
+    KeyframeService
 from spotmicroai.motion_controller.services.pose_service import PoseService
 from spotmicroai.motion_controller.services.servo_service import ServoService
 from spotmicroai.motion_controller.wrappers.pca9685 import PCA9685Board
@@ -135,6 +136,9 @@ class MotionController:
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                     self._is_activated = False
                     self._is_running = False
+                
+                # throttle CPU when no input but still activated
+                time.sleep(0.05)
                 continue
 
             else:
