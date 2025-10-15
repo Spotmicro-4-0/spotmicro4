@@ -6,17 +6,15 @@ import time
 
 import spotmicroai.utilities.queues as queues
 from spotmicroai.motion_controller.models.pose import Pose
-from spotmicroai.motion_controller.services.keyframe_service import \
-    KeyframeService
+from spotmicroai.motion_controller.services.keyframe_service import KeyframeService
 from spotmicroai.motion_controller.services.pose_service import PoseService
 from spotmicroai.motion_controller.services.servo_service import ServoService
 from spotmicroai.motion_controller.wrappers.pca9685 import PCA9685Board
-from spotmicroai.utilities.general import General
 from spotmicroai.utilities.log import Logger
 
-from .constants import FOOT_SERVO_OFFSET, INACTIVITY_TIME, LEG_SERVO_OFFSET
-from .enums import ControllerEvent
-from .wrappers.buzzer import Buzzer
+from spotmicroai.motion_controller.constants import FOOT_SERVO_OFFSET, INACTIVITY_TIME, LEG_SERVO_OFFSET
+from spotmicroai.motion_controller.enums import ControllerEvent
+from spotmicroai.motion_controller.wrappers.buzzer import Buzzer
 
 log = Logger().setup_logger('Motion controller')
 
@@ -136,7 +134,7 @@ class MotionController:
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                     self._is_activated = False
                     self._is_running = False
-                
+
                 # throttle CPU when no input but still activated
                 time.sleep(0.05)
                 continue
@@ -513,44 +511,48 @@ class MotionController:
     def body_move_pitch_analog(self, raw_value):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_leg_left_angle = int(General().maprange((5, -5), (180, 180), raw_value))
-        self._servo_service.rear_foot_left_angle = int(General().maprange((5, -5), (10, 50), raw_value))
-        self._servo_service.rear_leg_right_angle = int(General().maprange((5, -5), (0, 0), raw_value))
-        self._servo_service.rear_foot_right_angle = int(General().maprange((5, -5), (170, 130), raw_value))
+        self._servo_service.rear_leg_left_angle = int(self.maprange((5, -5), (180, 180), raw_value))
+        self._servo_service.rear_foot_left_angle = int(self.maprange((5, -5), (10, 50), raw_value))
+        self._servo_service.rear_leg_right_angle = int(self.maprange((5, -5), (0, 0), raw_value))
+        self._servo_service.rear_foot_right_angle = int(self.maprange((5, -5), (170, 130), raw_value))
 
-        self._servo_service.front_leg_left_angle = int(General().maprange((-5, 5), (160, 180), raw_value))
-        self._servo_service.front_foot_left_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
-        self._servo_service.front_leg_right_angle = int(General().maprange((-5, 5), (20, 0), raw_value))
-        self._servo_service.front_foot_right_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
+        self._servo_service.front_leg_left_angle = int(self.maprange((-5, 5), (160, 180), raw_value))
+        self._servo_service.front_foot_left_angle = int(self.maprange((-5, 5), (10, 50), raw_value))
+        self._servo_service.front_leg_right_angle = int(self.maprange((-5, 5), (20, 0), raw_value))
+        self._servo_service.front_foot_right_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
 
     def body_move_roll_analog(self, raw_value):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_shoulder_left_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        self._servo_service.rear_shoulder_right_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_left_angle = int(self.maprange((5, -5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_right_angle = int(self.maprange((5, -5), (145, 35), raw_value))
 
-        self._servo_service.front_shoulder_left_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
-        self._servo_service.front_shoulder_right_angle = int(General().maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.front_shoulder_left_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.front_shoulder_right_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
 
     def body_move_height_analog(self, raw_value):
 
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_leg_left_angle = int(General().maprange((5, -5), (160, 180), raw_value))
-        self._servo_service.rear_foot_left_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
-        self._servo_service.rear_leg_right_angle = int(General().maprange((5, -5), (20, 0), raw_value))
-        self._servo_service.rear_foot_right_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
+        self._servo_service.rear_leg_left_angle = int(self.maprange((5, -5), (160, 180), raw_value))
+        self._servo_service.rear_foot_left_angle = int(self.maprange((-5, 5), (10, 50), raw_value))
+        self._servo_service.rear_leg_right_angle = int(self.maprange((5, -5), (20, 0), raw_value))
+        self._servo_service.rear_foot_right_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
 
-        self._servo_service.front_leg_left_angle = int(General().maprange((5, -5), (160, 180), raw_value))
-        self._servo_service.front_foot_left_angle = int(General().maprange((-5, 5), (10, 50), raw_value))
-        self._servo_service.front_leg_right_angle = int(General().maprange((5, -5), (20, 0), raw_value))
-        self._servo_service.front_foot_right_angle = int(General().maprange((-5, 5), (170, 130), raw_value))
+        self._servo_service.front_leg_left_angle = int(self.maprange((5, -5), (160, 180), raw_value))
+        self._servo_service.front_foot_left_angle = int(self.maprange((-5, 5), (10, 50), raw_value))
+        self._servo_service.front_leg_right_angle = int(self.maprange((5, -5), (20, 0), raw_value))
+        self._servo_service.front_foot_right_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
 
     def body_move_yaw_analog(self, raw_value):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_shoulder_left_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        self._servo_service.rear_shoulder_right_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_left_angle = int(self.maprange((5, -5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_right_angle = int(self.maprange((5, -5), (145, 35), raw_value))
 
-        self._servo_service.front_shoulder_left_angle = int(General().maprange((5, -5), (145, 35), raw_value))
-        self._servo_service.front_shoulder_right_angle = int(General().maprange((5, -5), (145, 35), raw_value))
+        self._servo_service.front_shoulder_left_angle = int(self.maprange((5, -5), (145, 35), raw_value))
+        self._servo_service.front_shoulder_right_angle = int(self.maprange((5, -5), (145, 35), raw_value))
+
+    def maprange(self, from_range, to_range, value):
+        (from_start, from_end), (to_start, to_end) = from_range, to_range
+        return to_start + ((value - from_start) * (to_end - to_start) / (from_end - from_start))

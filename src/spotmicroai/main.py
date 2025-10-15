@@ -4,9 +4,11 @@ import multiprocessing
 import sys
 
 from spotmicroai.abort_controller.abort_controller import AbortController
-from spotmicroai.lcd_screen_controller.lcd_screen_controller import LCDScreenController
+from spotmicroai.lcd_screen_controller.lcd_screen_controller import \
+    LCDScreenController
 from spotmicroai.motion_controller.motion_controller import MotionController
-from spotmicroai.remote_controller.remote_controller import RemoteControllerController
+from spotmicroai.remote_controller.remote_controller import \
+    RemoteControllerController
 from spotmicroai.utilities.log import Logger
 
 log = Logger().setup_logger()

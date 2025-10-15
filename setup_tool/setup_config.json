@@ -1,0 +1,7 @@
+{
+  "hostname": "spotmicroai.local",
+  "username": "pi",
+  "password_provided": true,
+  "setup_completed": true,
+  "ssh_key_path": "/home/ob/.ssh/id_rsa"
+}

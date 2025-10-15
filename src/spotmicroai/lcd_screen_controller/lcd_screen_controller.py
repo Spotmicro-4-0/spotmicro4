@@ -1,13 +1,12 @@
+import os
+import queue
 import signal
 import sys
 import time
-import queue
 
-from spotmicroai.utilities.log import Logger
 from spotmicroai.lcd_screen_controller import LCD_16x2_I2C_driver
 from spotmicroai.utilities.config import Config
-from spotmicroai.utilities.system import System
-
+from spotmicroai.utilities.log import Logger
 import spotmicroai.utilities.queues as queues
 
 log = Logger().setup_logger('LCD Screen controller')
@@ -34,7 +33,6 @@ class LCDScreenController:
             self.screen = LCD_16x2_I2C_driver.lcd(address=i2c_address)
 
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
-
             self.screen.lcd_clear()
             self.update_lcd_creen()
             self.turn_on()
@@ -43,9 +41,9 @@ class LCDScreenController:
 
         except Exception as e:
             self.is_alive = False
-            log.error('LCD Screen controller initialization problem, module not critical, skipping', e)
+            log.error('LCD Screen controller initialization problem, module not critical, skipping: %s', e)
 
-    def exit_gracefully(self, signum, frame):
+    def exit_gracefully(self, _signum, _frame):
         try:
             self.turn_off()
         finally:
@@ -65,23 +63,23 @@ class LCDScreenController:
                     event = self._lcd_screen_queue.get(block=True, timeout=1)
 
                     if event.startswith(queues.LCD_SCREEN_CONTROLLER + ' '):
-                        self.lcd_screen_controller = event[len(queues.LCD_SCREEN_CONTROLLER) + 1:]
+                        self.lcd_screen_controller = event[len(queues.LCD_SCREEN_CONTROLLER) + 1 :]
 
                     if event.startswith(queues.ABORT_CONTROLLER + ''):
-                        self.abort_controller = event[len(queues.ABORT_CONTROLLER) + 1:]
+                        self.abort_controller = event[len(queues.ABORT_CONTROLLER) + 1 :]
 
                     if event.startswith(queues.REMOTE_CONTROLLER_CONTROLLER + ' '):
-                        self.remote_controller_controller = event[len(queues.REMOTE_CONTROLLER_CONTROLLER + ' '):]
+                        self.remote_controller_controller = event[len(queues.REMOTE_CONTROLLER_CONTROLLER + ' ') :]
 
                     if event.startswith(queues.MOTION_CONTROLLER + ' '):
-                        self.motion_controller = event[len(queues.MOTION_CONTROLLER + ' '):]
+                        self.motion_controller = event[len(queues.MOTION_CONTROLLER + ' ') :]
 
-                except queue.Empty as e:
+                except queue.Empty:
                     self.update_lcd_creen()
                     time.sleep(1)
 
         except Exception as e:
-            log.error('Unknown problem while processing the queue of the lcd screen controller', e)
+            log.error('Unknown problem while processing the queue of the lcd screen controller: %s', e)
 
     def turn_off(self):
         self.screen.lcd_clear()
@@ -98,18 +96,18 @@ class LCDScreenController:
         elif self.lcd_screen_controller == 'OFF':
             self.turn_off()
 
-        temperature = System().temperature()
+        temperature = self.temperature()
 
         custom_icons = []
 
         icon_empty = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
-        icon_success = [0x0, 0x1, 0x3, 0x16, 0x1c, 0x8, 0x0, 0x0]
-        icon_pca9685 = [0x1f, 0x11, 0x15, 0x15, 0x15, 0x15, 0x11, 0x1f]
-        icon_gpio = [0x4, 0x4, 0x1f, 0x0, 0x0, 0xe, 0x4, 0x4]
-        icon_remote_controller = [0x11, 0xa, 0xe, 0xa, 0xa, 0xe, 0xa, 0x11]
+        icon_success = [0x0, 0x1, 0x3, 0x16, 0x1C, 0x8, 0x0, 0x0]
+        icon_pca9685 = [0x1F, 0x11, 0x15, 0x15, 0x15, 0x15, 0x11, 0x1F]
+        icon_gpio = [0x4, 0x4, 0x1F, 0x0, 0x0, 0xE, 0x4, 0x4]
+        icon_remote_controller = [0x11, 0xA, 0xE, 0xA, 0xA, 0xE, 0xA, 0x11]
         icon_temperature = [0x18, 0x18, 0x3, 0x4, 0x4, 0x4, 0x3, 0x0]
-        icon_problem = [0x0, 0x1b, 0xe, 0x4, 0xe, 0x1b, 0x0, 0x0]
-        icon_success_reverse = [0x1f, 0x1e, 0x1c, 0x9, 0x3, 0x17, 0x1f]
+        icon_problem = [0x0, 0x1B, 0xE, 0x4, 0xE, 0x1B, 0x0, 0x0]
+        icon_success_reverse = [0x1F, 0x1E, 0x1C, 0x9, 0x3, 0x17, 0x1F]
 
         # There is only memory for 7 in the lcd screen controller
         custom_icons.insert(0, icon_empty)
@@ -178,3 +176,11 @@ class LCDScreenController:
             self.screen.lcd_write_char(1)
         else:
             self.screen.lcd_write_char(6)
+
+    def temperature(self):
+        try:
+            temp = os.popen("vcgencmd measure_temp").readline()
+            return temp.replace("temp=", "")[:-5]
+        except Exception as e:
+            log.error('Error reading system temperature: %s', e)
+            return '000'

@@ -1,104 +1,93 @@
 {
-    "folders": [
-        {
-            "name": "spotmicro4",
-            "path": "."
-        }
-    ],
-    "extensions": {
-        "recommendations": [
-            // Core Python environment
-            "ms-python.python",
-            "ms-python.vscode-python-envs",
-            "ms-python.python-debugger",
-            "ms-python.vscode-pylance",
-            "ms-python.black-formatter",
-            "ms-python.isort",
-            // Testing
-            "ms-python.python-test-adapter",
-            // Other
-            "misiekhardcore.stl-previewer",
-            "aaron-bond.better-comments",
-            // Formatters
-            "esbenp.prettier-vscode"
-        ]
-    },
-    "settings": {
-        // PYTHON ANALYSIS & INTERPRETER
-        "python.defaultInterpreterPath": "./src/.venv/bin/python",
-        "python.analysis.typeCheckingMode": "basic",
-        "python.analysis.autoSearchPaths": true,
-        "python.analysis.extraPaths": [
-            "./src/robot",
-            "./src/robot/spotmicroai",
-            "./src/robot/spotmicroai/utilities",
-            "./src/robot/spotmicroai/calibration",
-            "./src/robot/spotmicroai/integration_tests"
-        ],
-        "python.analysis.diagnosticSeverityOverrides": {
-            "reportMissingImports": "none",
-            "reportMissingModuleSource": "none",
-            "reportAttributeAccessIssue": "none"
-        },
-        // LINTING & FORMATTING
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        },
-        "[python]": {
-            "editor.defaultFormatter": "ms-python.black-formatter"
-        },
-        "[json]": {
-            "editor.defaultFormatter": "esbenp.prettier-vscode",
-            "editor.formatOnSave": true
-        },
-        "[jsonc]": {
-            "editor.defaultFormatter": "esbenp.prettier-vscode",
-            "editor.formatOnSave": true
-        },
-        "flake8.args": [
-            "--config-toml=${workspaceFolder}/pyproject.toml"
-        ],
-        // TESTING
-        "python.testing.pytestEnabled": true,
-        "python.testing.unittestEnabled": false,
-        "python.testing.autoTestDiscoverOnSaveEnabled": true,
-        "python.testing.pytestArgs": [
-            "src/integration_tests"
-        ],
-        // TERMINAL & ENVIRONMENT
-        "terminal.integrated.cwd": "${workspaceFolder}",
-        "terminal.integrated.env.linux": {
-            "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}/src/spotmicroai"
-        },
-        // EDITOR UX
-        "editor.tabSize": 4,
-        "editor.insertSpaces": true,
-        "editor.rulers": [
-            120
-        ],
-        "editor.cursorBlinking": "expand",
-        "editor.cursorSmoothCaretAnimation": "on",
-        // FILE EXCLUSIONS
-        "files.exclude": {
-            "**/__pycache__": true,
-            "**/*.pyc": true,
-            "**/.pytest_cache": true,
-            "**/.git": true,
-            "**/.venv": true,
-            "**/venv": true
-        },
-        "files.watcherExclude": {
-            "**/__pycache__/**": true,
-            "**/.pytest_cache/**": true,
-            "**/.git/**": true
-        },
-        "files.associations": {
-            "*.py": "python",
-            "*.sh": "shellscript",
-            "*.service": "systemd",
-            "*.default": "properties",
-            "*.log": "log"
-        }
+  "folders": [
+    {
+      "name": "spotmicro4",
+      "path": "."
     }
+  ],
+  "extensions": {
+    "recommendations": [
+      // Core Python environment
+      "ms-python.python",
+      "ms-python.vscode-python-envs",
+      "ms-python.python-debugger",
+      "ms-python.vscode-pylance",
+      "ms-python.black-formatter",
+      "ms-python.isort",
+      // Testing
+      "ms-python.python-test-adapter",
+      // Other
+      "misiekhardcore.stl-previewer",
+      "aaron-bond.better-comments",
+      // Formatters
+      "esbenp.prettier-vscode",
+      "tamasfe.even-better-toml"
+    ]
+  },
+  "settings": {
+    // PYTHON ANALYSIS & INTERPRETER
+    "python.defaultInterpreterPath": "./src/.venv/bin/python",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.extraPaths": ["./src/robot", "./src/robot/spotmicroai", "./src/robot/spotmicroai/utilities", "./src/robot/spotmicroai/calibration", "./src/robot/spotmicroai/integration_tests"],
+    "python.analysis.diagnosticSeverityOverrides": {
+      "reportMissingImports": "none",
+      "reportMissingModuleSource": "none",
+      "reportAttributeAccessIssue": "none"
+    },
+    // LINTING & FORMATTING
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[jsonc]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "flake8.args": ["--config-toml=${workspaceFolder}/pyproject.toml"],
+    // TESTING
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "python.testing.pytestArgs": ["src/integration_tests"],
+    // TERMINAL & ENVIRONMENT
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "terminal.integrated.env.linux": {
+      "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}/src/spotmicroai"
+    },
+    // EDITOR UX
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [120],
+    "editor.cursorBlinking": "expand",
+    "editor.cursorSmoothCaretAnimation": "on",
+    // FILE EXCLUSIONS
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/.pytest_cache": true,
+      "**/.git": true,
+      "**/.venv": true,
+      "**/venv": true
+    },
+    "files.watcherExclude": {
+      "**/__pycache__/**": true,
+      "**/.pytest_cache/**": true,
+      "**/.git/**": true
+    },
+    "files.associations": {
+      "*.py": "python",
+      "*.sh": "shellscript",
+      "*.service": "systemd",
+      "*.default": "properties",
+      "*.log": "log"
+    }
+  }
 }
