@@ -127,7 +127,7 @@ if [ ${#missing_modules[@]} -ne 0 ]; then
 fi
 
 # Check if setup directory exists
-SETUP_DIR="$(dirname "$0")/setup_tool"
+SETUP_DIR="$(dirname "$0")/src/setup_tool"
 if [ ! -d "$SETUP_DIR" ]; then
     print_error "Setup directory not found: $SETUP_DIR"
     exit 1
@@ -144,7 +144,7 @@ print_info "All validation checks passed!"
 print_info "Launching setup tool..."
 
 # Change to the source directory
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/src"
 
 # Execute the Python setup tool
 exec $PYTHON_CMD setup_tool/setup_tool.py "$@"
