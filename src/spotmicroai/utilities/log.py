@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
 
-from spotmicroai.singleton import Singleton
+from spotmicroai.utilities.singleton import Singleton
 
-SPOTMICRO = 'SpotMicro'
+SPOTMICRO = 'Spotmicro'
 
 
 class Logger(metaclass=Singleton):

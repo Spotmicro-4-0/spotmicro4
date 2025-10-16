@@ -1,19 +1,22 @@
 from board import SCL, SDA  # type: ignore
 import busio  # type: ignore
-from adafruit_pca9685 import PCA9685 # type: ignore
-from spotmicroai.singleton import Singleton
+from adafruit_pca9685 import PCA9685  # type: ignore
+from spotmicroai.utilities.singleton import Singleton
 from spotmicroai.utilities.config import Config
 from spotmicroai.utilities.log import Logger
 
 log = Logger().setup_logger('Motion controller')
 
+
 class PCA9685Board(metaclass=Singleton):
+    config = Config()
+
     def __init__(self):
         self.i2c = busio.I2C(SCL, SDA)
         self.pca9685 = None
-        self.address = int(Config().get(Config.MOTION_CONTROLLER_PCA9685_ADDRESS), 0)
-        self.reference_clock_speed = int(Config().get(Config.MOTION_CONTROLLER_PCA9685_REFERENCE_CLOCK_SPEED))
-        self.frequency = int(Config().get(Config.MOTION_CONTROLLER_PCA9685_FREQUENCY))
+        self.address = int(self.config.motion_controller.pca9685.address, 0)
+        self.reference_clock_speed = int(self.config.motion_controller.pca9685.reference_clock_speed)
+        self.frequency = int(self.config.motion_controller.pca9685.frequency)
 
     def activate(self):
         self.pca9685 = PCA9685(self.i2c, address=self.address, reference_clock_speed=self.reference_clock_speed)

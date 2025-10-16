@@ -4,13 +4,14 @@ import shutil
 import sys
 from typing import Any, Dict, List, Optional
 
-from singleton import Singleton
-
+from spotmicroai.utilities.dot_dict import DotDict
 from spotmicroai.utilities.log import Logger
+from spotmicroai.utilities.singleton import Singleton
 
 log = Logger().setup_logger('Configuration')
 
 
+# TODO: add validation
 class Config(metaclass=Singleton):
     """
     Clean configuration management using dot notation.
@@ -57,7 +58,7 @@ class Config(metaclass=Singleton):
             if not config_path.exists() and default_path.exists():
                 shutil.copyfile(default_path, config_path)
 
-            with open(config_path) as json_file:
+            with open(config_path, encoding='utf-8') as json_file:
                 self._raw_data = json.load(json_file)
                 self._config = DotDict(self._raw_data)
                 log.debug('Configuration loaded from %s', config_path)
@@ -81,7 +82,7 @@ class Config(metaclass=Singleton):
         """Save current configuration back to JSON file"""
         try:
             config_path = Path.home() / 'spotmicroai.json'
-            with open(config_path, 'w') as outfile:
+            with open(config_path, 'w', encoding='utf-8') as outfile:
                 json.dump(self._raw_data, outfile, indent=2)
             log.info('Configuration saved to %s', config_path)
         except Exception as e:

@@ -19,6 +19,7 @@ src_paths = ["src"]
 [tool.pylint.main]
 ignore = ["venv"]
 extension-pkg-whitelist = ["RPi.GPIO"]
+init-hook = "import sys, os; sys.path.insert(0, os.path.abspath('src'))"
 
 [tool.pylint.typecheck]
 ignored-modules = [

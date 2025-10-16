@@ -14,6 +14,7 @@ log = Logger().setup_logger('LCD Screen controller')
 
 class LCDScreenController:
     is_alive = False
+    config = Config()
 
     lcd_screen_controller = None
     abort_controller = None
@@ -28,7 +29,7 @@ class LCDScreenController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            i2c_address = int(Config().get(Config.LCD_SCREEN_CONTROLLER_I2C_ADDRESS), 0)
+            i2c_address = int(self.config.lcd_screen_controller.address, 0)
 
             self.screen = LCD_16x2_I2C_driver.lcd(address=i2c_address)
 

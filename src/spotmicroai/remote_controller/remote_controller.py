@@ -24,6 +24,7 @@ log = Logger().setup_logger('Remote controller')
 
 
 class RemoteControllerController:
+    config = Config()
 
     def __init__(self, communication_queues):
         try:
@@ -127,7 +128,7 @@ class RemoteControllerController:
         """
         Scans /dev/input for the configured joystick device and opens it.
         """
-        connected_device = Config().get(Config.REMOTE_CONTROLLER_CONTROLLER_DEVICE)
+        connected_device = self.config.remote_controller.device
 
         log.info('The remote controller is not detected, looking for connected devices')
         self.connected_device = False

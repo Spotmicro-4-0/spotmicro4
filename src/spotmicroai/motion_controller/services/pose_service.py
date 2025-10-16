@@ -1,7 +1,8 @@
-from spotmicroai.motion_controller.models.servo_angles import ServoAngles
 from spotmicroai.motion_controller.models.pose import Pose
-from spotmicroai.singleton import Singleton
+from spotmicroai.motion_controller.models.servo_angles import ServoAngles
 from spotmicroai.utilities.config import Config
+from spotmicroai.utilities.singleton import Singleton
+
 
 class PoseService(metaclass=Singleton):
     """A singleton class containing predefined poses for the robot.
@@ -16,8 +17,8 @@ class PoseService(metaclass=Singleton):
 
     def __init__(self):
         config = Config()
-        poses_data = config.get(Config.MOTION_CONTROLLER_POSES)
-        
+        poses_data = config.motion_controller.poses
+
         self.poses = {}
 
         for pose_name, pose_angles in poses_data.items():
@@ -25,9 +26,9 @@ class PoseService(metaclass=Singleton):
             rear_right = ServoAngles(*pose_angles[1])
             front_left = ServoAngles(*pose_angles[2])
             front_right = ServoAngles(*pose_angles[3])
-            
+
             self.poses[pose_name] = Pose(rear_left, rear_right, front_left, front_right)
-        
+
         self.current_index = 0
 
     @property

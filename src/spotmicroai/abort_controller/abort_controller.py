@@ -1,9 +1,11 @@
 import signal
-import time
-import RPi.GPIO as GPIO
 import sys
-from spotmicroai.utilities.log import Logger
+import time
+
+import RPi.GPIO as GPIO
+
 from spotmicroai.utilities.config import Config
+from spotmicroai.utilities.log import Logger
 import spotmicroai.utilities.queues as queues
 
 log = Logger().setup_logger('Abort controller')
@@ -11,6 +13,7 @@ log = Logger().setup_logger('Abort controller')
 
 class AbortController:
     gpio_port = None
+    config = Config()
 
     def __init__(self, communication_queues):
 
@@ -21,7 +24,7 @@ class AbortController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self.gpio_port = Config().get(Config.ABORT_CONTROLLER_GPIO_PORT)
+            self.gpio_port = self.config.abort_controller.gpio_port
 
             retries = 10
             while retries > 0:
@@ -33,8 +36,10 @@ class AbortController:
                     GPIO.setup(self.gpio_port, GPIO.OUT)
                     log.info('GPIO pins configured successfully.')
                     break
-                except:
-                    log.warning('An error occured while attempting to access the GPIO pins. Will retry in 2 seconds.')
+                except Exception as e:
+                    log.warning(
+                        'An error occured while attempting to access the GPIO pins. Will retry in 2 seconds.', e
+                    )
                     time.sleep(2)
                     retries -= 1
 
