@@ -15,6 +15,7 @@ from spotmicroai.utilities.log import Logger
 from spotmicroai.motion_controller.constants import FOOT_SERVO_OFFSET, INACTIVITY_TIME, LEG_SERVO_OFFSET
 from spotmicroai.motion_controller.enums import ControllerEvent
 from spotmicroai.motion_controller.wrappers.buzzer import Buzzer
+from .report import TelemetryDisplay, TelemetryCollector
 
 log = Logger().setup_logger('Motion controller')
 
@@ -29,6 +30,8 @@ class MotionController:
     _is_activated = False
     _is_running = False
     _keyframe_service: KeyframeService
+    _telemetry_display: TelemetryDisplay
+    _telemetry_collector: TelemetryCollector
 
     def __init__(self, communication_queues):
         try:
@@ -39,6 +42,10 @@ class MotionController:
             self._buzzer = Buzzer()
             self._pose_service = PoseService()
             self._keyframe_service = KeyframeService()
+
+            # Initialize telemetry system
+            self._telemetry_display = TelemetryDisplay()
+            self._telemetry_collector = TelemetryCollector(self)
 
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
             self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
@@ -83,6 +90,18 @@ class MotionController:
 
         event = {}
         prev_event = {}
+
+        # Telemetry variables
+        cycle_index = None
+        cycle_ratio = None
+        leg_positions = None
+        telemetry_update_counter = 0
+        TELEMETRY_UPDATE_INTERVAL = 2  # Update telemetry display every N frames
+
+        # Initialize telemetry display
+        log.info("Initializing telemetry display...")
+        self._telemetry_display.initialize()
+        time.sleep(0.5)  # Give time for display to initialize
 
         while True:
             frame_start = time.time()
@@ -146,10 +165,10 @@ class MotionController:
             try:
                 if self._is_running:
                     # Update walking cycle and get current position
-                    index, ratio = self._keyframe_service.update_walking_keyframes()
+                    cycle_index, cycle_ratio = self._keyframe_service.update_walking_keyframes()
 
                     # Get interpolated leg positions and apply to servos
-                    leg_positions = self._keyframe_service.get_interpolated_leg_positions(ratio)
+                    leg_positions = self._keyframe_service.get_interpolated_leg_positions(cycle_ratio)
 
                     # Front Right
                     foot_angle, leg_angle, shoulder_angle = leg_positions['front_right'].inverse_kinematics()
@@ -166,6 +185,11 @@ class MotionController:
                     # Rear Right
                     foot_angle, leg_angle, shoulder_angle = leg_positions['rear_right'].inverse_kinematics()
                     self.set_rear_right_servos(foot_angle, leg_angle, shoulder_angle)
+                else:
+                    # When not running, clear the telemetry values
+                    cycle_index = None
+                    cycle_ratio = None
+                    leg_positions = None
 
                 if event[ControllerEvent.A]:
                     self._is_running = False
@@ -281,7 +305,30 @@ class MotionController:
             finally:
                 # continue
                 pass
+
+            # Calculate timing metrics
             elapsed_time = time.time() - frame_start
+            idle_time = max(FRAME_DURATION - elapsed_time, 0)
+            loop_time_ms = elapsed_time * 1000
+            idle_time_ms = idle_time * 1000
+
+            # Update telemetry display periodically (not every frame to reduce overhead)
+            telemetry_update_counter += 1
+            if telemetry_update_counter >= TELEMETRY_UPDATE_INTERVAL:
+                telemetry_update_counter = 0
+                try:
+                    telemetry_data = self._telemetry_collector.collect(
+                        event=event,
+                        loop_time_ms=loop_time_ms,
+                        idle_time_ms=idle_time_ms,
+                        cycle_index=cycle_index,
+                        cycle_ratio=cycle_ratio,
+                        leg_positions=leg_positions,
+                    )
+                    self._telemetry_display.update(telemetry_data)
+                except Exception as e:
+                    # Don't let telemetry errors crash the robot
+                    log.warning(f"Telemetry display error: {e}")
 
             if elapsed_time < FRAME_DURATION:
                 time.sleep(FRAME_DURATION - elapsed_time)
