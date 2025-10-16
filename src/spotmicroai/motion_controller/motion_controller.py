@@ -4,9 +4,14 @@ import signal
 import sys
 import time
 
-from spotmicroai.motion_controller.constants import FOOT_SERVO_OFFSET, INACTIVITY_TIME, LEG_SERVO_OFFSET
+from spotmicroai.motion_controller.constants import (
+    FOOT_SERVO_OFFSET,
+    FRAME_DURATION,
+    INACTIVITY_TIME,
+    LEG_SERVO_OFFSET,
+    TELEMETRY_UPDATE_INTERVAL,
+)
 from spotmicroai.motion_controller.enums import ControllerEvent
-from spotmicroai.motion_controller.models.pose import Pose
 from spotmicroai.motion_controller.services.keyframe_service import KeyframeService
 from spotmicroai.motion_controller.services.pose_service import PoseService
 from spotmicroai.motion_controller.services.servo_service import ServoService
@@ -88,9 +93,6 @@ class MotionController:
         activate_debounce_time = 0
         walking_debounce_time = 0
 
-        FRAME_RATE_HZ = 50
-        FRAME_DURATION = 1.0 / FRAME_RATE_HZ
-
         event = {}
         prev_event = {}
 
@@ -99,7 +101,6 @@ class MotionController:
         cycle_ratio = None
         leg_positions = None
         telemetry_update_counter = 0
-        TELEMETRY_UPDATE_INTERVAL = 2  # Update telemetry display every N frames
 
         # Initialize telemetry display
         log.info("Initializing telemetry display...")
@@ -121,23 +122,9 @@ class MotionController:
                     activate_debounce_time = time.time()
 
                 if self._is_activated:
-                    self._buzzer.beep()
-                    self._is_activated = False
-                    self._servo_service.rest_position()
-                    time.sleep(0.25)
-                    self._pca9685_board.deactivate()
-                    self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
+                    self._deactivate()
                 else:
-                    log.info('Press START/OPTIONS to re-enable the servos')
-                    self._buzzer.beep()
-                    self._is_activated = True
-                    self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
-                    self._pca9685_board.activate()
-                    self._servo_service = ServoService()
-                    time.sleep(0.25)
-                    self._servo_service.rest_position()
-                    # Reset inactivity counter on activation so timer starts now
-                    inactivity_counter = time.time()
+                    inactivity_counter = self._activate()
 
             if not self._is_activated:
                 time.sleep(0.1)
@@ -253,12 +240,14 @@ class MotionController:
                     if self.check_event(ControllerEvent.RIGHT_BUMPER, event, prev_event):
                         # Next Pose
                         time.sleep(0.5)
-                        self.handle_pose(self._pose_service.next())
+                        next_pose = self._pose_service.next()
+                        self._servo_service.set_pose(next_pose)
                     # Left Bumper
                     if self.check_event(ControllerEvent.LEFT_BUMPER, event, prev_event):
                         # Prev Pose
-                        time.sleep(1)
-                        self.handle_pose(self._pose_service.previous())
+                        time.sleep(0.5)
+                        prev_pose = self._pose_service.previous()
+                        self._servo_service.set_pose(prev_pose)
 
                     if event[ControllerEvent.DPAD_VERTICAL]:
                         self.body_move_pitch(event[ControllerEvent.DPAD_VERTICAL])
@@ -338,23 +327,6 @@ class MotionController:
 
     def check_event(self, key, event, prev_event):
         return key in event and event[key] != 0 and key in prev_event and prev_event[key] == 0
-
-    def handle_pose(self, pose: Pose):
-        self._servo_service.rear_shoulder_left_angle = pose.rear_left.shoulder_angle
-        self._servo_service.rear_leg_left_angle = pose.rear_left.leg_angle
-        self._servo_service.rear_foot_left_angle = pose.rear_left.foot_angle
-
-        self._servo_service.rear_shoulder_right_angle = pose.rear_right.shoulder_angle
-        self._servo_service.rear_leg_right_angle = pose.rear_right.leg_angle
-        self._servo_service.rear_foot_right_angle = pose.rear_right.foot_angle
-
-        self._servo_service.front_shoulder_left_angle = pose.front_left.shoulder_angle
-        self._servo_service.front_leg_left_angle = pose.front_left.leg_angle
-        self._servo_service.front_foot_left_angle = pose.front_left.foot_angle
-
-        self._servo_service.front_shoulder_right_angle = pose.front_right.shoulder_angle
-        self._servo_service.front_leg_right_angle = pose.front_right.leg_angle
-        self._servo_service.front_foot_right_angle = pose.front_right.foot_angle
 
     def set_front_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the front right leg.
@@ -604,6 +576,26 @@ class MotionController:
 
         self._servo_service.front_shoulder_left_angle = int(self.maprange((5, -5), (145, 35), raw_value))
         self._servo_service.front_shoulder_right_angle = int(self.maprange((5, -5), (145, 35), raw_value))
+
+    def _deactivate(self):
+        self._buzzer.beep()
+        self._is_activated = False
+        self._servo_service.rest_position()
+        time.sleep(0.25)
+        self._pca9685_board.deactivate()
+        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
+
+    def _activate(self):
+        log.info('Press START/OPTIONS to re-enable the servos')
+        self._buzzer.beep()
+        self._is_activated = True
+        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
+        self._pca9685_board.activate()
+        self._servo_service = ServoService()
+        time.sleep(0.25)
+        self._servo_service.rest_position()
+        # Reset inactivity counter on activation so timer starts now
+        return time.time()
 
     def maprange(self, from_range, to_range, value):
         (from_start, from_end), (to_start, to_end) = from_range, to_range
