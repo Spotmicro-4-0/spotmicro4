@@ -65,7 +65,7 @@ class AbortController:
             finally:
                 sys.exit(1)
 
-    def exit_gracefully(self, signum, frame):
+    def exit_gracefully(self, _signum, _frame):
         try:
             self.abort()
         finally:

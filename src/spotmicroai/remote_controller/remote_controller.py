@@ -1,12 +1,10 @@
 import array
+from fcntl import ioctl
 import os
 import signal
 import struct
 import sys
 import time
-from fcntl import ioctl
-
-import spotmicroai.utilities.queues as queues
 
 # Import tunable constants
 from spotmicroai.remote_controller.constants import (
@@ -19,6 +17,7 @@ from spotmicroai.remote_controller.constants import (
 )
 from spotmicroai.utilities.config import Config
 from spotmicroai.utilities.log import Logger
+import spotmicroai.utilities.queues as queues
 
 log = Logger().setup_logger('Remote controller')
 
@@ -50,7 +49,7 @@ class RemoteControllerController:
             log.error('Remote controller controller initialization problem: %s', e)
             sys.exit(1)
 
-    def exit_gracefully(self, signum, frame):
+    def exit_gracefully(self, _signum, _frame):
         log.info('Terminated')
         sys.exit(0)
 
@@ -83,20 +82,20 @@ class RemoteControllerController:
                     evbuf = self.jsdev.read(8)  # type: ignore
 
                     if evbuf:
-                        _, value, type, number = struct.unpack('IhBB', evbuf)
+                        _, value, event_type, number = struct.unpack('IhBB', evbuf)
 
                         # Skip initialization events
-                        if type & 0x80:
+                        if event_type & 0x80:
                             continue
 
                         # Button event
-                        if type & 0x01:
+                        if event_type & 0x01:
                             button = self.button_map[number]
                             if button:
                                 self.button_states[button] = value
 
                         # Axis event
-                        elif type & 0x02:
+                        elif event_type & 0x02:
                             axis = self.axis_map[number]
                             if axis:
                                 fvalue = round(value / 32767.0, 3)
