@@ -4,18 +4,18 @@ import signal
 import sys
 import time
 
-import spotmicroai.utilities.queues as queues
+from spotmicroai.motion_controller.constants import FOOT_SERVO_OFFSET, INACTIVITY_TIME, LEG_SERVO_OFFSET
+from spotmicroai.motion_controller.enums import ControllerEvent
 from spotmicroai.motion_controller.models.pose import Pose
 from spotmicroai.motion_controller.services.keyframe_service import KeyframeService
 from spotmicroai.motion_controller.services.pose_service import PoseService
 from spotmicroai.motion_controller.services.servo_service import ServoService
+from spotmicroai.motion_controller.services.telemetry_service import TelemetryService
+from spotmicroai.motion_controller.telemetry_display import TelemetryDisplay
+from spotmicroai.motion_controller.wrappers.buzzer import Buzzer
 from spotmicroai.motion_controller.wrappers.pca9685 import PCA9685Board
 from spotmicroai.utilities.log import Logger
-
-from spotmicroai.motion_controller.constants import FOOT_SERVO_OFFSET, INACTIVITY_TIME, LEG_SERVO_OFFSET
-from spotmicroai.motion_controller.enums import ControllerEvent
-from spotmicroai.motion_controller.wrappers.buzzer import Buzzer
-from .report import TelemetryDisplay, TelemetryCollector
+import spotmicroai.utilities.queues as queues
 
 log = Logger().setup_logger('Motion controller')
 
@@ -31,7 +31,7 @@ class MotionController:
     _is_running = False
     _keyframe_service: KeyframeService
     _telemetry_display: TelemetryDisplay
-    _telemetry_collector: TelemetryCollector
+    _telemetry_service: TelemetryService
 
     def __init__(self, communication_queues):
         try:
@@ -45,12 +45,15 @@ class MotionController:
 
             # Initialize telemetry system
             self._telemetry_display = TelemetryDisplay()
-            self._telemetry_collector = TelemetryCollector(self)
+            self._telemetry_service = TelemetryService(self)
 
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
             self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
             self._lcd_screen_queue.put(queues.MOTION_CONTROLLER + ' OK')
+
+            time.sleep(0.1)
+            self._buzzer.beep()
 
         except Exception as e:
             log.error('Motion controller initialization problem', e)
@@ -61,7 +64,7 @@ class MotionController:
             finally:
                 sys.exit(1)
 
-    def exit_gracefully(self, signum, frame):
+    def exit_gracefully(self, _signum, _frame):
         log.info("Graceful shutdown initiated...")
 
         # Move servos to neutral (rest) first
@@ -317,7 +320,7 @@ class MotionController:
             if telemetry_update_counter >= TELEMETRY_UPDATE_INTERVAL:
                 telemetry_update_counter = 0
                 try:
-                    telemetry_data = self._telemetry_collector.collect(
+                    telemetry_data = self._telemetry_service.collect(
                         event=event,
                         loop_time_ms=loop_time_ms,
                         idle_time_ms=idle_time_ms,
@@ -447,32 +450,34 @@ class MotionController:
 
     def body_move_roll(self, raw_value: float):
 
-        range = 1
+        increment = 1
 
         if raw_value < 0:
-            self._servo_service.rear_shoulder_left_angle = max(self._servo_service.rear_shoulder_left_angle - range, 0)
+            self._servo_service.rear_shoulder_left_angle = max(
+                self._servo_service.rear_shoulder_left_angle - increment, 0
+            )
             self._servo_service.rear_shoulder_right_angle = max(
-                self._servo_service.rear_shoulder_right_angle - range, 0
+                self._servo_service.rear_shoulder_right_angle - increment, 0
             )
             self._servo_service.front_shoulder_left_angle = min(
-                self._servo_service.front_shoulder_left_angle + range, 180
+                self._servo_service.front_shoulder_left_angle + increment, 180
             )
             self._servo_service.front_shoulder_right_angle = min(
-                self._servo_service.front_shoulder_right_angle + range, 180
+                self._servo_service.front_shoulder_right_angle + increment, 180
             )
 
         elif raw_value > 0:
             self._servo_service.rear_shoulder_left_angle = min(
-                self._servo_service.rear_shoulder_left_angle + range, 180
+                self._servo_service.rear_shoulder_left_angle + increment, 180
             )
             self._servo_service.rear_shoulder_right_angle = min(
-                self._servo_service.rear_shoulder_right_angle + range, 180
+                self._servo_service.rear_shoulder_right_angle + increment, 180
             )
             self._servo_service.front_shoulder_left_angle = max(
-                self._servo_service.front_shoulder_left_angle - range, 0
+                self._servo_service.front_shoulder_left_angle - increment, 0
             )
             self._servo_service.front_shoulder_right_angle = max(
-                self._servo_service.front_shoulder_right_angle - range, 0
+                self._servo_service.front_shoulder_right_angle - increment, 0
             )
 
         else:
