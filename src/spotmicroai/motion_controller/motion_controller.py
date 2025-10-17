@@ -138,7 +138,7 @@ class MotionController:
                 event = {}
 
             # Handle START button with debouncing
-            if self._button_manager.is_pressed(ControllerEvent.START, event):
+            if self._button_manager.check_edge(ControllerEvent.START, event):
                 inactivity_counter = self._handle_start_button_toggle(inactivity_counter)
 
             if not self._is_activated:
@@ -270,7 +270,7 @@ class MotionController:
                     #     self.handle_instinct(self._instincts['sleep'])
 
                 # Handle BACK button (walking toggle) with debouncing
-                if self._button_manager.is_pressed(ControllerEvent.BACK, event):
+                if self._button_manager.check_edge(ControllerEvent.BACK, event):
                     self._is_running = not self._is_running
                     if self._is_running:
                         # Reset walking state when starting to walk

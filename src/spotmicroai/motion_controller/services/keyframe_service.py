@@ -96,6 +96,10 @@ class KeyframeService(metaclass=Singleton):
     def walking_speed(self, value: float):
         self._walking_speed = value
 
+    @property
+    def elapsed(self) -> float:
+        return self._elapsed
+
     def _compute_rotation_offsets(self, x: float) -> Tuple[float, float]:
         """Calculate the rotational movement for a given x value
 
