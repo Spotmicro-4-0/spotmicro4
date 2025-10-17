@@ -14,25 +14,21 @@ log = Logger().setup_logger('Test Motion')
 
 log.info('Testing Motion...')
 
-pca9685_1_address = int(
-    Config().get('motion_controller[*].boards[*].pca9685_1[*].address | [0] | [0] | [0]'), 0)
-pca9685_1_reference_clock_speed = int(Config().get(
-    'motion_controller[*].boards[*].pca9685_1[*].reference_clock_speed | [0] | [0] | [0]'))
-pca9685_1_frequency = int(
-    Config().get('motion_controller[*].boards[*].pca9685_1[*].frequency | [0] | [0] | [0]'))
+config = Config()
+pca = config.motion_controller.pca9685
+
+pca9685_1_address = int(pca.address, 0)
+pca9685_1_reference_clock_speed = pca.reference_clock_speed
+pca9685_1_frequency = pca.frequency
 
 boards = 1
 
 try:
-    pca9685_2_address = int(
-        Config().get('motion_controller[*].boards[*].pca9685_2[*].address | [0] | [0] | [0]'), 0)
-
-    if pca9685_2_address:
-        pca9685_2_reference_clock_speed = int(Config().get(
-            'motion_controller[*].boards[*].pca9685_2[*].reference_clock_speed | [0] | [0] | [0]'))
-        pca9685_2_frequency = int(Config().get(
-            'motion_controller[*].boards[*].pca9685_2[*].frequency | [0] | [0] | [0]'))
-        boards = 2
+    # Assuming no second PCA in config, but if added later
+    pca9685_2_address = 0  # Placeholder
+    pca9685_2_reference_clock_speed = 0
+    pca9685_2_frequency = 0
+    boards = 1  # Only one board in current config
 
 except:
     log.error("Second PCA not found")
@@ -45,7 +41,7 @@ input("Press Enter to start the tests...")
 
 pca = None
 
-gpio_port = Config().get('abort_controller[0].gpio_port')
+gpio_port = config.abort_controller.gpio_port
 
 try:
 
@@ -57,8 +53,7 @@ try:
 
     i2c = busio.I2C(SCL, SDA)
 
-    pca = PCA9685(i2c, address=pca9685_1_address,
-                  reference_clock_speed=pca9685_1_reference_clock_speed)
+    pca = PCA9685(i2c, address=pca9685_1_address, reference_clock_speed=pca9685_1_reference_clock_speed)
     pca.frequency = 50
 
     for x in range(0, 15):
@@ -104,8 +99,7 @@ if boards == 2:
 
         i2c = busio.I2C(SCL, SDA)
 
-        pca = PCA9685(i2c, address=pca9685_2_address,
-                      reference_clock_speed=pca9685_2_reference_clock_speed)
+        pca = PCA9685(i2c, address=pca9685_2_address, reference_clock_speed=pca9685_2_reference_clock_speed)
         pca.frequency = 50
 
         for x in range(0, 15):

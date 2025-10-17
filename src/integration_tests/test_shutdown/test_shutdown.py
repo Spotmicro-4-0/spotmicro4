@@ -18,7 +18,8 @@ log = Logger().setup_logger('Shutdown SERVOS')
 log.info('Shutting down...')
 
 pca = None
-gpio_port = Config().get('abort_controller[0].gpio_port')
+config = Config()
+gpio_port = config.abort_controller.gpio_port
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpio_port, GPIO.OUT)
 GPIO.output(gpio_port, False)
@@ -37,10 +38,21 @@ options = [
     'front_feet_left',
     'front_shoulder_right',
     'front_leg_right',
-    'front_feet_right']  
+    'front_feet_right',
+]
 
 for selected_option in options:
-    PCA9685_ADDRESS, PCA9685_REFERENCE_CLOCK_SPEED, PCA9685_FREQUENCY, CHANNEL, MIN_PULSE, MAX_PULSE, REST_ANGLE = Config().get_by_section_name(selected_option)
+    servo_config = config.get_servo(selected_option)
+    pca_info = config.motion_controller.pca9685
+
+    PCA9685_ADDRESS = pca_info.address
+    PCA9685_REFERENCE_CLOCK_SPEED = pca_info.reference_clock_speed
+    PCA9685_FREQUENCY = pca_info.frequency
+    CHANNEL = servo_config.channel
+    MIN_PULSE = servo_config.min_pulse
+    MAX_PULSE = servo_config.max_pulse
+    REST_ANGLE = servo_config.rest_angle
+
     try:
         pca = PCA9685(i2c, address=int(PCA9685_ADDRESS, 0), reference_clock_speed=PCA9685_REFERENCE_CLOCK_SPEED)
         pca.frequency = PCA9685_FREQUENCY
