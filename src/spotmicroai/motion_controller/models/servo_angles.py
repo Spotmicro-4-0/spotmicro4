@@ -12,6 +12,7 @@ class ServoAngles:
         leg_angle: The leg angle (float).
         foot_angle: The foot angle (float).
     """
+
     shoulder_angle: float = 90.0
     leg_angle: float = 90.0
     foot_angle: float = 90.0

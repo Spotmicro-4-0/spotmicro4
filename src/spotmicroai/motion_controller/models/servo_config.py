@@ -17,6 +17,7 @@ class ServoConfig:
         max_pulse: The maximum pulse width in microseconds
         rest_angle: The value of the resting angle of the servo
     """
+
     channel: int
     min_pulse: int
     max_pulse: int

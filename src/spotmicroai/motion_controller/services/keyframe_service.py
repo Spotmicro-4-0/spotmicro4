@@ -2,7 +2,13 @@ import math
 import time
 from typing import List, Tuple
 
-from spotmicroai.motion_controller.constants import ROTATION_OFFSET
+from spotmicroai.motion_controller.constants import (
+    HEIGHT_MULTIPLIER,
+    LEAN_MULTIPLIER,
+    MAX_WALKING_SPEED,
+    ROTATION_INCREMENT,
+    ROTATION_OFFSET,
+)
 from spotmicroai.motion_controller.models.coordinate import Coordinate
 from spotmicroai.motion_controller.models.keyframe import Keyframe
 from spotmicroai.utilities.config import Config
@@ -10,21 +16,20 @@ from spotmicroai.utilities.singleton import Singleton
 
 
 class KeyframeService(metaclass=Singleton):
-    """A class representing a transition from a previous keyframe to a current keyframe.
+    """A class representing a transition from a previous keyframe to a next keyframe.
 
     Attributes:
-        current: The current keyframe (Keyframe).
-        previous: The previous keyframe (Keyframe).
+        _next: The next keyframe (Keyframe).
+        _previous: The previous keyframe (Keyframe).
     """
 
-    walking_cycle: List[Coordinate] = []
-    walking_cycle_length: int = 0
-    current: Keyframe
-    previous: Keyframe
+    _walking_cycle: List[Coordinate] = []
+    __next_keyframe: Keyframe
+    __previous_keyframe: Keyframe
 
     def __init__(self):
-        self.current = Keyframe()
-        self.previous = Keyframe()
+        self.__next_keyframe = Keyframe()
+        self.__previous_keyframe = Keyframe()
 
         self._forward_factor = 0.0
         self._max_forward_factor = 0.5
@@ -36,13 +41,12 @@ class KeyframeService(metaclass=Singleton):
         # Walking state tracking
         self._elapsed = 0.0
         self._start = 0.0
-        self._last_index = 0
+        self.prev_index = 0
 
-        if not self.walking_cycle:
+        if not self._walking_cycle:
             config = Config()
             walking_cycle_data = config.motion_controller.walking_cycle
-            self.__class__.walking_cycle = [Coordinate(*pos) for pos in walking_cycle_data]
-            self.__class__.walking_cycle_length = len(self.walking_cycle)
+            self.__class__._walking_cycle = [Coordinate(*pos) for pos in walking_cycle_data]
 
     @property
     def forward_factor(self) -> float:
@@ -92,18 +96,13 @@ class KeyframeService(metaclass=Singleton):
     def walking_speed(self, value: float):
         self._walking_speed = value
 
-    def createNextKeyframe(self):
-        """Copy the current keyframe to previous and reset current to default values."""
-        self.previous = self.current
-        self.current = Keyframe()
-
-    def calculate_rotational_movement(self, index: int) -> Tuple[float, float]:
-        """Calculate the rotational movement for a given walking cycle index.
+    def _compute_rotation_offsets(self, x: float) -> Tuple[float, float]:
+        """Calculate the rotational movement for a given x value
 
         Parameters
         ----------
-        index : int
-            The index in the walking cycle.
+        x : float
+            The x value for the next keyframe
 
         Returns
         -------
@@ -115,11 +114,56 @@ class KeyframeService(metaclass=Singleton):
         x_rot = math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
         z_rot = math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
 
-        angle = (45 + self.walking_cycle[index].x) / 180.0 * math.pi
+        angle = (45 + x) / 180.0 * math.pi
         x_rot = x_rot - math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
         z_rot = z_rot - math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
 
         return x_rot, z_rot
+
+    def _advance_to_next_keyframe(self, next_index: int):
+        current_coordinate = self._walking_cycle[next_index]
+
+        # Calculate rotational movement for current index
+        x_rot, z_rot = self._compute_rotation_offsets(current_coordinate.x)
+
+        # Handle Front-Right and Back-Left legs first
+        front_right = Coordinate(
+            current_coordinate.x * -self._forward_factor + x_rot,
+            current_coordinate.y,
+            current_coordinate.z + z_rot,
+        )
+
+        rear_left = Coordinate(
+            current_coordinate.x * -self._forward_factor - x_rot,
+            current_coordinate.y,
+            current_coordinate.z + z_rot,
+        )
+
+        # Handle the other two legs (Front-Left and Back-Right) with phase offset
+        adjusted_index = (next_index + 3) % len(self._walking_cycle)
+        current_coordinate = self._walking_cycle[adjusted_index]
+
+        x_rot, z_rot = self._compute_rotation_offsets(current_coordinate.x)
+
+        front_left = Coordinate(
+            current_coordinate.x * -self._forward_factor - x_rot,
+            current_coordinate.y,
+            current_coordinate.z - z_rot,
+        )
+
+        rear_right = Coordinate(
+            current_coordinate.x * -self._forward_factor + x_rot,
+            current_coordinate.y,
+            current_coordinate.z - z_rot,
+        )
+
+        # Shift keyframes: current becomes previous, prepare new current
+        self.__previous_keyframe = self.__next_keyframe
+        self.__next_keyframe = Keyframe(
+            front_left=front_left, front_right=front_right, rear_left=rear_left, rear_right=rear_right
+        )
+
+        self.prev_index = next_index
 
     def set_forward_factor(self, factor: float):
         """Set forward and backward movement.
@@ -140,16 +184,16 @@ class KeyframeService(metaclass=Singleton):
             Positive values rotate right, negative values rotate left. Should be in the range -1.0 - 1.0.
         """
         if self._rotation_factor >= 0 and factor >= self._rotation_factor:
-            self._rotation_factor = min(self._rotation_factor + 0.025, 1)
+            self._rotation_factor = min(self._rotation_factor + ROTATION_INCREMENT, 1)
 
         if self._rotation_factor > 0 and factor < 0:
-            self._rotation_factor = max(self._rotation_factor - 0.025, -1)
+            self._rotation_factor = max(self._rotation_factor - ROTATION_INCREMENT, -1)
 
         if self._rotation_factor < 0 and factor > 0:
-            self._rotation_factor = min(self._rotation_factor + 0.025, 1)
+            self._rotation_factor = min(self._rotation_factor + ROTATION_INCREMENT, 1)
 
         if self._rotation_factor < 0 and factor < self._rotation_factor:
-            self._rotation_factor = max(self._rotation_factor - 0.025, -1)
+            self._rotation_factor = max(self._rotation_factor - ROTATION_INCREMENT, -1)
 
     def set_lean(self, lean: float):
         """Set the distance that it should lean left to right.
@@ -159,7 +203,7 @@ class KeyframeService(metaclass=Singleton):
         lean : float
             Positive values lean right, negative values lean left. Should be in the range -1.0 - 1.0.
         """
-        self._lean_factor = lean * 50
+        self._lean_factor = lean * LEAN_MULTIPLIER
 
     def set_height_offset(self, height: float):
         """Set the extra distance for the chassis to be off the ground.
@@ -169,7 +213,7 @@ class KeyframeService(metaclass=Singleton):
         height : float
             Should be in the range 0.0-1.0.
         """
-        self._height_factor = height * 40
+        self._height_factor = height * HEIGHT_MULTIPLIER
 
     def reset_movement(self):
         """Reset rotation and forward factors to zero."""
@@ -190,17 +234,17 @@ class KeyframeService(metaclass=Singleton):
             The amount to adjust speed by (can be positive or negative).
         """
         if delta > 0:
-            self._walking_speed = max(min(self._walking_speed + 1, 15), 0)
+            self._walking_speed = max(min(self._walking_speed + 1, MAX_WALKING_SPEED), 0)
         else:
-            self._walking_speed = min(max(self._walking_speed - 1, 0), 15)
+            self._walking_speed = min(max(self._walking_speed - 1, 0), MAX_WALKING_SPEED)
 
     def reset_walking_state(self):
         """Reset the walking state to initial values. Call this when starting a new walking session."""
         self._elapsed = 0.0
         self._start = time.time()
-        self._last_index = 0
+        self.prev_index = 0
 
-    def update_walking_keyframes(self) -> Tuple[int, float]:
+    def update_keyframes(self) -> Keyframe:
         """Update the walking cycle keyframes based on elapsed time.
 
         This method calculates the current position in the walking cycle and updates
@@ -214,52 +258,19 @@ class KeyframeService(metaclass=Singleton):
         """
         # Calculate elapsed time and current position in walking cycle
         self._elapsed += (time.time() - self._start) * self._walking_speed
-        self._elapsed = self._elapsed % self.walking_cycle_length
+        self._elapsed = self._elapsed % len(self._walking_cycle)
 
         self._start = time.time()
-        index = math.floor(self._elapsed)
-        ratio = self._elapsed - index
+        next_index = math.floor(self._elapsed)
+        ratio = self._elapsed - next_index
 
-        if self._last_index != index:
-            # Shift keyframes: current becomes previous, prepare new current
-            self.createNextKeyframe()
+        if self.prev_index != next_index:
+            self._advance_to_next_keyframe(next_index)
 
-            # Calculate rotational movement for current index
-            x_rot, z_rot = self.calculate_rotational_movement(index)
+        # Get interpolated leg positions and apply to servos
+        return self._interpolate_next_keyframe(ratio)
 
-            current_coordinate = self.walking_cycle[index]
-
-            # Handle Front-Right and Back-Left legs first
-            x = current_coordinate.x * -self._forward_factor + x_rot
-            y = current_coordinate.y
-            z = current_coordinate.z + z_rot
-            self.current.front_right = Coordinate(x, y, z)
-
-            x = current_coordinate.x * -self._forward_factor - x_rot
-            y = current_coordinate.y
-            z = current_coordinate.z + z_rot
-            self.current.rear_left = Coordinate(x, y, z)
-
-            # Handle the other two legs (Front-Left and Back-Right) with phase offset
-            adjusted_index = (index + 3) % self.walking_cycle_length
-            x_rot, z_rot = self.calculate_rotational_movement(adjusted_index)
-            current_coordinate = self.walking_cycle[adjusted_index]
-
-            x = current_coordinate.x * -self._forward_factor - x_rot
-            y = current_coordinate.y
-            z = current_coordinate.z - z_rot
-            self.current.front_left = Coordinate(x, y, z)
-
-            x = current_coordinate.x * -self._forward_factor + x_rot
-            y = current_coordinate.y
-            z = current_coordinate.z - z_rot
-            self.current.rear_right = Coordinate(x, y, z)
-
-            self._last_index = index
-
-        return index, ratio
-
-    def get_interpolated_leg_positions(self, ratio: float) -> dict:
+    def _interpolate_next_keyframe(self, ratio: float) -> Keyframe:
         """Get interpolated leg positions for all four legs.
 
         This method interpolates between previous and current keyframes based on the
@@ -276,58 +287,56 @@ class KeyframeService(metaclass=Singleton):
             A dictionary with keys 'front_right', 'rear_left', 'front_left', 'rear_right',
             each containing a Coordinate representing the interpolated position.
         """
-        positions = {}
-
         # Front Right
         start_coord = Coordinate(
-            self.previous.front_right.x,
-            self.previous.front_right.y + self._height_factor,
-            self.previous.front_right.z - self._lean_factor,
+            self.__previous_keyframe.front_right.x,
+            self.__previous_keyframe.front_right.y + self._height_factor,
+            self.__previous_keyframe.front_right.z - self._lean_factor,
         )
         end_coord = Coordinate(
-            self.current.front_right.x,
-            self.current.front_right.y + self._height_factor,
-            self.current.front_right.z - self._lean_factor,
+            self.__next_keyframe.front_right.x,
+            self.__next_keyframe.front_right.y + self._height_factor,
+            self.__next_keyframe.front_right.z - self._lean_factor,
         )
-        positions['front_right'] = start_coord.interpolate_to(end_coord, ratio)
+        front_right = start_coord.interpolate_to(end_coord, ratio)
 
         # Rear Left
         start_coord = Coordinate(
-            self.previous.rear_left.x,
-            self.previous.rear_left.y + self._height_factor,
-            self.previous.rear_left.z + self._lean_factor,
+            self.__previous_keyframe.rear_left.x,
+            self.__previous_keyframe.rear_left.y + self._height_factor,
+            self.__previous_keyframe.rear_left.z + self._lean_factor,
         )
         end_coord = Coordinate(
-            self.current.rear_left.x,
-            self.current.rear_left.y + self._height_factor,
-            self.current.rear_left.z + self._lean_factor,
+            self.__next_keyframe.rear_left.x,
+            self.__next_keyframe.rear_left.y + self._height_factor,
+            self.__next_keyframe.rear_left.z + self._lean_factor,
         )
-        positions['rear_left'] = start_coord.interpolate_to(end_coord, ratio)
+        rear_left = start_coord.interpolate_to(end_coord, ratio)
 
         # Front Left
         start_coord = Coordinate(
-            self.previous.front_left.x,
-            self.previous.front_left.y + self._height_factor,
-            self.previous.front_left.z + self._lean_factor,
+            self.__previous_keyframe.front_left.x,
+            self.__previous_keyframe.front_left.y + self._height_factor,
+            self.__previous_keyframe.front_left.z + self._lean_factor,
         )
         end_coord = Coordinate(
-            self.current.front_left.x,
-            self.current.front_left.y + self._height_factor,
-            self.current.front_left.z + self._lean_factor,
+            self.__next_keyframe.front_left.x,
+            self.__next_keyframe.front_left.y + self._height_factor,
+            self.__next_keyframe.front_left.z + self._lean_factor,
         )
-        positions['front_left'] = start_coord.interpolate_to(end_coord, ratio)
+        front_left = start_coord.interpolate_to(end_coord, ratio)
 
         # Rear Right
         start_coord = Coordinate(
-            self.previous.rear_right.x,
-            self.previous.rear_right.y + self._height_factor,
-            self.previous.rear_right.z - self._lean_factor,
+            self.__previous_keyframe.rear_right.x,
+            self.__previous_keyframe.rear_right.y + self._height_factor,
+            self.__previous_keyframe.rear_right.z - self._lean_factor,
         )
         end_coord = Coordinate(
-            self.current.rear_right.x,
-            self.current.rear_right.y + self._height_factor,
-            self.current.rear_right.z - self._lean_factor,
+            self.__next_keyframe.rear_right.x,
+            self.__next_keyframe.rear_right.y + self._height_factor,
+            self.__next_keyframe.rear_right.z - self._lean_factor,
         )
-        positions['rear_right'] = start_coord.interpolate_to(end_coord, ratio)
+        rear_right = start_coord.interpolate_to(end_coord, ratio)
 
-        return positions
+        return Keyframe(front_left=front_left, front_right=front_right, rear_left=rear_left, rear_right=rear_right)

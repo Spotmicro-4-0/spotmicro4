@@ -1,5 +1,6 @@
 from adafruit_motor import servo  # type: ignore
 
+from spotmicroai.motion_controller.constants import FOOT_SERVO_OFFSET, LEG_SERVO_OFFSET
 from spotmicroai.motion_controller.models.pose import Pose
 from spotmicroai.motion_controller.wrappers.pca9685 import PCA9685Board
 from spotmicroai.utilities.config import Config
@@ -49,6 +50,10 @@ class ServoService(metaclass=Singleton):
 
         # Initialize staged angles
         self.clear_staged()
+
+    def _complement(self, angle):
+        """Return the complementary angle (180 - angle)."""
+        return 180 - angle
 
     def _make_servo(self, board, config):
         """Create and configure one Adafruit servo object."""
@@ -109,3 +114,67 @@ class ServoService(metaclass=Singleton):
         self.front_shoulder_right_angle = pose.front_right.shoulder_angle
         self.front_leg_right_angle = pose.front_right.leg_angle
         self.front_foot_right_angle = pose.front_right.foot_angle
+
+    def set_front_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
+        """Helper function for setting servo angles for the front right leg.
+
+        Parameters
+        ----------
+        foot_angle : float
+            Servo angle for foot in degrees.
+        leg_angle : float
+            Servo angle for leg in degrees.
+        shoulder_angle : float
+            Servo angle for shoulder in degrees.
+        """
+        self.front_shoulder_right_angle = shoulder_angle
+        self.front_leg_right_angle = max(self._complement(leg_angle + LEG_SERVO_OFFSET), 0)
+        self.front_foot_right_angle = self._complement(max(foot_angle - FOOT_SERVO_OFFSET, 0))
+
+    def set_front_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
+        """Helper function for setting servo angles for the front left leg.
+
+        Parameters
+        ----------
+        foot_angle : float
+            Servo angle for foot in degrees.
+        leg_angle : float
+            Servo angle for leg in degrees.
+        shoulder_angle : float
+            Servo angle for shoulder in degrees.
+        """
+        self.front_shoulder_left_angle = self._complement(shoulder_angle)
+        self.front_leg_left_angle = min(leg_angle + LEG_SERVO_OFFSET, 180)
+        self.front_foot_left_angle = max(foot_angle - FOOT_SERVO_OFFSET, 0)
+
+    def set_rear_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
+        """Helper function for setting servo angles for the back right leg.
+
+        Parameters
+        ----------
+        foot_angle : float
+            Servo angle for foot in degrees.
+        leg_angle : float
+            Servo angle for leg in degrees.
+        shoulder_angle : float
+            Servo angle for shoulder in degrees.
+        """
+        self.rear_shoulder_right_angle = self._complement(shoulder_angle)
+        self.rear_leg_right_angle = max(self._complement(leg_angle + LEG_SERVO_OFFSET), 0)
+        self.rear_foot_right_angle = self._complement(max(foot_angle - FOOT_SERVO_OFFSET, 0))
+
+    def set_rear_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
+        """Helper function for setting servo angles for the back left leg.
+
+        Parameters
+        ----------
+        foot_angle : float
+            Servo angle for foot in degrees.
+        leg_angle : float
+            Servo angle for leg in degrees.
+        shoulder_angle : float
+            Servo angle for shoulder in degrees.
+        """
+        self.rear_shoulder_left_angle = shoulder_angle
+        self.rear_leg_left_angle = min(leg_angle + LEG_SERVO_OFFSET, 180)
+        self.rear_foot_left_angle = max(foot_angle - FOOT_SERVO_OFFSET, 0)

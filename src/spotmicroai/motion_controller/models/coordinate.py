@@ -1,11 +1,10 @@
 import math
 
-from spotmicroai.motion_controller.constants import (FOOT_LENGTH, SAFE_NEUTRAL,
-                                                     SHOULDER_OFFSET,
-                                                     UPPER_LEG_LENGTH)
+from spotmicroai.motion_controller.constants import FOOT_LENGTH, SAFE_NEUTRAL, SHOULDER_OFFSET, UPPER_LEG_LENGTH
 from spotmicroai.utilities.log import Logger
 
 log = Logger().setup_logger('Motion controller')
+
 
 class Coordinate:
     """A class that holds 3 values: x, y, and z.
@@ -78,7 +77,7 @@ class Coordinate:
             if hasattr(self, "log"):
                 log.warning(f"IK fallback due to {ex} for ({x}, {y}, {z})")
             return SAFE_NEUTRAL
-        
+
     def interpolate_to(self, other: 'Coordinate', ratio: float) -> 'Coordinate':
         """Interpolate between this coordinate (from) and another coordinate (to).
 

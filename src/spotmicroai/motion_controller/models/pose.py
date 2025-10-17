@@ -10,12 +10,13 @@ class Pose:
     Used to describe the angles for all servo motors in the robot.
 
     Attributes:
-        rear_left: ServoAngles for the rear left leg.
-        rear_right: ServoAngles for the rear right leg.
         front_left: ServoAngles for the front left leg.
         front_right: ServoAngles for the front right leg.
+        rear_left: ServoAngles for the rear left leg.
+        rear_right: ServoAngles for the rear right leg.
     """
-    rear_left: ServoAngles
-    rear_right: ServoAngles
+
     front_left: ServoAngles
     front_right: ServoAngles
+    rear_left: ServoAngles
+    rear_right: ServoAngles
