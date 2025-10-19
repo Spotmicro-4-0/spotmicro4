@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ~/spotmicroai || exit
-export PYTHONPATH=.
+cd ~/spotmicroai/calibration || exit
+export PYTHONPATH=~/spotmicroai/calibration:$PYTHONPATH
 
-venv/bin/python3 calibration/calibration.py
+../venv/bin/python3 calibration.py
