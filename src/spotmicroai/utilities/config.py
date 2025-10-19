@@ -120,12 +120,13 @@ class Config(metaclass=Singleton):
             servo_name: Name like 'front_shoulder_left', 'rear_leg_right', etc.
 
         Returns:
-            DotDict with channel, min_pulse, max_pulse, rest_angle
+            DotDict with channel, min_pulse, max_pulse, rest_angle, range
 
         Example:
             servo = config.get_servo('front_shoulder_left')
             channel = servo.channel
             min_pulse = servo.min_pulse
+            range_degrees = servo.range
         """
         try:
             return self.motion_controller.servos[servo_name]
