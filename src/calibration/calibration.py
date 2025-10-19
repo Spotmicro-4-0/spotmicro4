@@ -142,26 +142,39 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
     input_row = prompt_row + 2
     status_row = prompt_row + 3
 
+    def angle_to_pulse_us(angle: float) -> float:
+        """Convert angle to pulse width in microseconds."""
+        min_pulse = CalibrationHardwareConfig.MIN_PULSE_US
+        max_pulse = CalibrationHardwareConfig.MAX_PULSE_US
+        actuation_range = CalibrationHardwareConfig.ACTUATION_RANGE_DEGREES
+        return min_pulse + (angle / actuation_range) * (max_pulse - min_pulse)
+
     try:
         while True:
             win.attrset(curses.color_pair(CalibrationUIConfig.PANEL_BACKGROUND_PAIR))
 
-            # Draw prompt line
+            # Calculate pulse width
+            pulse_us = angle_to_pulse_us(current_angle)
+            
+            # Use proper indentation to avoid overwriting the border
+            indent = CalibrationUIConfig.PANEL_LIST_COL
+
+            # Draw instruction line first
             win.move(prompt_row, 0)
             win.clrtoeol()
             win.addstr(
                 prompt_row,
-                0,
-                f"{name} angle: {current_angle:.1f}°  (default is last set value)",
+                indent,
+                f"↑/↓ adjust ±{angle_step:.0f}°. ENTER moves. b/ESC exits.",
             )
 
-            # Draw instruction line
+            # Draw angle and pulse width line
             win.move(instruction_row, 0)
             win.clrtoeol()
             win.addstr(
                 instruction_row,
-                0,
-                f"↑/↓ adjust ±{angle_step:.0f}°. ENTER moves. b/ESC exits.",
+                indent,
+                f"{name}: {current_angle:.1f}° [{pulse_us:.0f}µs]",
             )
 
             # Draw input buffer line
@@ -169,7 +182,7 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
             win.clrtoeol()
             win.addstr(
                 input_row,
-                0,
+                indent,
                 f"{CalibrationUIConfig.INPUT_PROMPT_LABEL}{input_buffer}",
             )
 
@@ -177,7 +190,7 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
             win.move(status_row, 0)
             win.clrtoeol()
             if status_message:
-                win.addstr(status_row, 0, status_message)
+                win.addstr(status_row, indent, status_message)
 
             win.refresh()
             status_message = ""
