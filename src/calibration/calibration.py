@@ -78,7 +78,7 @@ _servo_objects: Dict[str, Servo] = {}
 # ============================================================
 def init_servo_controller() -> None:
     """Initialise the PWM controller and create Servo objects."""
-    global _pca9685, _servo_objects
+    global _pca9685
 
     if _pca9685 is None:
         _pca9685 = PCA9685(
@@ -292,11 +292,11 @@ def main_menu(stdscr):
     stdscr.bkgd(" ", curses.color_pair(CalibrationUIConfig.SCREEN_BACKGROUND_PAIR))
     stdscr.attrset(curses.color_pair(CalibrationUIConfig.SCREEN_BACKGROUND_PAIR))
 
-    servo_names = list(CalibrationHardwareConfig.SERVOS.keys()) + [CalibrationUIConfig.EXIT_OPTION_LABEL]
+    servo_names = list(CalibrationHardwareConfig.SERVOS) + [CalibrationUIConfig.EXIT_OPTION_LABEL]
     selected = 0
     num_items = len(servo_names)
     angle_memory = {
-        name: CalibrationUIConfig.DEFAULT_SERVO_ANGLE for name in CalibrationHardwareConfig.SERVOS.keys()
+        name: CalibrationUIConfig.DEFAULT_SERVO_ANGLE for name in CalibrationHardwareConfig.SERVOS
     }  # remember angles only for servos
 
     init_servo_controller()
