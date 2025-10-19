@@ -117,4 +117,4 @@ if [ ! -f "$SETUP_TOOL" ]; then
 fi
 
 print_info "Environment ready. Launching setup tool..."
-exec python "$SETUP_TOOL" "$@"
+exec $PYTHON_CMD "$SETUP_TOOL" "$@"
