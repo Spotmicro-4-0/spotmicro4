@@ -1,0 +1,21 @@
+{
+  "deploy_main": {
+    "title": "Deployment Menu",
+    "options": [
+      {
+        "label": "Copy Files to Robot",
+        "action": "run",
+        "command": "python3 scripts/deploy_package.py"
+      },
+      {
+        "label": "Restart SpotMicro Service",
+        "action": "run",
+        "command": "sudo systemctl restart spotmicro"
+      },
+      {
+        "label": "Q) Back",
+        "action": "back"
+      }
+    ]
+  }
+}

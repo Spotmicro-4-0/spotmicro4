@@ -1,0 +1,21 @@
+{
+  "main": {
+    "title": "SpotMicroAI Setup Tool",
+    "options": [
+      {
+        "label": "Servo Calibration",
+        "action": "submenu",
+        "target": "calibrate_main"
+      },
+      {
+        "label": "Deployment Tasks",
+        "action": "submenu",
+        "target": "deploy_main"
+      },
+      {
+        "label": "Q) Exit",
+        "action": "exit"
+      }
+    ]
+  }
+}
