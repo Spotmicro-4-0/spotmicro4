@@ -58,9 +58,10 @@ class ServoService(metaclass=Singleton):
     def _make_servo(self, board, config):
         """Create and configure one Adafruit servo object."""
         s = servo.Servo(
-            board.get_channel(
-                config.channel, min_pulse=config.min_pulse, max_pulse=config.max_pulse, actuation_range=config.range
-            )
+            board.get_channel(config.channel),
+            min_pulse=config.min_pulse,
+            max_pulse=config.max_pulse,
+            actuation_range=config.range,
         )
         return s
 
