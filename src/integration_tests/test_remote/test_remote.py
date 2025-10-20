@@ -4,20 +4,24 @@
 # Based on information from:
 # https://www.kernel.org/doc/Documentation/input/joystick-api.txt
 
-import os, struct, array
+import array
 from fcntl import ioctl
+import os
+import struct
+import sys
+import time
 
-from spotmicroai.core.utilities.log import Logger
 from spotmicroai.core.utilities.config import Config
+from spotmicroai.core.utilities.log import Logger
 
 log = Logger().setup_logger('Testing remote controller')
 
 # Iterate over the joystick devices.
-print('Available devices:')
+log.info('Available devices:')
 
 for fn in os.listdir('/dev/input'):
     if fn.startswith('js'):
-        log.info(('  /dev/input/%s' % (fn)))
+        log.info(f'  /dev/input/{fn}')
 
 # We'll store the states here.
 axis_states = {}
@@ -101,15 +105,26 @@ button_map = []
 config = Config()
 connected_device = config.remote_controller.device
 fn = '/dev/input/' + str(connected_device)
-print(('Opening %s...' % fn))
-jsdev = open(fn, 'rb')
+log.info(f'Opening {fn}...')
+
+try:
+    jsdev = open(fn, 'rb')
+except FileNotFoundError:
+    log.error(f'Controller device not found: {fn}')
+    log.error('Make sure your controller is paired and connected before running this test.')
+    log.error('Check available devices above to verify the controller is detected.')
+    sys.exit(1)
+except PermissionError:
+    log.error(f'Permission denied accessing {fn}')
+    log.error('You may need to run this script with elevated permissions.')
+    sys.exit(1)
 
 # Get the device name.
 # buf = bytearray(63)
 buf = array.array('B', [0] * 64)
 ioctl(jsdev, 0x80006A13 + (0x10000 * len(buf)), buf)  # JSIOCGNAME(len)
 js_name = buf.tobytes().rstrip(b'\x00').decode('utf-8')
-print(('Device name: %s' % js_name))
+log.info(f'Device name: {js_name}')
 
 # Get number of axes and buttons.
 buf = array.array('B', [0])
@@ -125,7 +140,7 @@ buf = array.array('B', [0] * 0x40)
 ioctl(jsdev, 0x80406A32, buf)  # JSIOCGAXMAP
 
 for axis in buf[:num_axes]:
-    axis_name = axis_names.get(axis, 'unknown(0x%02x)' % axis)
+    axis_name = axis_names.get(axis, f'unknown(0x{axis:02x})')
     axis_map.append(axis_name)
     axis_states[axis_name] = 0.0
 
@@ -134,34 +149,38 @@ buf = array.array('H', [0] * 200)
 ioctl(jsdev, 0x80406A34, buf)  # JSIOCGBTNMAP
 
 for btn in buf[:num_buttons]:
-    btn_name = button_names.get(btn, 'unknown(0x%03x)' % btn)
+    btn_name = button_names.get(btn, f'unknown(0x{btn:03x})')
     button_map.append(btn_name)
     button_states[btn_name] = 0
 
-print(('%d axes found: %s' % (num_axes, ', '.join(axis_map))))
-print(('%d buttons found: %s' % (num_buttons, ', '.join(button_map))))
+log.info(f'{num_axes} axes found: {", ".join(axis_map)}')
+log.info(f'{num_buttons} buttons found: {", ".join(button_map)}')
 
-# Main event loop
+# Main event loop - polling at 50 Hz
+log.info('Starting event loop (50 Hz polling rate)...')
 while True:
     evbuf = jsdev.read(8)
     if evbuf:
-        time, value, type, number = struct.unpack('IhBB', evbuf)
+        timestamp, value, event_type, number = struct.unpack('IhBB', evbuf)
 
-        if type & 0x80:
-            print("(initial)")
+        if event_type & 0x80:
+            log.info("(initial)")
 
-        if type & 0x01:
+        if event_type & 0x01:
             button = button_map[number]
             if button:
                 button_states[button] = value
                 if value:
-                    print(("%s pressed" % (button)))
+                    log.info(f"{button} pressed")
                 else:
-                    print(("%s released" % (button)))
+                    log.info(f"{button} released")
 
-        if type & 0x02:
+        if event_type & 0x02:
             axis = axis_map[number]
             if axis:
                 fvalue = value / 32767.0
                 axis_states[axis] = fvalue
-                print(("%s: %.3f" % (axis, fvalue)))
+                log.info(f"{axis}: {fvalue:.3f}")
+
+    # Sleep to maintain 50 Hz polling rate (20ms between polls)
+    time.sleep(0.02)

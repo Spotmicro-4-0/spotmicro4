@@ -20,13 +20,13 @@
     "servos": {
       "front_shoulder_left": {
         "channel": 6,
-        "min_pulse": 1337,
-        "min_angle": 113,
-        "max_pulse": 1707,
-        "max_angle": 163,
-        "rest_angle": 147,
+        "min_pulse": 1841,
+        "min_angle": 181,
+        "max_pulse": 1396,
+        "max_angle": 121,
+        "rest_angle": 151,
         "range": 270,
-        "delta": 50
+        "delta": 60
       },
       "front_leg_left": {
         "channel": 7,
@@ -80,28 +80,28 @@
       },
       "rear_shoulder_left": {
         "channel": 3,
-        "min_pulse": 1500,
-        "max_pulse": 1850,
-        "rest_angle": 90,
+        "min_pulse": 1478,
+        "min_angle": 132,
+        "max_pulse": 1922,
+        "max_angle": 192,
+        "rest_angle": 162,
         "range": 270,
-        "min_angle": 0,
-        "max_angle": 180,
-        "delta": 0
+        "delta": 60
       },
       "rear_leg_left": {
         "channel": 4,
         "min_pulse": 980,
+        "min_angle": 132,
         "max_pulse": 2300,
         "rest_angle": 180,
         "range": 270,
-        "min_angle": 0,
         "max_angle": 180,
         "delta": 0
       },
       "rear_foot_left": {
         "channel": 5,
-        "min_pulse": 981,
-        "min_angle": 65,
+        "min_pulse": 959,
+        "min_angle": 62,
         "max_pulse": 1848,
         "max_angle": 182,
         "rest_angle": 65,
