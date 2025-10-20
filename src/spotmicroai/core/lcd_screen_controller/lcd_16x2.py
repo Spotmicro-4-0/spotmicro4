@@ -11,44 +11,9 @@ Made available under GNU GENERAL PUBLIC LICENSE
 # 2015-02-10, ver 0.1
 
 """
-#
-#
-import smbus
-from time import *
+from time import sleep
 
-
-class i2c_device:
-    def __init__(self, addr, port=1):
-        self.addr = addr
-        self.bus = smbus.SMBus(port)
-
-    # Write a single command
-    def write_cmd(self, cmd):
-        self.bus.write_byte(self.addr, cmd)
-        sleep(0.0001)
-
-    # Write a command and argument
-    def write_cmd_arg(self, cmd, data):
-        self.bus.write_byte_data(self.addr, cmd, data)
-        sleep(0.0001)
-
-    # Write a block of data
-    def write_block_data(self, cmd, data):
-        self.bus.write_block_data(self.addr, cmd, data)
-        sleep(0.0001)
-
-    # Read a single byte
-    def read(self):
-        return self.bus.read_byte(self.addr)
-
-    # Read
-    def read_data(self, cmd):
-        return self.bus.read_byte_data(self.addr, cmd)
-
-    # Read a block of data
-    def read_block_data(self, cmd):
-        return self.bus.read_block_data(self.addr, cmd)
-
+from .i2c_device import I2cDevice
 
 # LCD Address
 ADDRESS = 0x27
@@ -88,40 +53,44 @@ LCD_8BITMODE = 0x10
 LCD_4BITMODE = 0x00
 LCD_2LINE = 0x08
 LCD_1LINE = 0x00
-LCD_5x10DOTS = 0x04
-LCD_5x8DOTS = 0x00
+LCD_5X10_DOTS = 0x04
+LCD_5X8_DOTS = 0x00
 
 # flags for backlight control
 LCD_BACKLIGHT = 0x08
 LCD_NOBACKLIGHT = 0x00
 
-En = 0b00000100  # Enable bit
-Rw = 0b00000010  # Read/Write bit
-Rs = 0b00000001  # Register select bit
+EN = 0b00000100  # Enable bit
+RW = 0b00000010  # Read/Write bit
+RS = 0b00000001  # Register select bit
 
 
-class lcd:
+class Lcd16x2:
+    INIT_DELAY_SECONDS = 0.2
+    ENABLE_PULSE_SECONDS = 0.0005
+    POST_ENABLE_DELAY_SECONDS = 0.0001
+
     # initializes objects and lcd
     def __init__(self, address=ADDRESS):
-        self.lcd_device = i2c_device(address)
+        self.lcd_device = I2cDevice(address)
 
         self.lcd_write(0x03)
         self.lcd_write(0x03)
         self.lcd_write(0x03)
         self.lcd_write(0x02)
 
-        self.lcd_write(LCD_FUNCTIONSET | LCD_2LINE | LCD_5x8DOTS | LCD_4BITMODE)
+        self.lcd_write(LCD_FUNCTIONSET | LCD_2LINE | LCD_5X8_DOTS | LCD_4BITMODE)
         self.lcd_write(LCD_DISPLAYCONTROL | LCD_DISPLAYON)
         self.lcd_write(LCD_CLEARDISPLAY)
         self.lcd_write(LCD_ENTRYMODESET | LCD_ENTRYLEFT)
-        sleep(0.2)
+        sleep(self.INIT_DELAY_SECONDS)
 
     # clocks EN to latch command
     def lcd_strobe(self, data):
-        self.lcd_device.write_cmd(data | En | LCD_BACKLIGHT)
-        sleep(.0005)
-        self.lcd_device.write_cmd(((data & ~En) | LCD_BACKLIGHT))
-        sleep(.0001)
+        self.lcd_device.write_cmd(data | EN | LCD_BACKLIGHT)
+        sleep(self.ENABLE_PULSE_SECONDS)
+        self.lcd_device.write_cmd(((data & ~EN) | LCD_BACKLIGHT))
+        sleep(self.POST_ENABLE_DELAY_SECONDS)
 
     def lcd_write_four_bits(self, data):
         self.lcd_device.write_cmd(data | LCD_BACKLIGHT)
@@ -150,7 +119,7 @@ class lcd:
             self.lcd_write(0xD4)
 
         for char in string:
-            self.lcd_write(ord(char), Rs)
+            self.lcd_write(ord(char), RS)
 
     # clear lcd and set to home
     def lcd_clear(self):
@@ -166,7 +135,7 @@ class lcd:
 
     # add custom characters (0 - 7)
     def lcd_load_custom_chars(self, fontdata):
-        self.lcd_write(0x40);
+        self.lcd_write(0x40)
         for char in fontdata:
             for line in char:
                 self.lcd_write_char(line)
@@ -180,8 +149,10 @@ class lcd:
             pos_new = 0x14 + pos
         elif line == 4:
             pos_new = 0x54 + pos
+        else:
+            pos_new = pos
 
         self.lcd_write(0x80 + pos_new)
 
         for char in string:
-            self.lcd_write(ord(char), Rs)
+            self.lcd_write(ord(char), RS)

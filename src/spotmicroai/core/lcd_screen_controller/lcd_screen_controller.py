@@ -4,7 +4,7 @@ import signal
 import sys
 import time
 
-from spotmicroai.core.lcd_screen_controller import LCD_16x2_I2C_driver
+from spotmicroai.core.lcd_screen_controller.lcd_16x2 import Lcd16x2
 from spotmicroai.core.utilities.config import Config
 from spotmicroai.core.utilities.log import Logger
 import spotmicroai.core.utilities.queues as queues
@@ -31,7 +31,7 @@ class LCDScreenController:
 
             i2c_address = int(self.config.lcd_screen_controller.address, 0)
 
-            self.screen = LCD_16x2_I2C_driver.lcd(address=i2c_address)
+            self.screen = Lcd16x2(address=i2c_address)
 
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
             self.screen.lcd_clear()

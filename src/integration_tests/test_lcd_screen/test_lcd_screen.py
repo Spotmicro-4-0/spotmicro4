@@ -18,10 +18,10 @@ Usage:
 """
 
 import time
-from spotmicroai.core.lcd_screen_controller import LCD_16x2_I2C_driver
-from spotmicroai.core.utilities.log import Logger
-from spotmicroai.core.utilities.config import Config
 
+from spotmicroai.core.lcd_screen_controller.lcd_16x2 import Lcd16x2
+from spotmicroai.core.utilities.config import Config
+from spotmicroai.core.utilities.log import Logger
 
 # ------------------------------------------------------------------------------------------
 # Test Functions
@@ -149,7 +149,7 @@ def main():
 
     input("Press Enter to start the tests...")
 
-    lcd = LCD_16x2_I2C_driver.lcd(address=i2c_address)
+    lcd = Lcd16x2(address=i2c_address)
 
     try:
         test_backlight(lcd, log)
