@@ -1,6 +1,6 @@
 import math
 
-from spotmicroai.motion_controller.constants import FOOT_LENGTH, SAFE_NEUTRAL, SHOULDER_OFFSET, UPPER_LEG_LENGTH
+from spotmicroai.motion_controller.constants import FOOT_LENGTH, LEG_LENGTH, SAFE_NEUTRAL, SHOULDER_LENGTH
 from spotmicroai.utilities.log import Logger
 
 log = Logger().setup_logger('Motion controller')
@@ -36,7 +36,7 @@ class Coordinate:
 
         try:
             # (1) Projected Shoulder Distance
-            term = y * y + z * z - SHOULDER_OFFSET * SHOULDER_OFFSET
+            term = y * y + z * z - SHOULDER_LENGTH * SHOULDER_LENGTH
             if term < 0:
                 term = 0.0  # clamp to avoid sqrt of negative
             distance_yz = math.sqrt(term)
@@ -47,17 +47,17 @@ class Coordinate:
                 distance_total = 1e-6  # prevent divide-by-zero
 
             # (3) Shoulder Rotation
-            omega = math.atan(distance_total / max(SHOULDER_OFFSET, 1e-6)) + math.atan2(z, y)
+            omega = math.atan(distance_total / max(SHOULDER_LENGTH, 1e-6)) + math.atan2(z, y)
 
             # (4) Knee (Foot) Angle
-            num = distance_total * distance_total - UPPER_LEG_LENGTH * UPPER_LEG_LENGTH - FOOT_LENGTH * FOOT_LENGTH
-            denom = -2 * UPPER_LEG_LENGTH * FOOT_LENGTH
+            num = distance_total * distance_total - LEG_LENGTH * LEG_LENGTH - FOOT_LENGTH * FOOT_LENGTH
+            denom = -2 * LEG_LENGTH * FOOT_LENGTH
             ratio_phi = num / denom if denom != 0 else 0
             ratio_phi = self._clamp(ratio_phi, -1.0, 1.0)
             phi = math.acos(ratio_phi)
 
             # (5) Hip (Leg) Angle
-            ratio_theta = (UPPER_LEG_LENGTH * math.sin(phi)) / distance_total
+            ratio_theta = (LEG_LENGTH * math.sin(phi)) / distance_total
             ratio_theta = self._clamp(ratio_theta, -1.0, 1.0)
             theta = math.atan2(x, distance_yz) + math.asin(ratio_theta)
 

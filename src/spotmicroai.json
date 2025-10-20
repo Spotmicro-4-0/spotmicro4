@@ -20,87 +20,123 @@
     "servos": {
       "front_shoulder_left": {
         "channel": 6,
-        "min_pulse": 1420,
-        "max_pulse": 1800,
-        "rest_angle": 90,
-        "range": 270
+        "min_pulse": 1337,
+        "min_angle": 113,
+        "max_pulse": 1707,
+        "max_angle": 163,
+        "rest_angle": 147,
+        "range": 270,
+        "delta": 50
       },
       "front_leg_left": {
         "channel": 7,
-        "min_pulse": 1000,
-        "max_pulse": 2380,
-        "rest_angle": 180,
-        "range": 270
+        "min_pulse": 2374,
+        "min_angle": 253,
+        "max_pulse": 981,
+        "max_angle": 65,
+        "rest_angle": 253,
+        "range": 270,
+        "delta": 188
       },
       "front_foot_left": {
         "channel": 8,
-        "min_pulse": 350,
-        "max_pulse": 1160,
-        "rest_angle": 20,
-        "range": 270
+        "min_pulse": 781,
+        "min_angle": 38,
+        "max_pulse": 1626,
+        "max_angle": 152,
+        "rest_angle": 38,
+        "range": 270,
+        "delta": 114
       },
       "front_shoulder_right": {
         "channel": 9,
         "min_pulse": 1480,
         "max_pulse": 1820,
         "rest_angle": 90,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       },
       "front_leg_right": {
         "channel": 10,
         "min_pulse": 900,
         "max_pulse": 2280,
         "rest_angle": 0,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       },
       "front_foot_right": {
         "channel": 11,
         "min_pulse": 1350,
         "max_pulse": 2190,
         "rest_angle": 160,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       },
       "rear_shoulder_left": {
         "channel": 3,
         "min_pulse": 1500,
         "max_pulse": 1850,
         "rest_angle": 90,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       },
       "rear_leg_left": {
         "channel": 4,
         "min_pulse": 980,
         "max_pulse": 2300,
         "rest_angle": 180,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       },
       "rear_foot_left": {
         "channel": 5,
-        "min_pulse": 1000,
-        "max_pulse": 1850,
-        "rest_angle": 20,
-        "range": 270
+        "min_pulse": 981,
+        "min_angle": 65,
+        "max_pulse": 1848,
+        "max_angle": 182,
+        "rest_angle": 65,
+        "range": 270,
+        "delta": 0
       },
       "rear_shoulder_right": {
         "channel": 0,
         "min_pulse": 1480,
         "max_pulse": 1830,
         "rest_angle": 90,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       },
       "rear_leg_right": {
         "channel": 1,
         "min_pulse": 930,
         "max_pulse": 2325,
         "rest_angle": 0,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       },
       "rear_foot_right": {
         "channel": 2,
         "min_pulse": 1380,
         "max_pulse": 2240,
         "rest_angle": 160,
-        "range": 270
+        "range": 270,
+        "min_angle": 0,
+        "max_angle": 180,
+        "delta": 0
       }
     },
     "walking_cycle": [

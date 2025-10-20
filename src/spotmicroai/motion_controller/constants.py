@@ -1,8 +1,8 @@
 ### Inverse Kinematics Constants ###
 # Constants for inverse kinematics calculations (in mm)
-UPPER_LEG_LENGTH = 110.2
-FOOT_LENGTH = 125.5
-SHOULDER_OFFSET = 57.5
+LEG_LENGTH = 110
+FOOT_LENGTH = 138
+SHOULDER_LENGTH = 57
 SAFE_NEUTRAL = (0.0, 0.0, 0.0)
 
 ### Motion Controller Constants ###
