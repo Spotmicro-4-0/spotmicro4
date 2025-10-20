@@ -19,9 +19,9 @@ log = Logger().setup_logger('Testing remote controller')
 # Iterate over the joystick devices.
 log.info('Available devices:')
 
-for fn in os.listdir('/dev/input'):
-    if fn.startswith('js'):
-        log.info(f'  /dev/input/{fn}')
+for FN in os.listdir('/dev/input'):
+    if FN.startswith('js'):
+        log.info(f'  /dev/input/{FN}')
 
 # We'll store the states here.
 axis_states = {}
@@ -104,18 +104,18 @@ button_map = []
 
 config = Config()
 connected_device = config.remote_controller.device
-fn = '/dev/input/' + str(connected_device)
-log.info(f'Opening {fn}...')
+FN = '/dev/input/' + str(connected_device)
+log.info(f'Opening {FN}...')
 
 try:
-    jsdev = open(fn, 'rb')
+    jsdev = open(FN, 'rb')
 except FileNotFoundError:
-    log.error(f'Controller device not found: {fn}')
+    log.error(f'Controller device not found: {FN}')
     log.error('Make sure your controller is paired and connected before running this test.')
     log.error('Check available devices above to verify the controller is detected.')
     sys.exit(1)
 except PermissionError:
-    log.error(f'Permission denied accessing {fn}')
+    log.error(f'Permission denied accessing {FN}')
     log.error('You may need to run this script with elevated permissions.')
     sys.exit(1)
 
