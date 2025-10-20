@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from spotmicroai.core.motion_controller.models.servo_angles import ServoAngles
+from spotmicroai.runtime.motion_controller.models.servo_angles import ServoAngles
 
 
 @dataclass

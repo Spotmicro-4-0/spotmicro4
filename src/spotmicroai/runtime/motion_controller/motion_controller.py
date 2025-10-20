@@ -4,23 +4,23 @@ import signal
 import sys
 import time
 
-from spotmicroai.core.motion_controller.constants import (
+from spotmicroai.runtime.motion_controller.constants import (
     DEFAULT_SLEEP,
     FRAME_DURATION,
     INACTIVITY_TIME,
     TELEMETRY_UPDATE_INTERVAL,
 )
-from spotmicroai.core.motion_controller.enums import ControllerEvent
-from spotmicroai.core.motion_controller.services.button_manager import ButtonManager
-from spotmicroai.core.motion_controller.services.keyframe_service import KeyframeService
-from spotmicroai.core.motion_controller.services.pose_service import PoseService
-from spotmicroai.core.motion_controller.services.servo_service import ServoService
-from spotmicroai.core.motion_controller.services.telemetry_service import TelemetryService
-from spotmicroai.core.motion_controller.telemetry_display import TelemetryDisplay
-from spotmicroai.core.motion_controller.wrappers.buzzer import Buzzer
-from spotmicroai.core.motion_controller.wrappers.pca9685 import PCA9685Board
-from spotmicroai.core.utilities.log import Logger
-import spotmicroai.core.utilities.queues as queues
+from spotmicroai.runtime.motion_controller.enums import ControllerEvent
+from spotmicroai.runtime.motion_controller.services.button_manager import ButtonManager
+from spotmicroai.runtime.motion_controller.services.keyframe_service import KeyframeService
+from spotmicroai.runtime.motion_controller.services.pose_service import PoseService
+from spotmicroai.runtime.motion_controller.services.servo_service import ServoService
+from spotmicroai.runtime.motion_controller.services.telemetry_service import TelemetryService
+from spotmicroai.runtime.motion_controller.telemetry_display import TelemetryDisplay
+from spotmicroai.runtime.motion_controller.wrappers.buzzer import Buzzer
+from spotmicroai.runtime.motion_controller.wrappers.pca9685 import PCA9685Board
+from spotmicroai.runtime.utilities.log import Logger
+import spotmicroai.runtime.utilities.queues as queues
 
 log = Logger().setup_logger('Motion controller')
 

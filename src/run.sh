@@ -11,4 +11,4 @@ cd ~/spotmicroai || exit
 
 export PYTHONPATH=.
 
-venv/bin/python3 spotmicroai/core/main.py
+venv/bin/python3 spotmicroai/runtime/main.py

@@ -4,10 +4,10 @@ import signal
 import sys
 import time
 
-from spotmicroai.core.lcd_screen_controller.lcd_16x2 import Lcd16x2
-from spotmicroai.core.utilities.config import Config
-from spotmicroai.core.utilities.log import Logger
-import spotmicroai.core.utilities.queues as queues
+from spotmicroai.runtime.lcd_screen_controller.lcd_16x2 import Lcd16x2
+from spotmicroai.runtime.utilities.config import Config
+from spotmicroai.runtime.utilities.log import Logger
+import spotmicroai.runtime.utilities.queues as queues
 
 log = Logger().setup_logger('LCD Screen controller')
 

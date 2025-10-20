@@ -1,7 +1,7 @@
-from spotmicroai.core.motion_controller.models.pose import Pose
-from spotmicroai.core.motion_controller.models.servo_angles import ServoAngles
-from spotmicroai.core.utilities.config import Config
-from spotmicroai.core.utilities.singleton import Singleton
+from spotmicroai.runtime.motion_controller.models.pose import Pose
+from spotmicroai.runtime.motion_controller.models.servo_angles import ServoAngles
+from spotmicroai.runtime.utilities.config import Config
+from spotmicroai.runtime.utilities.singleton import Singleton
 
 
 class PoseService(metaclass=Singleton):

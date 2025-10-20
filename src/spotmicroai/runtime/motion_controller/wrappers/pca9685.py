@@ -5,9 +5,9 @@ PCA9685 handler for controlling PWM board on I2C.
 from board import SCL, SDA  # type: ignore
 import busio  # type: ignore
 from adafruit_pca9685 import PCA9685  # type: ignore
-from spotmicroai.core.utilities.singleton import Singleton
-from spotmicroai.core.utilities.config import Config
-from spotmicroai.core.utilities.log import Logger
+from spotmicroai.runtime.utilities.singleton import Singleton
+from spotmicroai.runtime.utilities.config import Config
+from spotmicroai.runtime.utilities.log import Logger
 
 log = Logger().setup_logger('Motion controller')
 

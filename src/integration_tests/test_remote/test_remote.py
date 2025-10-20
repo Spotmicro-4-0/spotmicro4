@@ -11,8 +11,8 @@ import struct
 import sys
 import time
 
-from spotmicroai.core.utilities.config import Config
-from spotmicroai.core.utilities.log import Logger
+from spotmicroai.runtime.utilities.config import Config
+from spotmicroai.runtime.utilities.log import Logger
 
 log = Logger().setup_logger('Testing remote controller')
 

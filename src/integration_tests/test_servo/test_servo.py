@@ -10,8 +10,8 @@ import os
 import sys
 import RPi.GPIO as GPIO  # type: ignore
 
-from spotmicroai.core.utilities.log import Logger
-from spotmicroai.core.utilities.config import Config
+from spotmicroai.runtime.utilities.log import Logger
+from spotmicroai.runtime.utilities.config import Config
 
 log = Logger().setup_logger('Servo Range Test')
 

@@ -6,8 +6,8 @@ from adafruit_pca9685 import PCA9685
 from adafruit_motor import servo
 import time
 
-from spotmicroai.core.utilities.log import Logger
-from spotmicroai.core.utilities.config import Config
+from spotmicroai.runtime.utilities.log import Logger
+from spotmicroai.runtime.utilities.config import Config
 import RPi.GPIO as GPIO
 
 log = Logger().setup_logger('Test Motion')
