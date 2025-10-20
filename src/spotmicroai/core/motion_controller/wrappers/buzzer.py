@@ -4,9 +4,9 @@ Buzzer handler for controlling audio feedback on GPIO.
 
 import time
 from RPi import GPIO  # type: ignore
-from spotmicroai.utilities.config import Config
-from spotmicroai.utilities.singleton import Singleton
-from spotmicroai.motion_controller.constants import BEEP_DURATION
+from spotmicroai.core.utilities.config import Config
+from spotmicroai.core.utilities.singleton import Singleton
+from spotmicroai.core.motion_controller.constants import BEEP_DURATION
 
 
 class Buzzer(metaclass=Singleton):

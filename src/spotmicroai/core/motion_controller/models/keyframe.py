@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 
-from spotmicroai.motion_controller.models.coordinate import Coordinate
-from spotmicroai.motion_controller.models.pose import Pose
-from spotmicroai.motion_controller.models.servo_angles import ServoAngles
+from spotmicroai.core.motion_controller.models.coordinate import Coordinate
+from spotmicroai.core.motion_controller.models.pose import Pose
+from spotmicroai.core.motion_controller.models.servo_angles import ServoAngles
 
 
 @dataclass

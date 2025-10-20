@@ -2,17 +2,17 @@ import math
 import time
 from typing import List, Tuple
 
-from spotmicroai.motion_controller.constants import (
+from spotmicroai.core.motion_controller.constants import (
     HEIGHT_MULTIPLIER,
     LEAN_MULTIPLIER,
     MAX_WALKING_SPEED,
     ROTATION_INCREMENT,
     ROTATION_OFFSET,
 )
-from spotmicroai.motion_controller.models.coordinate import Coordinate
-from spotmicroai.motion_controller.models.keyframe import Keyframe
-from spotmicroai.utilities.config import Config
-from spotmicroai.utilities.singleton import Singleton
+from spotmicroai.core.motion_controller.models.coordinate import Coordinate
+from spotmicroai.core.motion_controller.models.keyframe import Keyframe
+from spotmicroai.core.utilities.config import Config
+from spotmicroai.core.utilities.singleton import Singleton
 
 
 class KeyframeService(metaclass=Singleton):

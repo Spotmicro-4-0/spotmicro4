@@ -8,8 +8,8 @@ useful for testing without running the full robot system.
 
 import time
 import math
-from spotmicroai.motion_controller.report import TelemetryDisplay
-from spotmicroai.motion_controller.models.coordinate import Coordinate
+from spotmicroai.core.motion_controller.report import TelemetryDisplay
+from spotmicroai.core.motion_controller.models.coordinate import Coordinate
 
 
 def generate_mock_telemetry(t: float) -> dict:

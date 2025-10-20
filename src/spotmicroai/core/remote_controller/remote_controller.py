@@ -7,7 +7,7 @@ import sys
 import time
 
 # Import tunable constants
-from spotmicroai.remote_controller.constants import (
+from spotmicroai.core.remote_controller.constants import (
     AXIS_UPDATE_THRESHOLD,
     DEADZONE,
     DEVICE_SEARCH_INTERVAL,
@@ -15,9 +15,9 @@ from spotmicroai.remote_controller.constants import (
     READ_LOOP_SLEEP,
     RECONNECT_RETRY_DELAY,
 )
-from spotmicroai.utilities.config import Config
-from spotmicroai.utilities.log import Logger
-import spotmicroai.utilities.queues as queues
+from spotmicroai.core.utilities.config import Config
+from spotmicroai.core.utilities.log import Logger
+import spotmicroai.core.utilities.queues as queues
 
 log = Logger().setup_logger('Remote controller')
 

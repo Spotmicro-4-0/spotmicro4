@@ -10,9 +10,9 @@ import os
 import sys
 import RPi.GPIO as GPIO
 
-from spotmicroai.motion_controller.InverseKinematics import InverseKinematics
-from spotmicroai.utilities.log import Logger
-from spotmicroai.utilities.config import Config
+from spotmicroai.core.motion_controller.InverseKinematics import InverseKinematics
+from spotmicroai.core.utilities.log import Logger
+from spotmicroai.core.utilities.config import Config
 
 LEG_SERVO_OFFSET = 120
 

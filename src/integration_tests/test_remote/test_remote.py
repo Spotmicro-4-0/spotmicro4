@@ -7,8 +7,8 @@
 import os, struct, array
 from fcntl import ioctl
 
-from spotmicroai.utilities.log import Logger
-from spotmicroai.utilities.config import Config
+from spotmicroai.core.utilities.log import Logger
+from spotmicroai.core.utilities.config import Config
 
 log = Logger().setup_logger('Testing remote controller')
 
