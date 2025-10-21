@@ -14,6 +14,7 @@ import sys
 import traceback
 from pathlib import Path
 
+import labels as LABELS
 
 # ------------------------------------------------------------------
 # Constants (single source of truth)
@@ -46,7 +47,7 @@ RSYNC_EXCLUDES = [
     ".mypy_cache/",
 ]
 TOTAL_STEPS = 9
-VERSION = "SpotmicroAI Setup Tool v4.0"
+VERSION = "SpotmicroAI Setup Tool"
 USE_COLORS = True
 
 
@@ -83,16 +84,17 @@ class SetupTool:
     # Printing helpers
     # ------------------------------------------------------------------
     def print_info(self, msg):
-        print(f"{Colors.GREEN}[INFO]{Colors.NC} {msg}")
+        print(f"{Colors.GREEN}{LABELS.INFO_PREFIX}{Colors.NC} {msg}")
 
     def print_warn(self, msg):
-        print(f"{Colors.YELLOW}[WARN]{Colors.NC} {msg}")
+        print(f"{Colors.YELLOW}{LABELS.WARN_PREFIX}{Colors.NC} {msg}")
 
     def print_err(self, msg):
-        print(f"{Colors.RED}[ERROR]{Colors.NC} {msg}")
+        print(f"{Colors.RED}{LABELS.ERROR_PREFIX}{Colors.NC} {msg}")
 
     def print_step(self, n, msg):
-        print(f"{Colors.BLUE}[STEP {n}/{TOTAL_STEPS}]{Colors.NC} {msg}")
+        prefix = LABELS.STEP_PREFIX.format(n=n, TOTAL_STEPS=TOTAL_STEPS)
+        print(f"{Colors.BLUE}{prefix}{Colors.NC} {msg}")
 
     # ------------------------------------------------------------------
     # Config handling
@@ -104,17 +106,17 @@ class SetupTool:
                     self.config = json.load(f)
                 return True
             except Exception as e:
-                self.print_warn(f"Invalid configuration: {e}")
+                self.print_warn(LABELS.ERR_INVALID_CONFIG.format(e=e))
         return False
 
     def save_config(self):
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2)
-            self.print_info(f"Saved configuration → {self.config_file}")
+            self.print_info(LABELS.MSG_CONFIG_SAVED.format(config_file=self.config_file))
             return True
         except Exception as e:
-            self.print_err(f"Failed to save configuration: {e}")
+            self.print_err(LABELS.ERR_SAVE_CONFIG_FAILED.format(e=e))
             return False
 
     # ------------------------------------------------------------------
@@ -142,7 +144,7 @@ class SetupTool:
                 return result.stdout.strip() if result.returncode == 0 else None
             return result.returncode == 0
         except Exception as e:
-            self.print_err(f"SSH command failed: {e}")
+            self.print_err(LABELS.ERR_SSH_COMMAND_FAILED.format(e=e))
             return None if capture else False
 
     # ------------------------------------------------------------------
@@ -164,14 +166,14 @@ class SetupTool:
     # Setup steps
     # ------------------------------------------------------------------
     def collect_initial_config(self):
-        print("\n" + "=" * 60)
-        self.print_info("SpotmicroAI Initial Setup")
-        print("=" * 60)
-        hostname = self.ask("Hostname/IP", "spotmicroai.local")
-        username = self.ask("Username", "pi")
-        password = self.ask("Password", secret=True)
+        print("\n" + LABELS.UI_SEPARATOR)
+        self.print_info(LABELS.UI_INITIAL_SETUP_HEADER)
+        print(LABELS.UI_SEPARATOR)
+        hostname = self.ask(LABELS.PROMPT_HOSTNAME, "spotmicroai.local")
+        username = self.ask(LABELS.PROMPT_USERNAME, "pi")
+        password = self.ask(LABELS.PROMPT_PASSWORD, secret=True)
         if not all([hostname, username, password]):
-            self.print_err("Hostname, username, and password are required")
+            self.print_err(LABELS.ERR_MISSING_REQUIRED)
             return False
         self.config = {
             "hostname": hostname,
@@ -183,12 +185,12 @@ class SetupTool:
         return self.save_config()
 
     def test_ssh_connection(self):
-        self.print_info("Testing SSH connectivity...")
+        self.print_info(LABELS.SUBSTEP_TESTING_SSH)
         out = self._run_remote('echo "SSH test successful"', capture=True)
         if isinstance(out, str) and "SSH test successful" in out:
-            self.print_info("✓ SSH connection verified")
+            self.print_info(LABELS.MSG_SSH_CONNECTION_VERIFIED)
             return True
-        self.print_err("SSH test failed")
+        self.print_err(LABELS.ERR_SSH_TEST_FAILED)
         return False
 
     def generate_ssh_keys(self):
@@ -199,13 +201,13 @@ class SetupTool:
             return True
         cmd = f'ssh-keygen -t rsa -b 4096 -f "{keyfile}" -N "" -q'
         ok = subprocess.run(cmd, shell=True, check=False).returncode == 0
-        self.print_info("Generated SSH keypair" if ok else "Failed to generate SSH keys")
+        self.print_info(LABELS.MSG_SSH_KEY_GENERATED if ok else LABELS.ERR_SSH_KEY_GEN_FAILED)
         return ok
 
     def copy_ssh_key_to_pi(self):
         pubkey = Path.home() / ".ssh" / f"{SSH_KEY_FILE}.pub"
         if not pubkey.exists():
-            self.print_err("Public key not found")
+            self.print_err(LABELS.ERR_PUBLIC_KEY_NOT_FOUND)
             return False
         with open(pubkey, "r", encoding="utf-8") as f:
             keydata = f.read().strip()
@@ -213,8 +215,8 @@ class SetupTool:
             f'mkdir -p ~/.ssh && chmod 700 ~/.ssh && '
             f'echo "{keydata}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
         )
-        if self._run_remote(cmd, desc="Installing SSH key on Raspberry Pi"):
-            self.print_info("✓ SSH key installed on Raspberry Pi")
+        if self._run_remote(cmd, desc=LABELS.SUBSTEP_INSTALLING_SSH_KEY):
+            self.print_info(LABELS.MSG_SSH_KEY_INSTALLED)
             self.config["ssh_key_path"] = str(Path.home() / ".ssh" / SSH_KEY_FILE)
             self.current_password = None
             self.save_config()
@@ -222,32 +224,35 @@ class SetupTool:
         return False
 
     def perform_system_update(self):
-        self.print_step(1, "System Update")
-        cmds = [("sudo apt update", "Updating package list"), ("sudo apt upgrade -y", "Upgrading packages")]
+        self.print_step(1, LABELS.STEP_SYSTEM_UPDATE)
+        cmds = [
+            ("sudo apt update", LABELS.SUBSTEP_UPDATING_PACKAGES),
+            ("sudo apt upgrade -y", LABELS.SUBSTEP_UPGRADING_PACKAGES),
+        ]
         return all(self._run_remote(c, d) for c, d in cmds)
 
     def enable_i2c(self):
-        self.print_step(2, "Enable I2C")
+        self.print_step(2, LABELS.STEP_ENABLE_I2C)
         return all(self._run_remote(c) for c in ENABLE_I2C_CMDS)
 
     def create_project_directory(self):
-        self.print_step(3, "Create Project Directory")
+        self.print_step(3, LABELS.STEP_CREATE_PROJECT_DIR)
         out = self._run_remote(f"test -d ~/{PROJECT_DIR} && echo EXISTS || echo NOT_EXISTS", capture=True)
         if out == "EXISTS":
-            self.print_warn(f"Found existing ~/{PROJECT_DIR} directory")
-            if self.confirm("Remove it?", True):
+            self.print_warn(LABELS.WARN_EXISTING_DIR_FOUND.format(project_dir=PROJECT_DIR))
+            if self.confirm(LABELS.PROMPT_REMOVE_DIR, True):
                 self._run_remote(f"rm -rf ~/{PROJECT_DIR}")
             else:
-                self.print_err("Cannot proceed with existing directory")
+                self.print_err(LABELS.ERR_CANNOT_PROCEED_EXISTING_DIR)
                 return False
         return self._run_remote(f"mkdir -p ~/{PROJECT_DIR} && cd ~/{PROJECT_DIR} && pwd")
 
     def install_python_and_dependencies(self):
-        self.print_step(4, "Install Python & Dependencies")
+        self.print_step(4, LABELS.STEP_INSTALL_PYTHON_DEPS)
         return self._run_remote(f"sudo apt install -y {APT_PACKAGES}")
 
     def create_virtual_environment(self):
-        self.print_step(5, "Create Virtual Environment")
+        self.print_step(5, LABELS.STEP_CREATE_VENV)
         cmds = [
             f"cd ~/{PROJECT_DIR} && python3 -m venv {REMOTE_VENV_DIR}",
             f"cd ~/{PROJECT_DIR} && source {REMOTE_VENV_DIR}/bin/activate && pip install --upgrade pip",
@@ -255,10 +260,10 @@ class SetupTool:
         return all(self._run_remote(c) for c in cmds)
 
     def copy_project_files(self):
-        self.print_step(6, "Copy Project Files")
+        self.print_step(6, LABELS.STEP_COPY_FILES)
         src_dir = self.script_dir.parent / SRC_FOLDER_NAME
         if not src_dir.exists():
-            self.print_err(f"Missing source directory: {src_dir}")
+            self.print_err(LABELS.ERR_MISSING_SOURCE_DIR.format(src_dir=src_dir))
             return False
         host = f"{self.config['username']}@{self.config['hostname']}"
         key = self.config.get("ssh_key_path", "")
@@ -268,16 +273,16 @@ class SetupTool:
             f'-e "ssh -i \'{key}\' {SSH_OPTS}" '
             f'"{src_dir}/" "{host}:~/{PROJECT_DIR}/"'
         )
-        self.print_info("Transferring project files...")
+        self.print_info(LABELS.MSG_TRANSFERRING_FILES)
         result = subprocess.run(rsync_cmd, shell=True, check=False)
         if result.returncode == 0:
-            self.print_info("✓ Files copied successfully")
+            self.print_info(LABELS.MSG_FILES_COPIED)
             return True
-        self.print_err("File copy failed")
+        self.print_err(LABELS.ERR_FILE_COPY_FAILED)
         return False
 
     def install_python_packages(self):
-        self.print_step(7, "Install Python Packages")
+        self.print_step(7, LABELS.STEP_INSTALL_PACKAGES)
         return self._run_remote(
             f"cd ~/{PROJECT_DIR} && source {REMOTE_VENV_DIR}/bin/activate && pip install -r requirements.txt"
         )
@@ -285,25 +290,25 @@ class SetupTool:
     def _post_deploy_finalize(self):
         self._run_remote(
             f"cd ~/{PROJECT_DIR} && find . -name '*.sh' -exec chmod +x {{}} \\;",
-            desc="Setting execute permissions",
+            desc=LABELS.MSG_EXEC_PERMISSIONS_SET,
         )
         json_file = self.script_dir.parent / SRC_FOLDER_NAME / CONFIG_FILENAME
         if json_file.exists():
             scp_cmd = f'{self._scp_prefix()} "{json_file}" {self.config["username"]}@{self.config["hostname"]}:~/'
             subprocess.run(scp_cmd, shell=True, check=False)
-            self.print_info("✓ Config file copied")
+            self.print_info(LABELS.MSG_CONFIG_FILE_COPIED)
         else:
-            self.print_warn(f"{CONFIG_FILENAME} not found locally")
+            self.print_warn(LABELS.WARN_CONFIG_FILE_NOT_FOUND.format(config_filename=CONFIG_FILENAME))
 
     def set_permissions_and_copy_config(self):
-        self.print_step(8, "Finalize Setup")
+        self.print_step(8, LABELS.STEP_FINALIZE)
         self._post_deploy_finalize()
         return True
 
     def launch_setup_app(self):
-        self.print_step(9, "Launch Setup Application")
+        self.print_step(9, LABELS.STEP_LAUNCH_APP)
         cmd = f"cd ~/{PROJECT_DIR} && bash setup_app.sh"
-        self.print_info("Launching setup_app on Raspberry Pi...")
+        self.print_info(LABELS.MSG_LAUNCHING_SETUP_APP)
         host = f"{self.config['username']}@{self.config['hostname']}"
         key = self.config.get("ssh_key_path")
         base = f"ssh -t -o ConnectTimeout={SSH_CONNECT_TIMEOUT} {SSH_OPTS}"
@@ -313,16 +318,13 @@ class SetupTool:
             result = subprocess.run(full, shell=True, timeout=3600, check=False)
             return result.returncode == 0
         except Exception as e:
-            self.print_err(f"SSH command failed: {e}")
+            self.print_err(LABELS.ERR_SSH_COMMAND_FAILED.format(e=e))
             return False
 
     def sync_code_changes(self):
-        print("\n" + "=" * 60)
-        self.print_info("Syncing Code Changes to Raspberry Pi")
-        print("=" * 60)
         src_dir = self.script_dir.parent / SRC_FOLDER_NAME
         if not src_dir.exists():
-            self.print_err(f"Source directory not found: {src_dir}")
+            self.print_err(LABELS.ERR_SOURCE_DIR_NOT_FOUND.format(src_dir=src_dir))
             return False
         host = f"{self.config['username']}@{self.config['hostname']}"
         key = self.config.get("ssh_key_path", "")
@@ -334,10 +336,10 @@ class SetupTool:
         )
         result = subprocess.run(rsync_cmd, shell=True, check=False)
         if result.returncode == 0:
-            self.print_info("✓ Files synced successfully")
+            self.print_info(LABELS.MSG_FILES_SYNCED)
             self._post_deploy_finalize()
             return self.launch_setup_app()
-        self.print_err("Sync failed")
+        self.print_err(LABELS.ERR_SYNC_FAILED)
         return False
 
     # ------------------------------------------------------------------
@@ -345,58 +347,58 @@ class SetupTool:
     # ------------------------------------------------------------------
     def run_complete_setup(self):
         steps = [
-            (self.perform_system_update, "System Update"),
-            (self.enable_i2c, "Enable I2C"),
-            (self.create_project_directory, "Create Project Directory"),
-            (self.install_python_and_dependencies, "Install Python"),
-            (self.create_virtual_environment, "Create Virtual Environment"),
-            (self.copy_project_files, "Copy Project Files"),
-            (self.install_python_packages, "Install Python Packages"),
-            (self.set_permissions_and_copy_config, "Finalize"),
-            (self.launch_setup_app, "Launch Setup Application"),
+            (self.perform_system_update, LABELS.STEP_SYSTEM_UPDATE),
+            (self.enable_i2c, LABELS.STEP_ENABLE_I2C),
+            (self.create_project_directory, LABELS.STEP_CREATE_PROJECT_DIR),
+            (self.install_python_and_dependencies, LABELS.STEP_INSTALL_PYTHON_DEPS),
+            (self.create_virtual_environment, LABELS.STEP_CREATE_VENV),
+            (self.copy_project_files, LABELS.STEP_COPY_FILES),
+            (self.install_python_packages, LABELS.STEP_INSTALL_PACKAGES),
+            (self.set_permissions_and_copy_config, LABELS.STEP_FINALIZE),
+            (self.launch_setup_app, LABELS.STEP_LAUNCH_APP),
         ]
         for func, name in steps:
             if not func():
-                self.print_err(f"Setup failed at step: {name}")
+                self.print_err(LABELS.ERR_SETUP_FAILED_AT_STEP.format(name=name))
                 return False
         self.config["setup_completed"] = True
         self.save_config()
-        self.print_info("✓ Setup Completed Successfully")
+        self.print_info(LABELS.MSG_SETUP_COMPLETED)
         return True
 
     def run(self):
         try:
             if getattr(self.args, "clean", False) and self.config_file.exists():
                 self.config_file.unlink()
-                self.print_info("Configuration cleared")
+                self.print_info(LABELS.MSG_CONFIG_CLEARED)
 
             cfg_exists = self.load_config()
             if not cfg_exists:
-                if not self.confirm("Run first-time setup?", True):
+                if not self.confirm(LABELS.PROMPT_FIRST_TIME_SETUP, True):
                     return False
                 if not self.collect_initial_config():
                     return False
                 if not self.test_ssh_connection():
                     return False
-                if self.confirm("Setup SSH key authentication?", True):
+                if self.confirm(LABELS.PROMPT_SSH_KEY_AUTH, True):
                     if self.generate_ssh_keys():
                         self.copy_ssh_key_to_pi()
             else:
-                self.print_info("Existing configuration found")
+                self.print_info(LABELS.MSG_CONFIG_FOUND)
                 if self.config.get("setup_completed"):
-                    self.print_info("Syncing code changes...")
+                    self.print_info(LABELS.MSG_SYNCING_CHANGES)
                     return self.sync_code_changes()
                 else:
-                    pwd = self.ask("Password", secret=True)
+                    pwd = self.ask(LABELS.PROMPT_PASSWORD, secret=True)
                     self.current_password = pwd
 
             return self.run_complete_setup()
 
         except KeyboardInterrupt:
-            self.print_warn("Interrupted by user")
+            self.print_warn(LABELS.WARN_INTERRUPTED)
             return False
         except Exception as e:
-            self.print_err(f"Unexpected error: {e}")
+            self.print_err(LABELS.ERR_UNEXPECTED_ERROR.format(e=e))
             traceback.print_exc()
             return False
 
@@ -405,9 +407,9 @@ class SetupTool:
 # Main entry point
 # ------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="SpotmicroAI Setup Tool")
-    parser.add_argument("--clean", action="store_true", help="Clear existing configuration and start fresh")
-    parser.add_argument("--deploy", action="store_true", help="Sync code changes only")
+    parser = argparse.ArgumentParser(description=LABELS.CLI_DESCRIPTION)
+    parser.add_argument("--clean", action="store_true", help=LABELS.CLI_CLEAN_HELP)
+    parser.add_argument("--deploy", action="store_true", help=LABELS.CLI_DEPLOY_HELP)
     parser.add_argument("--version", action="version", version=VERSION)
     args = parser.parse_args()
     setup = SetupTool(args)
