@@ -6,7 +6,9 @@ This module implements a curses-based hierarchical menu system that:
 - Loads menu definitions from JSON files.
 - Supports nested submenus and command execution.
 - Handles navigation via arrow keys or `j`/`k`.
-- Allows graceful quitting with ESC or `q`.
+- Allows quitting with `q` (always quits) or going back with `b`/`ESC`.
+- Provides numerical shortcuts (1-9, 0) for quick option selection.
+- Implements scrolling for menus with many items.
 
 Example JSON:
 {
@@ -126,13 +128,34 @@ class MenuApp:
             self._adjust_scroll_offset(stdscr)
         elif key in (curses.KEY_ENTER, ord("\n"), ord("\r")):
             self._execute_option(options[self.current_index])
-        elif key in (ord("q"), ord("Q"), 27):
+        elif key in (ord("q"), ord("Q")):  # q/Q always quits the entire program
+            return False
+        elif key == 27:  # ESC goes back one level (or quits if at main menu)
             if len(self.menu_stack) > 1:
                 self.menu_stack.pop()
                 self.current_index = 0
                 self.scroll_offset = 0
             else:
                 return False
+        elif key in (ord("b"), ord("B")):  # b/B for back (goes back one level)
+            if len(self.menu_stack) > 1:
+                self.menu_stack.pop()
+                self.current_index = 0
+                self.scroll_offset = 0
+        elif ord("1") <= key <= ord("9"):  # Number keys 1-9
+            # Convert key to index (1 -> 0, 2 -> 1, etc.)
+            target_index = key - ord("1")
+            if target_index < len(options):
+                self.current_index = target_index
+                self._adjust_scroll_offset(stdscr)
+                # Auto-execute the selected option
+                self._execute_option(options[self.current_index])
+        elif key == ord("0"):  # Number key 0 for 10th item
+            if len(options) >= 10:
+                self.current_index = 9
+                self._adjust_scroll_offset(stdscr)
+                # Auto-execute the selected option
+                self._execute_option(options[self.current_index])
         return True
 
     def _draw_shadow(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int, h: int, w: int) -> None:
@@ -273,9 +296,30 @@ class MenuApp:
 
         # Options - draw only visible items
         items_end = min(self.scroll_offset + visible_items, len(options))
+        is_main_menu = len(self.menu_stack) == 1
+
         for i in range(self.scroll_offset, items_end):
             opt = options[i]
             label = opt['label']
+            action = opt.get('action', '')
+
+            # Determine prefix based on position and action
+            # Show Q) for exit in main menu, B) for back in submenus
+            is_last_item = i == len(options) - 1
+
+            if is_last_item and action == 'exit' and is_main_menu:
+                number_prefix = "Q) "
+            elif is_last_item and action == 'back' and not is_main_menu:
+                number_prefix = "B) "
+            elif i < 9:
+                number_prefix = f"{i + 1}) "
+            elif i == 9:
+                number_prefix = "0) "  # 10th item uses '0' key
+            else:
+                number_prefix = f"{i + 1}) "  # Show number but no keyboard shortcut
+
+            labeled_item = number_prefix + label
+
             # Calculate display position relative to viewport
             display_index = i - self.scroll_offset
             y_pos = start_y + 3 + display_index
@@ -288,9 +332,11 @@ class MenuApp:
             try:
                 if i == self.current_index:
                     stdscr.addstr(y_pos, x_pos, ' ' * (box_width - 8), curses.color_pair(HIGHLIGHTED_ROW))
-                    stdscr.addstr(y_pos, x_pos, label[: max(0, box_width - 8)], curses.color_pair(HIGHLIGHTED_ROW))
+                    stdscr.addstr(
+                        y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(HIGHLIGHTED_ROW)
+                    )
                 else:
-                    stdscr.addstr(y_pos, x_pos, label[: max(0, box_width - 8)], curses.color_pair(REGULAR_ROW))
+                    stdscr.addstr(y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(REGULAR_ROW))
             except curses.error:
                 pass
 

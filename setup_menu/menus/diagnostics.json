@@ -8,7 +8,7 @@
         "command": "python3 scripts/run_diagnostics.py"
       },
       {
-        "label": "Q) Back",
+        "label": "Back",
         "action": "back"
       }
     ]

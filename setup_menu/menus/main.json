@@ -39,7 +39,7 @@
         "target": "log_review"
       },
       {
-        "label": "Q) Exit",
+        "label": "Exit",
         "action": "exit"
       }
     ]
