@@ -56,6 +56,28 @@ class MenuApp:
         current_index (int): Currently highlighted menu item index.
     """
 
+    # UI Layout Constants
+    MIN_TERMINAL_HEIGHT = 10
+    MIN_TERMINAL_WIDTH = 30
+    BOX_MAX_WIDTH = 70
+    BOX_MARGIN_X = 10
+    BOX_MARGIN_Y = 4
+    INNER_MARGIN_LEFT = 4
+    INNER_MARGIN_TOTAL = 8
+    LAYOUT_OVERHEAD = 7
+    MIN_BOX_HEIGHT = 8
+    MSG_TOO_SMALL_WIDTH = 20
+    MSG_RESIZE_WIDTH = 30
+    MSG_HEIGHT_SMALL_WIDTH = 25
+    TITLE_Y_OFFSET = 1
+    SCROLL_UP_Y_OFFSET = 2
+    OPTIONS_Y_OFFSET = 3
+    SCROLL_DOWN_Y_OFFSET_FROM_BOTTOM = 3
+    HELP_Y_OFFSET_FROM_BOTTOM = 2
+    SAFETY_Y_CHECK_FROM_BOTTOM = 2
+    HELP_INNER_MARGIN = 2
+    TITLE_INNER_MARGIN = 1
+
     def __init__(self, menus: Mapping[str, Any], entry_menu: str = "main") -> None:
         """
         Initialize the MenuApp with in-memory menu definitions.
@@ -98,6 +120,7 @@ class MenuApp:
         key = stdscr.getch()
         options = self.menus[self.menu_stack[-1]].get("options", [])
 
+        # Navigation keys
         if key in (curses.KEY_UP, ord("k")):
             self.current_index = (self.current_index - 1) % len(options)
             self._adjust_scroll_offset(stdscr)
@@ -114,8 +137,12 @@ class MenuApp:
             page_size = max(1, self._calculate_visible_items(h) - 1)
             self.current_index = min(len(options) - 1, self.current_index + page_size)
             self._adjust_scroll_offset(stdscr)
+
+        # Selection
         elif key in (curses.KEY_ENTER, ord("\n"), ord("\r")):
             self._execute_option(options[self.current_index])
+
+        # Quit and Back
         elif key in (ord("q"), ord("Q")):  # q/Q always quits the entire program
             return False
         elif key == 27:  # ESC goes back one level (or quits if at main menu)
@@ -130,6 +157,8 @@ class MenuApp:
                 self.menu_stack.pop()
                 self.current_index = 0
                 self.scroll_offset = 0
+
+        # Number shortcuts
         elif ord("1") <= key <= ord("9"):  # Number keys 1-9
             # Convert key to index (1 -> 0, 2 -> 1, etc.)
             target_index = key - ord("1")
@@ -207,12 +236,12 @@ class MenuApp:
     def _calculate_visible_items(self, terminal_height: int) -> int:
         """Calculate how many menu items can fit in the terminal."""
         # Account for: borders (2), title (2), spacing (2), help text (1), shadow (1)
-        min_box_height = 8
-        max_box_height = terminal_height - 4
+        min_box_height = self.MIN_BOX_HEIGHT
+        max_box_height = terminal_height - self.BOX_MARGIN_Y
         if max_box_height < min_box_height:
             return 0
         # Items that fit = box_height - (borders + title + spacing + help text)
-        return max(0, max_box_height - 7)
+        return max(0, max_box_height - self.LAYOUT_OVERHEAD)
 
     def _adjust_scroll_offset(self, stdscr) -> None:
         """Adjust scroll offset to keep current selection visible."""
@@ -230,6 +259,22 @@ class MenuApp:
         if self.current_index < self.scroll_offset:
             self.scroll_offset = self.current_index
 
+    def _draw_help_text(self, stdscr, start_x, start_y, box_width, box_height):
+        # Always draw help text at the bottom of the box
+        help_text = "Use ↑ ↓ to navigate, ENTER to select and q/ESC to quit"
+        help_x = max(start_x + self.TITLE_INNER_MARGIN, start_x + (box_width - len(help_text)) // 2)
+        help_y = start_y + box_height - self.HELP_Y_OFFSET_FROM_BOTTOM
+        try:
+            # Use dim attribute for subtle text (like italics)
+            stdscr.addstr(
+                help_y,
+                help_x,
+                help_text[: max(0, box_width - self.HELP_INNER_MARGIN)],
+                curses.color_pair(THEME.REGULAR_ROW) | curses.A_DIM,
+            )
+        except curses.error:
+            pass
+
     def _draw_menu(self, stdscr) -> None:
         """Draw menu safely, responsive to resize."""
         h, w = stdscr.getmaxyx()
@@ -238,13 +283,19 @@ class MenuApp:
         stdscr.clear()
 
         # Avoid crash if terminal is too small
-        if h < 10 or w < 30:
+        if h < self.MIN_TERMINAL_HEIGHT or w < self.MIN_TERMINAL_WIDTH:
             try:
                 stdscr.addstr(
-                    h // 2, max(0, (w - 20) // 2), "Terminal too small!", curses.color_pair(THEME.REGULAR_ROW)
+                    h // 2,
+                    max(0, (w - self.MSG_TOO_SMALL_WIDTH) // 2),
+                    "Terminal too small!",
+                    curses.color_pair(THEME.REGULAR_ROW),
                 )
                 stdscr.addstr(
-                    h // 2 + 1, max(0, (w - 30) // 2), "Please resize to continue", curses.color_pair(THEME.REGULAR_ROW)
+                    h // 2 + 1,
+                    max(0, (w - self.MSG_RESIZE_WIDTH) // 2),
+                    "Please resize to continue",
+                    curses.color_pair(THEME.REGULAR_ROW),
                 )
             except curses.error:
                 pass
@@ -261,17 +312,20 @@ class MenuApp:
         if visible_items == 0:
             try:
                 stdscr.addstr(
-                    h // 2, max(0, (w - 25) // 2), "Terminal height too small", curses.color_pair(THEME.REGULAR_ROW)
+                    h // 2,
+                    max(0, (w - self.MSG_HEIGHT_SMALL_WIDTH) // 2),
+                    "Terminal height too small",
+                    curses.color_pair(THEME.REGULAR_ROW),
                 )
             except curses.error:
                 pass
             stdscr.refresh()
             return
 
-        box_width = min(w - 10, 70)
+        box_width = min(w - self.BOX_MARGIN_X, self.BOX_MAX_WIDTH)
         # Box height accounts for visible items, not all items
         # Add 7 for: borders (2) + title (2) + spacing (2) + help text (1)
-        box_height = min(visible_items + 7, h - 4)
+        box_height = min(visible_items + self.LAYOUT_OVERHEAD, h - self.BOX_MARGIN_Y)
         start_y = max(1, (h - box_height) // 2)
         start_x = max(1, (w - box_width) // 2)
 
@@ -280,18 +334,25 @@ class MenuApp:
         self._draw_box_content(stdscr, start_y, start_x, box_width, box_height)
 
         # Title
-        title_x = max(start_x + 1, start_x + (box_width - len(title)) // 2)
+        title_x = max(start_x + self.TITLE_INNER_MARGIN, start_x + (box_width - len(title)) // 2)
         try:
-            stdscr.addstr(start_y + 1, title_x, title[: max(0, w - title_x)], curses.color_pair(THEME.REGULAR_ROW))
+            stdscr.addstr(
+                start_y + self.TITLE_Y_OFFSET,
+                title_x,
+                title[: max(0, w - title_x)],
+                curses.color_pair(THEME.REGULAR_ROW),
+            )
         except curses.error:
             pass
 
         # Draw scroll indicator at top if scrolled down
         if self.scroll_offset > 0:
             indicator = THEME.SCROLL_UP
-            indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
+            indicator_x = max(start_x + self.TITLE_INNER_MARGIN, start_x + (box_width - len(indicator)) // 2)
             try:
-                stdscr.addstr(start_y + 2, indicator_x, indicator, curses.color_pair(THEME.REGULAR_ROW))
+                stdscr.addstr(
+                    start_y + self.SCROLL_UP_Y_OFFSET, indicator_x, indicator, curses.color_pair(THEME.REGULAR_ROW)
+                )
             except curses.error:
                 pass
 
@@ -323,22 +384,33 @@ class MenuApp:
 
             # Calculate display position relative to viewport
             display_index = i - self.scroll_offset
-            y_pos = start_y + 3 + display_index
-            x_pos = start_x + 4
+            y_pos = start_y + self.OPTIONS_Y_OFFSET + display_index
+            x_pos = start_x + self.INNER_MARGIN_LEFT
 
             # Safety check - should never happen with proper calculations
-            if y_pos >= start_y + box_height - 2:
+            if y_pos >= start_y + box_height - self.SAFETY_Y_CHECK_FROM_BOTTOM:
                 break
 
             try:
                 if i == self.current_index:
-                    stdscr.addstr(y_pos, x_pos, ' ' * (box_width - 8), curses.color_pair(THEME.HIGHLIGHTED_ROW))
                     stdscr.addstr(
-                        y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(THEME.HIGHLIGHTED_ROW)
+                        y_pos,
+                        x_pos,
+                        ' ' * (box_width - self.INNER_MARGIN_TOTAL),
+                        curses.color_pair(THEME.HIGHLIGHTED_ROW),
+                    )
+                    stdscr.addstr(
+                        y_pos,
+                        x_pos,
+                        labeled_item[: max(0, box_width - self.INNER_MARGIN_TOTAL)],
+                        curses.color_pair(THEME.HIGHLIGHTED_ROW),
                     )
                 else:
                     stdscr.addstr(
-                        y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(THEME.REGULAR_ROW)
+                        y_pos,
+                        x_pos,
+                        labeled_item[: max(0, box_width - self.INNER_MARGIN_TOTAL)],
+                        curses.color_pair(THEME.REGULAR_ROW),
                     )
             except curses.error:
                 pass
@@ -346,24 +418,14 @@ class MenuApp:
         # Draw scroll indicator at bottom if there are more items
         if self.scroll_offset + visible_items < len(options):
             indicator = THEME.SCROLL_DOWN
-            indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
-            indicator_y = start_y + box_height - 3  # One row above help text
+            indicator_x = max(start_x + self.TITLE_INNER_MARGIN, start_x + (box_width - len(indicator)) // 2)
+            indicator_y = start_y + box_height - self.SCROLL_DOWN_Y_OFFSET_FROM_BOTTOM  # One row above help text
             try:
                 stdscr.addstr(indicator_y, indicator_x, indicator, curses.color_pair(THEME.REGULAR_ROW))
             except curses.error:
                 pass
 
-        # Always draw help text at the bottom of the box
-        help_text = "Use ↑ ↓ to navigate, ENTER to select and q/ESC to quit"
-        help_x = max(start_x + 1, start_x + (box_width - len(help_text)) // 2)
-        help_y = start_y + box_height - 2
-        try:
-            # Use dim attribute for subtle text (like italics)
-            stdscr.addstr(
-                help_y, help_x, help_text[: max(0, box_width - 2)], curses.color_pair(THEME.REGULAR_ROW) | curses.A_DIM
-            )
-        except curses.error:
-            pass
+        self._draw_help_text(stdscr, start_x, start_y, box_width, box_height)
 
         stdscr.refresh()
 
