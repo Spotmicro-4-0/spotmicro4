@@ -62,6 +62,7 @@ class Colors:
     YELLOW = '\033[1;33m'
     BLUE = '\033[0;34m'
     CYAN = '\033[0;36m'
+    MAGENTA = '\033[0;35m'
     NC = '\033[0m'
 
 
@@ -97,6 +98,9 @@ class SetupTool:
     def print_step(self, n, msg):
         prefix = LABELS.STEP_PREFIX.format(n=n, TOTAL_STEPS=TOTAL_STEPS)
         print(f"{Colors.BLUE}{prefix}{Colors.NC} {msg}")
+
+    def print_input(self, msg):
+        print(f"{Colors.MAGENTA}[INPUT]{Colors.NC} {msg}", end=" ", flush=True)
 
     # ------------------------------------------------------------------
     # Spinner animation
@@ -172,13 +176,21 @@ class SetupTool:
     # User interaction
     # ------------------------------------------------------------------
     def ask(self, prompt, default=None, secret=False):
-        p = f"{prompt} [{default}]: " if default else f"{prompt}: "
-        val = getpass.getpass(p) if secret else input(p).strip()
-        return val or default
+        if default:
+            full_prompt = f"{prompt} [{default}]: "
+        else:
+            full_prompt = f"{prompt}: "
+        self.print_input(full_prompt)
+        # For secret input, getpass doesn't show a prompt (we already printed it)
+        # For regular input, use empty prompt since we already printed it
+        val = getpass.getpass("") if secret else input("")
+        return val if val else default
 
     def confirm(self, prompt, default=True):
         default_str = "Y/n" if default else "y/N"
-        val = input(f"{prompt} [{default_str}]: ").strip().lower()
+        full_prompt = f"{prompt} [{default_str}]:"
+        self.print_input(full_prompt)
+        val = input("").strip().lower()
         if not val:
             return default
         return val in ("y", "yes")
@@ -188,6 +200,7 @@ class SetupTool:
     # ------------------------------------------------------------------
     def collect_initial_config(self):
         self.print_info(LABELS.UI_INITIAL_SETUP_HEADER)
+        self.print_info(LABELS.UI_ACCEPT_DEFAULTS)
         hostname = self.ask(LABELS.PROMPT_HOSTNAME, "spotmicroai.local")
         username = self.ask(LABELS.PROMPT_USERNAME, "pi")
         password = self.ask(LABELS.PROMPT_PASSWORD, secret=True)
@@ -393,6 +406,7 @@ class SetupTool:
 
             cfg_exists = self.load_config()
             if not cfg_exists:
+                self.print_warn(LABELS.WARN_NO_PREVIOUS_CONFIG)
                 if not self.confirm(LABELS.PROMPT_FIRST_TIME_SETUP, True):
                     return False
                 if not self.collect_initial_config():

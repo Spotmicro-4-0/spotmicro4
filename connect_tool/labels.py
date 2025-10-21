@@ -56,6 +56,7 @@ MSG_TRANSFERRING_FILES = "Transferring project files..."
 WARN_CONFIG_FILE_NOT_FOUND = "{config_filename} not found locally"
 WARN_EXISTING_DIR_FOUND = "Found existing ~/{project_dir} directory"
 WARN_INTERRUPTED = "Interrupted by user"
+WARN_NO_PREVIOUS_CONFIG = "No previous configuration was detected."
 
 # Step descriptions
 STEP_SYSTEM_UPDATE = "System Update"
@@ -75,7 +76,8 @@ SUBSTEP_INSTALLING_SSH_KEY = "Installing SSH key on Raspberry Pi"
 SUBSTEP_TESTING_SSH = "Testing SSH connectivity..."
 
 # UI elements
-UI_INITIAL_SETUP_HEADER = "SpotmicroAI Initial Setup"
+UI_INITIAL_SETUP_HEADER = "Initiating Spotmicro first-time setup..."
+UI_ACCEPT_DEFAULTS = "Press enter to accept any of the default values"
 
 # Command line help
 CLI_DESCRIPTION = "SpotmicroAI Setup Tool"
