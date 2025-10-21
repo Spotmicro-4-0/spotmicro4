@@ -260,6 +260,35 @@ class MenuApp:
         if self.current_index < self.scroll_offset:
             self.scroll_offset = self.current_index
 
+    def _draw_terminal_too_small(self, stdscr, h: int, w: int) -> None:
+        """Draw message when terminal is too small."""
+        msg1 = LABELS.MSG_TERMINAL_TOO_SMALL
+        msg2 = LABELS.MSG_RESIZE_CONTINUE
+
+        # Find the longest message to determine padding width
+        max_msg_width = max(len(msg1), len(msg2))
+
+        # Center and pad both messages to equal width, then add 1 char padding on left and right
+        msg1_padded = f" {msg1.center(max_msg_width)} "
+        msg2_padded = f" {msg2.center(max_msg_width)} "
+
+        try:
+            stdscr.addstr(
+                h // 2,
+                max(0, (w - len(msg1_padded)) // 2),
+                msg1_padded,
+                curses.color_pair(THEME.REGULAR_ROW),
+            )
+            stdscr.addstr(
+                h // 2 + 1,
+                max(0, (w - len(msg2_padded)) // 2),
+                msg2_padded,
+                curses.color_pair(THEME.REGULAR_ROW),
+            )
+        except curses.error:
+            pass
+        stdscr.refresh()
+
     def _draw_help_text(self, stdscr, start_x, start_y, box_width, box_height):
         # Always draw help text at the bottom of the box
         help_text = LABELS.MSG_HELP_TEXT
@@ -285,22 +314,7 @@ class MenuApp:
 
         # Avoid crash if terminal is too small
         if h < self.MIN_TERMINAL_HEIGHT or w < self.MIN_TERMINAL_WIDTH:
-            try:
-                stdscr.addstr(
-                    h // 2,
-                    max(0, (w - self.MSG_TOO_SMALL_WIDTH) // 2),
-                    LABELS.MSG_TERMINAL_TOO_SMALL,
-                    curses.color_pair(THEME.REGULAR_ROW),
-                )
-                stdscr.addstr(
-                    h // 2 + 1,
-                    max(0, (w - self.MSG_RESIZE_WIDTH) // 2),
-                    LABELS.MSG_RESIZE_CONTINUE,
-                    curses.color_pair(THEME.REGULAR_ROW),
-                )
-            except curses.error:
-                pass
-            stdscr.refresh()
+            self._draw_terminal_too_small(stdscr, h, w)
             return
 
         current_menu = self.menus[self.menu_stack[-1]]

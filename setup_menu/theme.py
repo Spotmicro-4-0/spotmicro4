@@ -3,8 +3,8 @@
 Central place for color pair ids and default color assignments.
 """
 
-from typing import Dict, Tuple
 import curses
+from typing import Dict, Tuple
 
 # Named color-pair ids
 REGULAR_ROW: int = 1
