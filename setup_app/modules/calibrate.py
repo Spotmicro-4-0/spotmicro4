@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from setup_menu.modules.base_menu_launcher import BaseMenuLauncher
+from setup_app.modules.base_menu_launcher import BaseMenuLauncher
 
 
 class CalibrateLauncher(BaseMenuLauncher):

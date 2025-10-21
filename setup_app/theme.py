@@ -1,4 +1,4 @@
-"""Theme definitions for setup_menu.
+"""Theme definitions for setup_app.
 
 Central place for color pair ids and default color assignments.
 """
