@@ -85,7 +85,7 @@ else
     # --- Virtual environment setup ---
     print_info "Creating virtual environment (.venv)..."
     (
-        sleep 3  # <-- Demo delay: remove this later
+        $PYTHON_CMD -m venv .venv
     ) &
     show_spinner $!
     print_info "Virtual environment created at $(pwd)/.venv"
