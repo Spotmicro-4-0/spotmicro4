@@ -15,7 +15,7 @@ SHADOW: int = 4
 # Default theme: mapping of curses color pair id -> (fg_color, bg_color)
 DEFAULT_THEME: Dict[int, Tuple[int, int]] = {
     REGULAR_ROW: (curses.COLOR_BLACK, curses.COLOR_WHITE),
-    HIGHLIGHTED_ROW: (curses.COLOR_WHITE, curses.COLOR_CYAN),
+    HIGHLIGHTED_ROW: (curses.COLOR_WHITE, curses.COLOR_RED),
     BACKGROUND: (curses.COLOR_BLUE, curses.COLOR_BLUE),
     SHADOW: (curses.COLOR_BLACK, curses.COLOR_BLACK),
 }
