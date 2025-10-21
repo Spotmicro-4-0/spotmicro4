@@ -1,0 +1,16 @@
+{
+  "config_edit": {
+    "title": "Configuration Editor Menu",
+    "options": [
+      {
+        "label": "Edit spotmicroai.json Configuration",
+        "action": "run",
+        "command": "python3 scripts/edit_config.py"
+      },
+      {
+        "label": "Q) Back",
+        "action": "back"
+      }
+    ]
+  }
+}

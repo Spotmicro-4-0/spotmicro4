@@ -1,0 +1,16 @@
+{
+  "calibrate_servos": {
+    "title": "Servo Calibration Menu",
+    "options": [
+      {
+        "label": "Launch Servo Calibration Tool",
+        "action": "run",
+        "command": "python3 scripts/calibrate_servos.py"
+      },
+      {
+        "label": "Q) Back",
+        "action": "back"
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "upload_runtime": {
+    "title": "Upload Runtime Menu",
+    "options": [
+      {
+        "label": "Transfer Latest Runtime Code",
+        "action": "run",
+        "command": "python3 scripts/upload_runtime.py"
+      },
+      {
+        "label": "Q) Back",
+        "action": "back"
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from spotmicroai.runtime.utilities.singleton import Singleton
+from spotmicroai.core.singleton import Singleton
 
 SPOTMICRO = 'Spotmicro'
 

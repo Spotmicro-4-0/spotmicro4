@@ -1,19 +1,20 @@
 import signal
 import sys
 import time
+from typing import Optional
 
 import RPi.GPIO as GPIO
 
-from spotmicroai.runtime.utilities.config import Config
-from spotmicroai.runtime.utilities.log import Logger
-import spotmicroai.runtime.utilities.queues as queues
+from spotmicroai.core.config import Config
+from spotmicroai.core.log import Logger
+import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('Abort controller')
 
 
 class AbortController:
-    gpio_port = None
-    config = Config()
+    _gpio_port: Optional[int] = None
+    _config: Config = Config()
 
     def __init__(self, communication_queues):
 
@@ -24,7 +25,7 @@ class AbortController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self.gpio_port = self.config.abort_controller.gpio_port
+            self._gpio_port = self._config.abort_controller.gpio_port
 
             retries = 10
             while retries > 0:
@@ -33,7 +34,8 @@ class AbortController:
                 try:
                     log.info('Attempting to configure GPIO pins')
                     GPIO.setmode(GPIO.BCM)
-                    GPIO.setup(self.gpio_port, GPIO.OUT)
+                    assert self._gpio_port is not None
+                    GPIO.setup(self._gpio_port, GPIO.OUT)
                     log.info('GPIO pins configured successfully.')
                     break
                 except Exception as e:
@@ -89,9 +91,11 @@ class AbortController:
             sys.exit(1)
 
     def activate_servos(self):
+        assert self._gpio_port is not None
         self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_ON)
-        GPIO.output(self.gpio_port, GPIO.LOW)
+        GPIO.output(self._gpio_port, GPIO.LOW)
 
     def abort(self):
+        assert self._gpio_port is not None
         self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_OFF)
-        GPIO.output(self.gpio_port, GPIO.HIGH)
+        GPIO.output(self._gpio_port, GPIO.HIGH)

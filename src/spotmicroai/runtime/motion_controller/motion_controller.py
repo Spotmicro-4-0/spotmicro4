@@ -4,6 +4,9 @@ import signal
 import sys
 import time
 
+from spotmicroai.core.log import Logger
+from spotmicroai.drivers.buzzer import Buzzer
+from spotmicroai.drivers.pca9685 import PCA9685
 from spotmicroai.runtime.motion_controller.constants import (
     DEFAULT_SLEEP,
     FRAME_DURATION,
@@ -17,10 +20,7 @@ from spotmicroai.runtime.motion_controller.services.pose_service import PoseServ
 from spotmicroai.runtime.motion_controller.services.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.services.telemetry_service import TelemetryService
 from spotmicroai.runtime.motion_controller.telemetry_display import TelemetryDisplay
-from spotmicroai.runtime.motion_controller.wrappers.buzzer import Buzzer
-from spotmicroai.runtime.motion_controller.wrappers.pca9685 import PCA9685Board
-from spotmicroai.runtime.utilities.log import Logger
-import spotmicroai.runtime.utilities.queues as queues
+import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('Motion controller')
 
@@ -31,7 +31,7 @@ class MotionController:
     and responding to controller inputs for walking, standing, and other actions.
     """
 
-    _pca9685_board: PCA9685Board
+    _pca9685_board: PCA9685
     _servo_service: ServoService
     _pose_service: PoseService
     _buzzer: Buzzer
@@ -54,7 +54,7 @@ class MotionController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self._pca9685_board = PCA9685Board()
+            self._pca9685_board = PCA9685()
             self._buzzer = Buzzer()
             self._pose_service = PoseService()
             self._keyframe_service = KeyframeService()

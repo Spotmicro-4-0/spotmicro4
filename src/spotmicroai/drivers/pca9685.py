@@ -2,32 +2,33 @@
 PCA9685 handler for controlling PWM board on I2C.
 """
 
+from adafruit_pca9685 import PCA9685 as _PCA9685  # type: ignore
 from board import SCL, SDA  # type: ignore
-import busio  # type: ignore
-from adafruit_pca9685 import PCA9685  # type: ignore
-from spotmicroai.runtime.utilities.singleton import Singleton
-from spotmicroai.runtime.utilities.config import Config
-from spotmicroai.runtime.utilities.log import Logger
+import busio
+
+from spotmicroai.core.config import Config
+from spotmicroai.core.log import Logger
+from spotmicroai.core.singleton import Singleton  # type: ignore
 
 log = Logger().setup_logger('Motion controller')
 
 
-class PCA9685Board(metaclass=Singleton):
+class PCA9685(metaclass=Singleton):
     """Controls the PCA9685 PWM board for servo control.
 
     Attributes
     ----------
     config : Config
         Configuration object for motion controller settings
-    i2c : busio.I2C
+    _i2c : busio.I2C
         I2C bus interface
-    pca9685 : PCA9685 or None
+    _pca9685 : PCA9685 or None
         PCA9685 board instance
-    address : int
+    _address : int
         I2C address of the PCA9685 board
-    reference_clock_speed : int
+    _reference_clock_speed : int
         Reference clock speed for the PCA9685
-    frequency : int
+    _frequency : int
         PWM frequency
     """
 
@@ -35,23 +36,23 @@ class PCA9685Board(metaclass=Singleton):
 
     def __init__(self):
         """Initialize the PCA9685Board."""
-        self.i2c = busio.I2C(SCL, SDA)
-        self.pca9685 = None
-        self.address = int(self.config.motion_controller.pca9685.address, 0)
-        self.reference_clock_speed = int(self.config.motion_controller.pca9685.reference_clock_speed)
-        self.frequency = int(self.config.motion_controller.pca9685.frequency)
+        self._i2c = busio.I2C(SCL, SDA)
+        self._pca9685 = None
+        self._address = int(self.config.motion_controller.pca9685.address, 0)
+        self._reference_clock_speed = int(self.config.motion_controller.pca9685.reference_clock_speed)
+        self._frequency = int(self.config.motion_controller.pca9685.frequency)
 
     def activate_board(self):
         """Activate the PCA9685 board."""
-        self.pca9685 = PCA9685(self.i2c, address=self.address, reference_clock_speed=self.reference_clock_speed)
-        self.pca9685.frequency = self.frequency
+        self._pca9685 = _PCA9685(self._i2c, address=self._address, reference_clock_speed=self._reference_clock_speed)
+        self._pca9685.frequency = self._frequency
         log.info('PCA9685 board activated')
 
     def deactivate_board(self):
         """Deactivate the PCA9685 board."""
-        if self.pca9685:
-            self.pca9685.deinit()
-            self.pca9685 = None
+        if self._pca9685:
+            self._pca9685.deinit()
+            self._pca9685 = None
         log.info('PCA9685 board deactivated')
 
     def get_channel(self, channel_index):
@@ -62,6 +63,6 @@ class PCA9685Board(metaclass=Singleton):
         channel_index : int
             The index of the PWM channel
         """
-        if self.pca9685 is None:
+        if self._pca9685 is None:
             raise RuntimeError('PCA9685 board not activated')
-        return self.pca9685.channels[channel_index]
+        return self._pca9685.channels[channel_index]

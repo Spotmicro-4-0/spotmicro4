@@ -11,5 +11,4 @@ or imported for custom automation:
 
 __version__ = "1.0.0"
 
-# Optional convenience re-exports
-from .menu_app import MenuApp  # noqa: F401
+from .menu_app import MenuApp

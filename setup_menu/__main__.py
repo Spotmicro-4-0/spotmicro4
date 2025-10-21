@@ -8,7 +8,7 @@ This allows the setup_tool package to be executed directly:
 It simply delegates execution to setup_tool.main.main().
 """
 
-from setup_tool.main import main
+from setup_menu.main import main
 
 if __name__ == "__main__":
     main()

@@ -1,18 +1,19 @@
 #!/home/pi/spotmicroai/venv/bin/python3 -u
 
-import busio
-from board import SCL, SDA
-from adafruit_pca9685 import PCA9685
-from adafruit_motor import servo
-from pick import pick
-import time
 import os
 import sys
-import RPi.GPIO as GPIO
+import time
 
+import RPi.GPIO as GPIO
+from adafruit_motor import servo
+from adafruit_pca9685 import PCA9685
+from board import SCL, SDA
+import busio
+from pick import pick
+
+from spotmicroai.core.config import Config
+from spotmicroai.core.log import Logger
 from spotmicroai.runtime.motion_controller.InverseKinematics import InverseKinematics
-from spotmicroai.runtime.utilities.log import Logger
-from spotmicroai.runtime.utilities.config import Config
 
 LEG_SERVO_OFFSET = 120
 

@@ -1,0 +1,16 @@
+{
+  "log_review": {
+    "title": "Log Review Menu",
+    "options": [
+      {
+        "label": "View Latest Logs and Telemetry",
+        "action": "run",
+        "command": "python3 scripts/review_logs.py"
+      },
+      {
+        "label": "Q) Back",
+        "action": "back"
+      }
+    ]
+  }
+}

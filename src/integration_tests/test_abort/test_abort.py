@@ -15,13 +15,14 @@ Usage:
 """
 
 import time
-import RPi.GPIO as GPIO
-import busio
-import board
-from adafruit_pca9685 import PCA9685  # type: ignore
 
-from spotmicroai.runtime.utilities.log import Logger
-from spotmicroai.runtime.utilities.config import Config
+import RPi.GPIO as GPIO
+from adafruit_pca9685 import PCA9685  # type: ignore
+import board
+import busio
+
+from spotmicroai.core.config import Config
+from spotmicroai.core.log import Logger
 
 
 def safe_clear_pca_outputs(pca_address: int, ref_clock: int, freq: int):

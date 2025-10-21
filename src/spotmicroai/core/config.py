@@ -4,9 +4,9 @@ import shutil
 import sys
 from typing import Any, Dict, List, Optional
 
-from spotmicroai.runtime.utilities.dot_dict import DotDict
-from spotmicroai.runtime.utilities.log import Logger
-from spotmicroai.runtime.utilities.singleton import Singleton
+from spotmicroai.core.dot_dict import DotDict
+from spotmicroai.core.log import Logger
+from spotmicroai.core.singleton import Singleton
 
 log = Logger().setup_logger('Configuration')
 

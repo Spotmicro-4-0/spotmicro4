@@ -123,14 +123,18 @@ class MenuApp:
 
         # Calculate box dimensions
         box_width = min(w - 10, 70)
-        box_height = len(options) + 6
+        box_height = min(len(options) + 6, h - 4)
         start_y = max(2, (h - box_height) // 2)
         start_x = (w - box_width) // 2
 
         # Draw shadow (right and bottom)
-        for y in range(start_y + 1, start_y + box_height + 1):
-            stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(SHADOW))
-        stdscr.addstr(start_y + box_height, start_x + 2, ' ' * box_width, curses.color_pair(SHADOW))
+        for y in range(start_y + 1, min(start_y + box_height + 1, h)):
+            if start_x + box_width + 1 < w:
+                stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(SHADOW))
+        if start_y + box_height < h:
+            shadow_width = min(box_width, w - (start_x + 2))
+            if shadow_width > 0:
+                stdscr.addstr(start_y + box_height, start_x + 2, ' ' * shadow_width, curses.color_pair(SHADOW))
 
         # Top border
         stdscr.addstr(start_y, start_x, TL + HOR * (box_width - 2) + TR, curses.color_pair(REGULAR_ROW))

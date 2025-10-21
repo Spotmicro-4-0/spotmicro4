@@ -1,14 +1,15 @@
 #!/home/pi/spotmicroai/venv/bin/python3 -u
 
-import busio
-from board import SCL, SDA
-from adafruit_pca9685 import PCA9685
-from adafruit_motor import servo
 import time
 
-from spotmicroai.runtime.utilities.log import Logger
-from spotmicroai.runtime.utilities.config import Config
 import RPi.GPIO as GPIO
+from adafruit_motor import servo
+from adafruit_pca9685 import PCA9685
+from board import SCL, SDA
+import busio
+
+from spotmicroai.core.config import Config
+from spotmicroai.core.log import Logger
 
 log = Logger().setup_logger('Test Motion')
 

@@ -15,11 +15,12 @@ Usage:
 
 import sys
 import time
+
 import RPi.GPIO as GPIO
 from pick import pick
 
-from spotmicroai.runtime.utilities.log import Logger
-from spotmicroai.runtime.utilities.config import Config
+from spotmicroai.core.config import Config
+from spotmicroai.core.log import Logger
 
 
 def beep(gpio_port: int, duration: float, count: int = 1, delay: float = 0.5) -> None:

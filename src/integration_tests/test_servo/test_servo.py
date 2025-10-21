@@ -1,17 +1,18 @@
 #!/home/pi/spotmicroai/venv/bin/python3 -u
 
-import busio  # type: ignore
-from board import SCL, SDA  # type: ignore
-from adafruit_pca9685 import PCA9685  # type: ignore
-from adafruit_motor import servo  # type: ignore
-from pick import pick  # type: ignore
-import time
 import os
 import sys
-import RPi.GPIO as GPIO  # type: ignore
+import time
 
-from spotmicroai.runtime.utilities.log import Logger
-from spotmicroai.runtime.utilities.config import Config
+import RPi.GPIO as GPIO  # type: ignore
+from adafruit_motor import servo  # type: ignore
+from adafruit_pca9685 import PCA9685  # type: ignore
+from board import SCL, SDA  # type: ignore
+import busio  # type: ignore
+from pick import pick  # type: ignore
+
+from spotmicroai.core.config import Config
+from spotmicroai.core.log import Logger
 
 log = Logger().setup_logger('Servo Range Test')
 

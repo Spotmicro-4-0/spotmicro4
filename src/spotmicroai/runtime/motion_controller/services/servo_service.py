@@ -1,10 +1,10 @@
 from adafruit_motor import servo  # type: ignore
 
+from spotmicroai.core.config import Config
+from spotmicroai.core.singleton import Singleton
 from spotmicroai.runtime.motion_controller.constants import FOOT_SERVO_OFFSET, LEG_SERVO_OFFSET
 from spotmicroai.runtime.motion_controller.models.pose import Pose
 from spotmicroai.runtime.motion_controller.wrappers.pca9685 import PCA9685Board
-from spotmicroai.runtime.utilities.config import Config
-from spotmicroai.runtime.utilities.singleton import Singleton
 
 
 class ServoService(metaclass=Singleton):

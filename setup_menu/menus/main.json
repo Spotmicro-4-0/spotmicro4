@@ -1,16 +1,42 @@
 {
   "main": {
-    "title": "SpotMicroAI Setup Tool",
+    "title": "Spotmicro Setup Tool",
     "options": [
       {
-        "label": "Servo Calibration",
+        "label": "Upload Runtime",
+        "description": "Transfers the latest runtime code changes to the robot",
         "action": "submenu",
-        "target": "calibrate_main"
+        "target": "upload_runtime"
       },
       {
-        "label": "Deployment Tasks",
+        "label": "Start Runtime on Boot",
+        "description": "Can enable/disable the runtime to run automatically upon boot",
         "action": "submenu",
-        "target": "deploy_main"
+        "target": "config_boot"
+      },
+      {
+        "label": "Edit Configuration",
+        "description": "Edit configuration values in the spotmicroai.json file",
+        "action": "submenu",
+        "target": "config_edit"
+      },
+      {
+        "label": "Servo Calibration",
+        "description": "Launches the servo calibration menu",
+        "action": "submenu",
+        "target": "calibrate_servos"
+      },
+      {
+        "label": "Run Diagnostics",
+        "description": "Run various hardware and system checks",
+        "action": "submenu",
+        "target": "diagnostics"
+      },
+      {
+        "label": "Review Logs",
+        "description": "Investigate the latest log and telemetry entries",
+        "action": "submenu",
+        "target": "log_review"
       },
       {
         "label": "Q) Exit",
