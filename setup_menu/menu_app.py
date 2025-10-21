@@ -326,34 +326,10 @@ class MenuApp:
         start_y = max(1, (h - box_height) // 2)
         start_x = max(1, (w - box_width) // 2)
 
-        # Draw shadow
+        # Reuse existing drawing helpers
         self._draw_shadow(stdscr, start_y, start_x, box_width, box_height, h, w)
-
-        # Draw borders and background
-        try:
-            stdscr.addstr(
-                start_y,
-                start_x,
-                THEME.TL + THEME.HOR * (box_width - 2) + THEME.TR,
-                curses.color_pair(THEME.REGULAR_ROW),
-            )
-            for y in range(start_y + 1, start_y + box_height - 1):
-                stdscr.addstr(y, start_x, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
-                stdscr.addstr(
-                    y,
-                    start_x + 1,
-                    ' ' * (box_width - 2),
-                    curses.color_pair(THEME.REGULAR_ROW),
-                )
-                stdscr.addstr(y, start_x + box_width - 1, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
-            stdscr.addstr(
-                start_y + box_height - 1,
-                start_x,
-                THEME.BL + THEME.HOR * (box_width - 2) + THEME.BR,
-                curses.color_pair(THEME.REGULAR_ROW),
-            )
-        except curses.error:
-            pass
+        self._draw_borders(stdscr, start_y, start_x, box_width, box_height)
+        self._draw_box_content(stdscr, start_y, start_x, box_width, box_height)
 
         # Draw title
         title = "ERROR"
