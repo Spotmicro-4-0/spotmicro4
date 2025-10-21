@@ -11,6 +11,8 @@ import getpass
 import json
 import subprocess
 import sys
+import threading
+import time
 import traceback
 from pathlib import Path
 
@@ -97,6 +99,20 @@ class SetupTool:
         print(f"{Colors.BLUE}{prefix}{Colors.NC} {msg}")
 
     # ------------------------------------------------------------------
+    # Spinner animation
+    # ------------------------------------------------------------------
+    def show_spinner(self, process, delay=0.15):
+        """Display a spinner while a process is running."""
+        spinner_chars = ["⠋", "⠙", "⠸", "⢰", "⣠", "⣄", "⡆", "⠇"]
+        while process.poll() is None:
+            for char in spinner_chars:
+                if process.poll() is not None:
+                    break
+                print(f"\r   {char} ", end="", flush=True)
+                time.sleep(delay)
+        print("\r      \r", end="", flush=True)
+
+    # ------------------------------------------------------------------
     # Config handling
     # ------------------------------------------------------------------
     def load_config(self):
@@ -137,12 +153,17 @@ class SetupTool:
             self.print_info(desc)
         full = f'{self._ssh_prefix()} "{cmd}"'
         try:
-            result = subprocess.run(full, shell=True, capture_output=capture, text=True, timeout=300, check=False)
-            if result.returncode != 0 and result.stderr:
-                self.print_warn(result.stderr.strip())
+            process = subprocess.Popen(full, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            spinner_thread = threading.Thread(target=self.show_spinner, args=(process,), daemon=True)
+            spinner_thread.start()
+            stdout, stderr = process.communicate()
+            spinner_thread.join(timeout=1)
+
+            if process.returncode != 0 and stderr:
+                self.print_warn(stderr.strip())
             if capture:
-                return result.stdout.strip() if result.returncode == 0 else None
-            return result.returncode == 0
+                return stdout.strip() if process.returncode == 0 else None
+            return process.returncode == 0
         except Exception as e:
             self.print_err(LABELS.ERR_SSH_COMMAND_FAILED.format(e=e))
             return None if capture else False
@@ -166,9 +187,7 @@ class SetupTool:
     # Setup steps
     # ------------------------------------------------------------------
     def collect_initial_config(self):
-        print("\n" + LABELS.UI_SEPARATOR)
         self.print_info(LABELS.UI_INITIAL_SETUP_HEADER)
-        print(LABELS.UI_SEPARATOR)
         hostname = self.ask(LABELS.PROMPT_HOSTNAME, "spotmicroai.local")
         username = self.ask(LABELS.PROMPT_USERNAME, "pi")
         password = self.ask(LABELS.PROMPT_PASSWORD, secret=True)

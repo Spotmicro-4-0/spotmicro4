@@ -76,7 +76,6 @@ SUBSTEP_TESTING_SSH = "Testing SSH connectivity..."
 
 # UI elements
 UI_INITIAL_SETUP_HEADER = "SpotmicroAI Initial Setup"
-UI_SEPARATOR = "=" * 60
 
 # Command line help
 CLI_DESCRIPTION = "SpotmicroAI Setup Tool"
