@@ -22,7 +22,7 @@ PROJECT_DIR = "spotmicroai"  # Remote deployment folder
 SRC_FOLDER_NAME = "src"  # Local source folder
 CONFIG_FILENAME = "spotmicroai.json"  # Project config to copy
 REMOTE_VENV_DIR = "venv"  # Virtual environment folder
-CONFIG_FILE_NAME = "setup_config.json"  # Local saved setup metadata
+CONFIG_FILE_NAME = "connect_config.json"  # Local saved setup metadata
 SSH_KEY_FILE = "id_rsa"  # Default SSH key file
 SSH_CONNECT_TIMEOUT = 30
 SSH_OPTS = "-o StrictHostKeyChecking=no"

@@ -2,13 +2,13 @@
 
 ## Overview
 
-The setup tool now supports efficient code deployment for development workflows. After initial setup, you can quickly sync code changes to your Raspberry Pi using `rsync`.
+The connect tool now supports efficient code deployment for development workflows. After initial setup, you can quickly sync code changes to your Raspberry Pi using `rsync`.
 
 ## Usage Modes
 
 ### 1. Initial Setup (First Time)
 ```bash
-./setup.sh
+./connect.sh
 ```
 This will:
 - Configure SSH connection
@@ -20,14 +20,14 @@ This will:
 
 ### 2. Development Mode (Sync Changes)
 ```bash
-./setup.sh
+./connect.sh
 ```
 or explicitly:
 ```bash
-./setup.sh --deploy
+./connect.sh --deploy
 ```
 
-After initial setup is complete, running `./setup.sh` will automatically sync your changes.
+After initial setup is complete, running `./connect.sh` will automatically sync your changes.
 
 This will:
 - Sync only changed files using `rsync`
@@ -38,7 +38,7 @@ This will:
 
 ### 3. Clean Setup (Start Fresh)
 ```bash
-./setup.sh --clean
+./connect.sh --clean
 ```
 This will clear all saved configuration and start from scratch.
 
@@ -47,18 +47,18 @@ This will clear all saved configuration and start from scratch.
 1. **Initial Setup** (one time):
    ```bash
    cd ~/Spotmicro4/src
-   ./setup.sh
+   ./connect.sh
    ```
 
 2. **Make Code Changes** locally in your editor
 
 3. **Deploy Changes** to Raspberry Pi:
    ```bash
-   ./setup.sh --deploy
+   ./connect.sh --deploy
    ```
    or just:
    ```bash
-   ./setup.sh
+   ./connect.sh
    # Then select option 1
    ```
 
@@ -122,15 +122,15 @@ brew install rsync          # macOS
 ### Still asks for password
 Ensure SSH keys are set up correctly:
 ```bash
-./setup.sh --clean  # Start fresh
-./setup.sh          # Set up SSH keys
+./connect.sh --clean  # Start fresh
+./connect.sh          # Set up SSH keys
 ```
 
 ### Files not syncing
 Check that you're in the correct directory:
 ```bash
 cd ~/Spotmicro4/src
-./setup.sh --deploy
+./connect.sh --deploy
 ```
 
 ## Advanced Usage

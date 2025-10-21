@@ -2,7 +2,7 @@
 # =============================================================
 # SpotmicroAI Setup Tool (Bootstrap Script)
 # =============================================================
-# Ensures Python, pip, and venv are ready, then launches setup_tool.py.
+# Ensures Python, pip, and venv are ready, then launches connect_tool.py.
 # Includes spinner animation + preview delay.
 # =============================================================
 
@@ -109,12 +109,12 @@ else
     print_warn "No $REQ_FILE found; skipping dependency installation."
 fi
 
-# --- Locate setup_tool.py ---
-SETUP_TOOL="setup_tool/setup_tool.py"
+# --- Locate connect_tool.py ---
+SETUP_TOOL="connect_tool/connect_tool.py"
 if [ ! -f "$SETUP_TOOL" ]; then
-    print_error "Setup tool not found: $SETUP_TOOL"
+    print_error "Connect tool not found: $SETUP_TOOL"
     exit 1
 fi
 
-print_info "Environment ready. Launching setup tool..."
+print_info "Environment ready. Launching connect tool..."
 exec $PYTHON_CMD "$SETUP_TOOL" "$@"

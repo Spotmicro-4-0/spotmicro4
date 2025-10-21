@@ -6,7 +6,7 @@ This script dynamically loads all JSON menu definition files
 and merges them in memory, without writing any intermediate files.
 
 Run:
-    python3 -m setup_tool
+    python3 -m connect_tool
 """
 
 import json

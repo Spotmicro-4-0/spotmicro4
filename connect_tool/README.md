@@ -5,7 +5,7 @@ Automated setup tool for configuring SpotmicroAI on Raspberry Pi.
 ## Quick Start
 
 ```bash
-python setup_tool.py
+python connect_tool.py
 ```
 
 This will:
@@ -43,17 +43,17 @@ See `docs/1.raspberry-pi.md` for detailed setup instructions.
 
 ### Run Setup
 ```bash
-python setup_tool.py
+python connect_tool.py
 ```
 
 ### Clear Config and Start Fresh
 ```bash
-python setup_tool.py --clean
+python connect_tool.py --clean
 ```
 
 ### Show Version
 ```bash
-python setup_tool.py --version
+python connect_tool.py --version
 ```
 
 ## Configuration

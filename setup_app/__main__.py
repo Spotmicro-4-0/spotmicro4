@@ -2,10 +2,10 @@
 """
 SpotMicroAI Setup Tool - Package Entrypoint
 
-This allows the setup_tool package to be executed directly:
-    python3 -m setup_tool
+This allows the connect_tool package to be executed directly:
+    python3 -m connect_tool
 
-It simply delegates execution to setup_tool.main.main().
+It simply delegates execution to connect_tool.main.main().
 """
 
 from setup_app.main import main

@@ -1,4 +1,4 @@
-# setup_tool/modules/base_menu_launcher.py
+# connect_tool/modules/base_menu_launcher.py
 
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ from setup_app.menu_app import MenuApp
 
 class BaseMenuLauncher:
     """
-    Abstract base class for all setup_tool submenu launchers.
+    Abstract base class for all connect_tool submenu launchers.
     """
 
     MENU_FILENAME = None
