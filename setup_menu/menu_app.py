@@ -31,6 +31,7 @@ Example JSON:
 import curses
 import subprocess
 import sys
+from enum import Enum
 from typing import Mapping, Any
 
 from .theme import (
@@ -46,6 +47,13 @@ from .theme import (
     HOR,
     VERT,
 )
+
+
+class MenuAction(Enum):
+    SUBMENU = "submenu"
+    BACK = "back"
+    EXIT = "exit"
+    RUN = "run"
 
 
 class MenuApp:
@@ -82,8 +90,8 @@ class MenuApp:
 
     def _main_loop(self, stdscr) -> None:
         """Render and handle input for the current active menu."""
-        curses.curs_set(0)
-        stdscr.keypad(True)
+        curses.curs_set(0)  # Hide cursor
+        stdscr.keypad(True)  # Enable number keypad
 
         # Initialize color pairs from the central DEFAULT_THEME
         for pair_id, (fg, bg) in DEFAULT_THEME.items():
@@ -91,81 +99,124 @@ class MenuApp:
 
         while True:
             self._draw_menu(stdscr)
+            if not self._handle_key_input(stdscr):
+                break
 
-            # Handle key input
-            key = stdscr.getch()
+    def _handle_key_input(self, stdscr) -> bool:
+        """Handle key input for menu navigation."""
+        key = stdscr.getch()
+        options = self.menus[self.menu_stack[-1]].get("options", [])
+        if key in (curses.KEY_UP, ord("k")):
+            self.current_index = (self.current_index - 1) % len(options)
+        elif key in (curses.KEY_DOWN, ord("j")):
+            self.current_index = (self.current_index + 1) % len(options)
+        elif key in (curses.KEY_ENTER, ord("\n"), ord("\r")):
+            self._execute_option(options[self.current_index])
+        elif key in (ord("q"), ord("Q"), 27):
+            if len(self.menu_stack) > 1:
+                self.menu_stack.pop()
+                self.current_index = 0
+            else:
+                return False
+        return True
 
-            options = self.menus[self.menu_stack[-1]].get("options", [])
-            if key in (curses.KEY_UP, ord("k")):
-                self.current_index = (self.current_index - 1) % len(options)
-            elif key in (curses.KEY_DOWN, ord("j")):
-                self.current_index = (self.current_index + 1) % len(options)
-            elif key in (curses.KEY_ENTER, ord("\n"), ord("\r")):
-                self._execute_option(options[self.current_index])
-            elif key in (ord("q"), ord("Q"), 27):
-                if len(self.menu_stack) > 1:
-                    self.menu_stack.pop()
-                    self.current_index = 0
-                else:
-                    break
+    def _draw_shadow(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int, h: int, w: int) -> None:
+        """Draw shadow effect for the menu box safely."""
+        for y in range(start_y + 1, min(start_y + box_height + 1, h)):
+            if start_x + box_width < w:
+                try:
+                    stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(SHADOW))
+                except curses.error:
+                    pass
+        if start_y + box_height < h:
+            shadow_width = min(box_width, max(0, w - (start_x + 2)))
+            if shadow_width > 0:
+                try:
+                    stdscr.addstr(start_y + box_height, start_x + 2, ' ' * shadow_width, curses.color_pair(SHADOW))
+                except curses.error:
+                    pass
+
+    def _draw_borders(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int) -> None:
+        """Draw borders for the menu box safely."""
+        h, w = stdscr.getmaxyx()
+        if start_y + box_height > h or start_x + box_width > w or start_y < 0 or start_x < 0:
+            return  # skip if box doesn’t fit
+
+        try:
+            stdscr.addstr(start_y, start_x, TL + HOR * (box_width - 2) + TR, curses.color_pair(REGULAR_ROW))
+            for y in range(start_y + 1, start_y + box_height - 1):
+                stdscr.addstr(y, start_x, VERT, curses.color_pair(REGULAR_ROW))
+                stdscr.addstr(y, start_x + box_width - 1, VERT, curses.color_pair(REGULAR_ROW))
+            stdscr.addstr(
+                start_y + box_height - 1, start_x, BL + HOR * (box_width - 2) + BR, curses.color_pair(REGULAR_ROW)
+            )
+        except curses.error:
+            pass
+
+    def _draw_box_content(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int) -> None:
+        """Draw inner box content safely."""
+        h, w = stdscr.getmaxyx()
+        for y in range(start_y + 1, min(start_y + box_height - 1, h)):
+            if start_x + 1 < w:
+                try:
+                    stdscr.addstr(
+                        y,
+                        start_x + 1,
+                        ' ' * max(0, min(box_width - 2, w - start_x - 1)),
+                        curses.color_pair(REGULAR_ROW),
+                    )
+                except curses.error:
+                    pass
 
     def _draw_menu(self, stdscr) -> None:
-        """Draw the current menu on the screen."""
+        """Draw menu safely, responsive to resize."""
         h, w = stdscr.getmaxyx()
 
-        # Blue background
         stdscr.bkgd(' ', curses.color_pair(BACKGROUND))
         stdscr.clear()
+
+        # Avoid crash if terminal is too small
+        if h < 5 or w < 20:
+            stdscr.addstr(0, 0, "Terminal too small!", curses.color_pair(REGULAR_ROW))
+            stdscr.refresh()
+            return
 
         current_menu = self.menus[self.menu_stack[-1]]
         title = current_menu.get("title", "Menu")
         options = current_menu.get("options", [])
 
-        # Calculate box dimensions
         box_width = min(w - 10, 70)
         box_height = min(len(options) + 6, h - 4)
-        start_y = max(2, (h - box_height) // 2)
-        start_x = (w - box_width) // 2
+        start_y = max(1, (h - box_height) // 2)
+        start_x = max(1, (w - box_width) // 2)
 
-        # Draw shadow (right and bottom)
-        for y in range(start_y + 1, min(start_y + box_height + 1, h)):
-            if start_x + box_width + 1 < w:
-                stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(SHADOW))
-        if start_y + box_height < h:
-            shadow_width = min(box_width, w - (start_x + 2))
-            if shadow_width > 0:
-                stdscr.addstr(start_y + box_height, start_x + 2, ' ' * shadow_width, curses.color_pair(SHADOW))
+        self._draw_shadow(stdscr, start_y, start_x, box_width, box_height, h, w)
+        self._draw_borders(stdscr, start_y, start_x, box_width, box_height)
+        self._draw_box_content(stdscr, start_y, start_x, box_width, box_height)
 
-        # Top border
-        stdscr.addstr(start_y, start_x, TL + HOR * (box_width - 2) + TR, curses.color_pair(REGULAR_ROW))
-        # Side borders
-        for y in range(start_y + 1, start_y + box_height - 1):
-            stdscr.addstr(y, start_x, VERT, curses.color_pair(REGULAR_ROW))
-            stdscr.addstr(y, start_x + box_width - 1, VERT, curses.color_pair(REGULAR_ROW))
-        # Bottom border
-        stdscr.addstr(
-            start_y + box_height - 1, start_x, BL + HOR * (box_width - 2) + BR, curses.color_pair(REGULAR_ROW)
-        )
+        # Title
+        title_x = max(start_x + 1, start_x + (box_width - len(title)) // 2)
+        try:
+            stdscr.addstr(start_y + 1, title_x, title[: max(0, w - title_x)], curses.color_pair(REGULAR_ROW))
+        except curses.error:
+            pass
 
-        # Draw white box content
-        for y in range(start_y + 1, start_y + box_height - 1):
-            stdscr.addstr(y, start_x + 1, ' ' * (box_width - 2), curses.color_pair(REGULAR_ROW))
-
-        # Draw title
-        title_x = start_x + (box_width - len(title)) // 2
-        stdscr.addstr(start_y + 1, title_x, title, curses.color_pair(REGULAR_ROW))
-
-        # Draw options
+        # Options
         for i, opt in enumerate(options):
             label = opt['label']
             y_pos = start_y + 3 + i
             x_pos = start_x + 4
+            if y_pos >= h - 1:
+                break  # stop drawing when hitting bottom
 
-            if i == self.current_index:
-                stdscr.addstr(y_pos, x_pos, ' ' * (box_width - 8), curses.color_pair(HIGHLIGHTED_ROW))
-                stdscr.addstr(y_pos, x_pos, label, curses.color_pair(HIGHLIGHTED_ROW))
-            else:
-                stdscr.addstr(y_pos, x_pos, label, curses.color_pair(REGULAR_ROW))
+            try:
+                if i == self.current_index:
+                    stdscr.addstr(y_pos, x_pos, ' ' * (box_width - 8), curses.color_pair(HIGHLIGHTED_ROW))
+                    stdscr.addstr(y_pos, x_pos, label[: max(0, box_width - 8)], curses.color_pair(HIGHLIGHTED_ROW))
+                else:
+                    stdscr.addstr(y_pos, x_pos, label[: max(0, box_width - 8)], curses.color_pair(REGULAR_ROW))
+            except curses.error:
+                pass
 
         stdscr.refresh()
 
@@ -174,9 +225,14 @@ class MenuApp:
     # -------------------------------------------------------------------------
     def _execute_option(self, option: dict) -> None:
         """Execute an option based on its action type."""
-        action = option.get("action")
+        action_str = option.get("action")
+        try:
+            action = MenuAction(action_str)
+        except ValueError:
+            self._error(f"Invalid action: {action_str}")
+            return
 
-        if action == "submenu":
+        if action == MenuAction.SUBMENU:
             target = option.get("target")
             if not isinstance(target, str):
                 self._error("Invalid or missing submenu target.")
@@ -187,13 +243,16 @@ class MenuApp:
             self.menu_stack.append(target)
             self.current_index = 0
 
-        elif action == "back":
+        elif action == MenuAction.BACK:
             if len(self.menu_stack) > 1:
                 self.menu_stack.pop()
                 self.current_index = 0
 
-        elif action == "exit":
+        elif action == MenuAction.EXIT:
             sys.exit(0)
+
+        elif action == MenuAction.RUN:
+            self._run_command(option.get("command"))
 
     # -------------------------------------------------------------------------
     # Command Runner
