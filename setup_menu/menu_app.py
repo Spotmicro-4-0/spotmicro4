@@ -300,6 +300,105 @@ class MenuApp:
             pass
         stdscr.refresh()
 
+    def _draw_error_box(self, stdscr, message: str) -> None:
+        """Draw an error message box and wait for user to press a key."""
+        h, w = stdscr.getmaxyx()
+
+        # Split message into lines if it's too long
+        max_line_width = min(self.BOX_MAX_WIDTH - 8, w - 20)
+        words = message.split()
+        lines = []
+        current_line = ""
+
+        for word in words:
+            if len(current_line) + len(word) + 1 <= max_line_width:
+                current_line += (" " if current_line else "") + word
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+
+        # Calculate box dimensions
+        box_width = min(max(len(line) for line in lines) + 8, self.BOX_MAX_WIDTH)
+        box_height = len(lines) + 6  # lines + title + spacing + prompt
+        start_y = max(1, (h - box_height) // 2)
+        start_x = max(1, (w - box_width) // 2)
+
+        # Draw shadow
+        self._draw_shadow(stdscr, start_y, start_x, box_width, box_height, h, w)
+
+        # Draw borders and background
+        try:
+            stdscr.addstr(
+                start_y,
+                start_x,
+                THEME.TL + THEME.HOR * (box_width - 2) + THEME.TR,
+                curses.color_pair(THEME.REGULAR_ROW),
+            )
+            for y in range(start_y + 1, start_y + box_height - 1):
+                stdscr.addstr(y, start_x, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
+                stdscr.addstr(
+                    y,
+                    start_x + 1,
+                    ' ' * (box_width - 2),
+                    curses.color_pair(THEME.REGULAR_ROW),
+                )
+                stdscr.addstr(y, start_x + box_width - 1, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
+            stdscr.addstr(
+                start_y + box_height - 1,
+                start_x,
+                THEME.BL + THEME.HOR * (box_width - 2) + THEME.BR,
+                curses.color_pair(THEME.REGULAR_ROW),
+            )
+        except curses.error:
+            pass
+
+        # Draw title
+        title = "ERROR"
+        title_x = start_x + (box_width - len(title)) // 2
+        try:
+            stdscr.addstr(
+                start_y + 1,
+                title_x,
+                title,
+                curses.color_pair(THEME.REGULAR_ROW) | curses.A_BOLD,
+            )
+        except curses.error:
+            pass
+
+        # Draw message lines
+        for i, line in enumerate(lines):
+            line_x = start_x + 4
+            try:
+                stdscr.addstr(
+                    start_y + 3 + i,
+                    line_x,
+                    line[: box_width - 8],
+                    curses.color_pair(THEME.REGULAR_ROW),
+                )
+            except curses.error:
+                pass
+
+        # Draw prompt
+        prompt = "Press any key to continue..."
+        prompt_x = start_x + (box_width - len(prompt)) // 2
+        try:
+            stdscr.addstr(
+                start_y + box_height - 2,
+                prompt_x,
+                prompt,
+                curses.color_pair(THEME.REGULAR_ROW) | curses.A_DIM,
+            )
+        except curses.error:
+            pass
+
+        stdscr.refresh()
+
+        # Wait for key press
+        stdscr.getch()
+
     def _draw_help_text(self, stdscr, start_x, start_y, box_width, box_height):
         # Always draw help text at the bottom of the box
         help_text = LABELS.MSG_HELP_TEXT
@@ -500,46 +599,59 @@ class MenuApp:
             self._error(LABELS.MSG_MISSING_COMMAND)
             return
 
-        curses.endwin()
-        print(f"\n{LABELS.MSG_RUNNING_COMMAND.format(command)}\n")
-        try:
-            subprocess.run(command, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
-            print(LABELS.MSG_COMMAND_FAILED.format(e.returncode))
-        except KeyboardInterrupt:
-            print("\n[INFO] Command interrupted by user")
-
-        try:
-            input(f"\n{LABELS.MSG_PRESS_ENTER_RETURN}")
-        except KeyboardInterrupt:
-            # Handle Ctrl+C during the input prompt
-            print("\n")
-
-        curses.wrapper(self._main_loop)
-        sys.exit(0)
-
-    # -------------------------------------------------------------------------
-    # Utility
-    # -------------------------------------------------------------------------
-    def _error(self, msg: str) -> None:
-        """Display error message and return to menu."""
         if self.stdscr:
-            # Temporarily exit curses mode to show error
+            # Temporarily exit curses mode to run command
             curses.def_prog_mode()  # Save current curses mode
             curses.endwin()
 
-        print(LABELS.MSG_ERROR_PREFIX.format(msg))
+        print(f"\n{LABELS.MSG_RUNNING_COMMAND.format(command)}\n")
+        error_occurred = False
+        error_message = None
+
         try:
-            input(f"\n{LABELS.MSG_PRESS_ENTER_CONTINUE}")
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            error_occurred = True
+            error_message = f"Command failed with exit code {e.returncode}"
+            print(LABELS.MSG_COMMAND_FAILED.format(e.returncode))
         except KeyboardInterrupt:
-            # Handle Ctrl+C during error prompt
-            print("\n")
-            sys.exit(0)
+            error_occurred = True
+            error_message = "Command interrupted by user"
+            print("\n[INFO] Command interrupted by user")
+
+        if not error_occurred:
+            try:
+                input(f"\n{LABELS.MSG_PRESS_ENTER_RETURN}")
+            except KeyboardInterrupt:
+                # Handle Ctrl+C during the input prompt
+                print("\n")
 
         if self.stdscr:
             # Restore curses mode
             curses.reset_prog_mode()
             self.stdscr.refresh()
+
+            # Show error in a nice box if command failed
+            if error_occurred and error_message:
+                self._draw_error_box(self.stdscr, error_message)
+
+    # -------------------------------------------------------------------------
+    # Utility
+    # -------------------------------------------------------------------------
+    def _error(self, msg: str) -> None:
+        """Display error message in a box within the curses interface."""
+        if self.stdscr:
+            # Display error in a nice box instead of exiting curses
+            self._draw_error_box(self.stdscr, msg)
+        else:
+            # Fallback if stdscr is not available (shouldn't happen)
+            curses.endwin()
+            print(LABELS.MSG_ERROR_PREFIX.format(msg))
+            try:
+                input(f"\n{LABELS.MSG_PRESS_ENTER_CONTINUE}")
+            except KeyboardInterrupt:
+                print("\n")
+                sys.exit(0)
 
     @staticmethod
     def _dummy_screen(stdscr):
