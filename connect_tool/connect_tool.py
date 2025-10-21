@@ -82,6 +82,9 @@ class SetupTool:
         self.config = {}
         self.args = args or argparse.Namespace()
         self.current_password = None
+        # Setup logging
+        self.log_file = self.script_dir / "setup.log"
+        self.log_handle = None
 
     # ------------------------------------------------------------------
     # Printing helpers
@@ -102,6 +105,30 @@ class SetupTool:
     def print_input(self, msg):
         print(f"{Colors.MAGENTA}[INPUT]{Colors.NC} {msg}", end=" ", flush=True)
 
+    def _log(self, msg):
+        """Write message to log file."""
+        try:
+            if not self.log_handle:
+                self.log_handle = open(self.log_file, "a", encoding="utf-8")
+            self.log_handle.write(msg + "\n")
+            self.log_handle.flush()
+        except Exception as e:
+            print(f"Warning: Could not write to log: {e}", file=sys.stderr)
+
+    def _close_log(self):
+        """Close the log file."""
+        if self.log_handle:
+            self.log_handle.close()
+            self.log_handle = None
+
+    def _hide_cursor(self):
+        """Hide the terminal cursor."""
+        print("\033[?25l", end="", flush=True)
+
+    def _show_cursor(self):
+        """Show the terminal cursor."""
+        print("\033[?25h", end="", flush=True)
+
     # ------------------------------------------------------------------
     # Spinner animation
     # ------------------------------------------------------------------
@@ -112,7 +139,7 @@ class SetupTool:
             for char in spinner_chars:
                 if process.poll() is not None:
                     break
-                print(f"\r   {char} ", end="", flush=True)
+                print(f"\r{char} ", end="", flush=True)
                 time.sleep(delay)
         print("\r      \r", end="", flush=True)
 
@@ -163,6 +190,12 @@ class SetupTool:
             stdout, stderr = process.communicate()
             spinner_thread.join(timeout=1)
 
+            # Log output to file
+            if stdout:
+                self._log(f"[STDOUT] {stdout.strip()}")
+            if stderr and process.returncode != 0:
+                self._log(f"[STDERR] {stderr.strip()}")
+
             if process.returncode != 0 and stderr:
                 self.print_warn(stderr.strip())
             if capture:
@@ -170,6 +203,7 @@ class SetupTool:
             return process.returncode == 0
         except Exception as e:
             self.print_err(LABELS.ERR_SSH_COMMAND_FAILED.format(e=e))
+            self._log(f"[ERROR] {LABELS.ERR_SSH_COMMAND_FAILED.format(e=e)}")
             return None if capture else False
 
     # ------------------------------------------------------------------
@@ -301,12 +335,18 @@ class SetupTool:
         key = self.config.get("ssh_key_path", "")
         exclude_args = " ".join([f'--exclude=\"{x}\"' for x in RSYNC_EXCLUDES])
         rsync_cmd = (
-            f'rsync -avz --delete {exclude_args} '
+            f'rsync -az --delete --quiet {exclude_args} '
             f'-e "ssh -i \'{key}\' {SSH_OPTS}" '
             f'"{src_dir}/" "{host}:~/{PROJECT_DIR}/"'
         )
         self.print_info(LABELS.MSG_TRANSFERRING_FILES)
-        result = subprocess.run(rsync_cmd, shell=True, check=False)
+        result = subprocess.run(
+            rsync_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False
+        )
+        if result.stdout:
+            self._log(f"[RSYNC] {result.stdout.strip()}")
+        if result.stderr:
+            self._log(f"[RSYNC ERROR] {result.stderr.strip()}")
         if result.returncode == 0:
             self.print_info(LABELS.MSG_FILES_COPIED)
             return True
@@ -327,7 +367,7 @@ class SetupTool:
         json_file = self.script_dir.parent / SRC_FOLDER_NAME / CONFIG_FILENAME
         if json_file.exists():
             scp_cmd = f'{self._scp_prefix()} "{json_file}" {self.config["username"]}@{self.config["hostname"]}:~/'
-            subprocess.run(scp_cmd, shell=True, check=False)
+            subprocess.run(scp_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
             self.print_info(LABELS.MSG_CONFIG_FILE_COPIED)
         else:
             self.print_warn(LABELS.WARN_CONFIG_FILE_NOT_FOUND.format(config_filename=CONFIG_FILENAME))
@@ -345,7 +385,7 @@ class SetupTool:
         key = self.config.get("ssh_key_path")
         base = f"ssh -t -o ConnectTimeout={SSH_CONNECT_TIMEOUT} {SSH_OPTS}"
         ssh_prefix = f'{base} -i "{key}" {host}' if key else f"{base} {host}"
-        full = f'{ssh_prefix} "{cmd}"'
+        full = f'{ssh_prefix} "{cmd}" 2>/dev/null'
         try:
             result = subprocess.run(full, shell=True, timeout=3600, check=False)
             return result.returncode == 0
@@ -362,11 +402,15 @@ class SetupTool:
         key = self.config.get("ssh_key_path", "")
         exclude_args = " ".join([f'--exclude=\"{x}\"' for x in RSYNC_EXCLUDES])
         rsync_cmd = (
-            f'rsync -avz --delete {exclude_args} '
+            f'rsync -az --delete --quiet {exclude_args} '
             f'-e "ssh -i \'{key}\' {SSH_OPTS}" '
             f'"{src_dir}/" "{host}:~/{PROJECT_DIR}/"'
         )
-        result = subprocess.run(rsync_cmd, shell=True, check=False)
+        result = subprocess.run(rsync_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.stdout:
+            self._log(f"[RSYNC] {result.stdout.strip()}")
+        if result.stderr:
+            self._log(f"[RSYNC ERROR] {result.stderr.strip()}")
         if result.returncode == 0:
             self.print_info(LABELS.MSG_FILES_SYNCED)
             self._post_deploy_finalize()
@@ -400,6 +444,7 @@ class SetupTool:
 
     def run(self):
         try:
+            self._hide_cursor()
             if getattr(self.args, "clean", False) and self.config_file.exists():
                 self.config_file.unlink()
                 self.print_info(LABELS.MSG_CONFIG_CLEARED)
@@ -429,11 +474,18 @@ class SetupTool:
 
         except KeyboardInterrupt:
             self.print_warn(LABELS.WARN_INTERRUPTED)
+            self._close_log()
+            self._show_cursor()
             return False
         except Exception as e:
             self.print_err(LABELS.ERR_UNEXPECTED_ERROR.format(e=e))
             traceback.print_exc()
+            self._close_log()
+            self._show_cursor()
             return False
+        finally:
+            self._close_log()
+            self._show_cursor()
 
 
 # ------------------------------------------------------------------

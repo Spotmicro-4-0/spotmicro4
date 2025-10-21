@@ -150,4 +150,6 @@ Thumbs.db
 
 ######### Deployment Configuration
 connect_tool/connect_config.json
+setup.log
+
 logs
