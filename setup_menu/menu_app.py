@@ -94,16 +94,23 @@ class MenuApp:
         self.menu_stack = [entry_menu]
         self.current_index = 0
         self.scroll_offset = 0  # Track scroll position for viewport
+        self.stdscr = None  # Will be set in _main_loop
 
     # -------------------------------------------------------------------------
     # Main Execution Loop
     # -------------------------------------------------------------------------
     def run(self) -> None:
         """Start the curses rendering loop."""
-        curses.wrapper(self._main_loop)
+        try:
+            curses.wrapper(self._main_loop)
+        except KeyboardInterrupt:
+            # Clean exit on Ctrl+C
+            curses.endwin()
+            sys.exit(0)
 
     def _main_loop(self, stdscr) -> None:
         """Render and handle input for the current active menu."""
+        self.stdscr = stdscr  # Store for use in error handling
         curses.curs_set(0)  # Hide cursor
         stdscr.keypad(True)  # Enable number keypad
 
@@ -111,10 +118,14 @@ class MenuApp:
         for pair_id, (fg, bg) in THEME.DEFAULT_THEME.items():
             curses.init_pair(pair_id, fg, bg)
 
-        while True:
-            self._draw_menu(stdscr)
-            if not self._handle_key_input(stdscr):
-                break
+        try:
+            while True:
+                self._draw_menu(stdscr)
+                if not self._handle_key_input(stdscr):
+                    break
+        except KeyboardInterrupt:
+            # Clean exit on Ctrl+C
+            pass
 
     def _handle_key_input(self, stdscr) -> bool:
         """Handle key input for menu navigation."""
@@ -495,20 +506,40 @@ class MenuApp:
             subprocess.run(command, shell=True, check=True)
         except subprocess.CalledProcessError as e:
             print(LABELS.MSG_COMMAND_FAILED.format(e.returncode))
-        input(f"\n{LABELS.MSG_PRESS_ENTER_RETURN}")
+        except KeyboardInterrupt:
+            print("\n[INFO] Command interrupted by user")
+
+        try:
+            input(f"\n{LABELS.MSG_PRESS_ENTER_RETURN}")
+        except KeyboardInterrupt:
+            # Handle Ctrl+C during the input prompt
+            print("\n")
+
         curses.wrapper(self._main_loop)
         sys.exit(0)
 
     # -------------------------------------------------------------------------
     # Utility
     # -------------------------------------------------------------------------
-    @staticmethod
-    def _error(msg: str) -> None:
-        """Display error message."""
-        curses.endwin()
+    def _error(self, msg: str) -> None:
+        """Display error message and return to menu."""
+        if self.stdscr:
+            # Temporarily exit curses mode to show error
+            curses.def_prog_mode()  # Save current curses mode
+            curses.endwin()
+
         print(LABELS.MSG_ERROR_PREFIX.format(msg))
-        input(f"\n{LABELS.MSG_PRESS_ENTER_CONTINUE}")
-        curses.wrapper(MenuApp._dummy_screen)
+        try:
+            input(f"\n{LABELS.MSG_PRESS_ENTER_CONTINUE}")
+        except KeyboardInterrupt:
+            # Handle Ctrl+C during error prompt
+            print("\n")
+            sys.exit(0)
+
+        if self.stdscr:
+            # Restore curses mode
+            curses.reset_prog_mode()
+            self.stdscr.refresh()
 
     @staticmethod
     def _dummy_screen(stdscr):
