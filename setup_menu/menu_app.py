@@ -37,6 +37,7 @@ from enum import Enum
 from typing import Mapping, Any
 
 from . import theme as THEME
+from . import labels as LABELS
 
 
 class MenuAction(Enum):
@@ -261,7 +262,7 @@ class MenuApp:
 
     def _draw_help_text(self, stdscr, start_x, start_y, box_width, box_height):
         # Always draw help text at the bottom of the box
-        help_text = "Use ↑ ↓ to navigate, ENTER to select and q/ESC to quit"
+        help_text = LABELS.MSG_HELP_TEXT
         help_x = max(start_x + self.TITLE_INNER_MARGIN, start_x + (box_width - len(help_text)) // 2)
         help_y = start_y + box_height - self.HELP_Y_OFFSET_FROM_BOTTOM
         try:
@@ -288,13 +289,13 @@ class MenuApp:
                 stdscr.addstr(
                     h // 2,
                     max(0, (w - self.MSG_TOO_SMALL_WIDTH) // 2),
-                    "Terminal too small!",
+                    LABELS.MSG_TERMINAL_TOO_SMALL,
                     curses.color_pair(THEME.REGULAR_ROW),
                 )
                 stdscr.addstr(
                     h // 2 + 1,
                     max(0, (w - self.MSG_RESIZE_WIDTH) // 2),
-                    "Please resize to continue",
+                    LABELS.MSG_RESIZE_CONTINUE,
                     curses.color_pair(THEME.REGULAR_ROW),
                 )
             except curses.error:
@@ -314,7 +315,7 @@ class MenuApp:
                 stdscr.addstr(
                     h // 2,
                     max(0, (w - self.MSG_HEIGHT_SMALL_WIDTH) // 2),
-                    "Terminal height too small",
+                    LABELS.MSG_HEIGHT_TOO_SMALL,
                     curses.color_pair(THEME.REGULAR_ROW),
                 )
             except curses.error:
@@ -438,16 +439,16 @@ class MenuApp:
         try:
             action = MenuAction(action_str)
         except ValueError:
-            self._error(f"Invalid action: {action_str}")
+            self._error(LABELS.MSG_INVALID_ACTION.format(action_str))
             return
 
         if action == MenuAction.SUBMENU:
             target = option.get("target")
             if not isinstance(target, str):
-                self._error("Invalid or missing submenu target.")
+                self._error(LABELS.MSG_INVALID_SUBMENU_TARGET)
                 return
             if target not in self.menus:
-                self._error(f"Submenu '{target}' not found.")
+                self._error(LABELS.MSG_SUBMENU_NOT_FOUND.format(target))
                 return
             self.menu_stack.append(target)
             self.current_index = 0
@@ -471,16 +472,16 @@ class MenuApp:
     def _run_command(self, command: str | None) -> None:
         """Run a shell command outside curses and return to menu afterward."""
         if not command:
-            self._error("Missing 'command' field for action 'run'")
+            self._error(LABELS.MSG_MISSING_COMMAND)
             return
 
         curses.endwin()
-        print(f"\n[INFO] Running: {command}\n")
+        print(f"\n{LABELS.MSG_RUNNING_COMMAND.format(command)}\n")
         try:
             subprocess.run(command, shell=True, check=True)
         except subprocess.CalledProcessError as e:
-            print(f"[ERROR] Command failed with exit code {e.returncode}")
-        input("\nPress Enter to return to menu...")
+            print(LABELS.MSG_COMMAND_FAILED.format(e.returncode))
+        input(f"\n{LABELS.MSG_PRESS_ENTER_RETURN}")
         curses.wrapper(self._main_loop)
         sys.exit(0)
 
@@ -491,8 +492,8 @@ class MenuApp:
     def _error(msg: str) -> None:
         """Display error message."""
         curses.endwin()
-        print(f"[ERROR] {msg}")
-        input("\nPress Enter to continue...")
+        print(LABELS.MSG_ERROR_PREFIX.format(msg))
+        input(f"\n{LABELS.MSG_PRESS_ENTER_CONTINUE}")
         curses.wrapper(MenuApp._dummy_screen)
 
     @staticmethod
