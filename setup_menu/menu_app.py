@@ -36,21 +36,7 @@ import sys
 from enum import Enum
 from typing import Mapping, Any
 
-from .theme import (
-    REGULAR_ROW,
-    HIGHLIGHTED_ROW,
-    BACKGROUND,
-    SHADOW,
-    DEFAULT_THEME,
-    TL,
-    TR,
-    BL,
-    BR,
-    HOR,
-    VERT,
-    SCROLL_UP,
-    SCROLL_DOWN,
-)
+from . import theme as THEME
 
 
 class MenuAction(Enum):
@@ -99,7 +85,7 @@ class MenuApp:
         stdscr.keypad(True)  # Enable number keypad
 
         # Initialize color pairs from the central DEFAULT_THEME
-        for pair_id, (fg, bg) in DEFAULT_THEME.items():
+        for pair_id, (fg, bg) in THEME.DEFAULT_THEME.items():
             curses.init_pair(pair_id, fg, bg)
 
         while True:
@@ -165,14 +151,16 @@ class MenuApp:
         for y in range(start_y + 1, min(start_y + box_height + 1, h)):
             if start_x + box_width < w:
                 try:
-                    stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(SHADOW))
+                    stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(THEME.SHADOW))
                 except curses.error:
                     pass
         if start_y + box_height < h:
             shadow_width = min(box_width, max(0, w - (start_x + 2)))
             if shadow_width > 0:
                 try:
-                    stdscr.addstr(start_y + box_height, start_x + 2, ' ' * shadow_width, curses.color_pair(SHADOW))
+                    stdscr.addstr(
+                        start_y + box_height, start_x + 2, ' ' * shadow_width, curses.color_pair(THEME.SHADOW)
+                    )
                 except curses.error:
                     pass
 
@@ -183,12 +171,20 @@ class MenuApp:
             return  # skip if box doesn’t fit
 
         try:
-            stdscr.addstr(start_y, start_x, TL + HOR * (box_width - 2) + TR, curses.color_pair(REGULAR_ROW))
-            for y in range(start_y + 1, start_y + box_height - 1):
-                stdscr.addstr(y, start_x, VERT, curses.color_pair(REGULAR_ROW))
-                stdscr.addstr(y, start_x + box_width - 1, VERT, curses.color_pair(REGULAR_ROW))
             stdscr.addstr(
-                start_y + box_height - 1, start_x, BL + HOR * (box_width - 2) + BR, curses.color_pair(REGULAR_ROW)
+                start_y,
+                start_x,
+                THEME.TL + THEME.HOR * (box_width - 2) + THEME.TR,
+                curses.color_pair(THEME.REGULAR_ROW),
+            )
+            for y in range(start_y + 1, start_y + box_height - 1):
+                stdscr.addstr(y, start_x, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
+                stdscr.addstr(y, start_x + box_width - 1, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
+            stdscr.addstr(
+                start_y + box_height - 1,
+                start_x,
+                THEME.BL + THEME.HOR * (box_width - 2) + THEME.BR,
+                curses.color_pair(THEME.REGULAR_ROW),
             )
         except curses.error:
             pass
@@ -203,7 +199,7 @@ class MenuApp:
                         y,
                         start_x + 1,
                         ' ' * max(0, min(box_width - 2, w - start_x - 1)),
-                        curses.color_pair(REGULAR_ROW),
+                        curses.color_pair(THEME.REGULAR_ROW),
                     )
                 except curses.error:
                     pass
@@ -238,15 +234,17 @@ class MenuApp:
         """Draw menu safely, responsive to resize."""
         h, w = stdscr.getmaxyx()
 
-        stdscr.bkgd(' ', curses.color_pair(BACKGROUND))
+        stdscr.bkgd(' ', curses.color_pair(THEME.BACKGROUND))
         stdscr.clear()
 
         # Avoid crash if terminal is too small
         if h < 10 or w < 30:
             try:
-                stdscr.addstr(h // 2, max(0, (w - 20) // 2), "Terminal too small!", curses.color_pair(REGULAR_ROW))
                 stdscr.addstr(
-                    h // 2 + 1, max(0, (w - 30) // 2), "Please resize to continue", curses.color_pair(REGULAR_ROW)
+                    h // 2, max(0, (w - 20) // 2), "Terminal too small!", curses.color_pair(THEME.REGULAR_ROW)
+                )
+                stdscr.addstr(
+                    h // 2 + 1, max(0, (w - 30) // 2), "Please resize to continue", curses.color_pair(THEME.REGULAR_ROW)
                 )
             except curses.error:
                 pass
@@ -263,7 +261,7 @@ class MenuApp:
         if visible_items == 0:
             try:
                 stdscr.addstr(
-                    h // 2, max(0, (w - 25) // 2), "Terminal height too small", curses.color_pair(REGULAR_ROW)
+                    h // 2, max(0, (w - 25) // 2), "Terminal height too small", curses.color_pair(THEME.REGULAR_ROW)
                 )
             except curses.error:
                 pass
@@ -284,16 +282,16 @@ class MenuApp:
         # Title
         title_x = max(start_x + 1, start_x + (box_width - len(title)) // 2)
         try:
-            stdscr.addstr(start_y + 1, title_x, title[: max(0, w - title_x)], curses.color_pair(REGULAR_ROW))
+            stdscr.addstr(start_y + 1, title_x, title[: max(0, w - title_x)], curses.color_pair(THEME.REGULAR_ROW))
         except curses.error:
             pass
 
         # Draw scroll indicator at top if scrolled down
         if self.scroll_offset > 0:
-            indicator = SCROLL_UP
+            indicator = THEME.SCROLL_UP
             indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
             try:
-                stdscr.addstr(start_y + 2, indicator_x, indicator, curses.color_pair(REGULAR_ROW))
+                stdscr.addstr(start_y + 2, indicator_x, indicator, curses.color_pair(THEME.REGULAR_ROW))
             except curses.error:
                 pass
 
@@ -334,22 +332,24 @@ class MenuApp:
 
             try:
                 if i == self.current_index:
-                    stdscr.addstr(y_pos, x_pos, ' ' * (box_width - 8), curses.color_pair(HIGHLIGHTED_ROW))
+                    stdscr.addstr(y_pos, x_pos, ' ' * (box_width - 8), curses.color_pair(THEME.HIGHLIGHTED_ROW))
                     stdscr.addstr(
-                        y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(HIGHLIGHTED_ROW)
+                        y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(THEME.HIGHLIGHTED_ROW)
                     )
                 else:
-                    stdscr.addstr(y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(REGULAR_ROW))
+                    stdscr.addstr(
+                        y_pos, x_pos, labeled_item[: max(0, box_width - 8)], curses.color_pair(THEME.REGULAR_ROW)
+                    )
             except curses.error:
                 pass
 
         # Draw scroll indicator at bottom if there are more items
         if self.scroll_offset + visible_items < len(options):
-            indicator = SCROLL_DOWN
+            indicator = THEME.SCROLL_DOWN
             indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
             indicator_y = start_y + box_height - 3  # One row above help text
             try:
-                stdscr.addstr(indicator_y, indicator_x, indicator, curses.color_pair(REGULAR_ROW))
+                stdscr.addstr(indicator_y, indicator_x, indicator, curses.color_pair(THEME.REGULAR_ROW))
             except curses.error:
                 pass
 
@@ -360,7 +360,7 @@ class MenuApp:
         try:
             # Use dim attribute for subtle text (like italics)
             stdscr.addstr(
-                help_y, help_x, help_text[: max(0, box_width - 2)], curses.color_pair(REGULAR_ROW) | curses.A_DIM
+                help_y, help_x, help_text[: max(0, box_width - 2)], curses.color_pair(THEME.REGULAR_ROW) | curses.A_DIM
             )
         except curses.error:
             pass
