@@ -210,13 +210,13 @@ class MenuApp:
 
     def _calculate_visible_items(self, terminal_height: int) -> int:
         """Calculate how many menu items can fit in the terminal."""
-        # Account for: borders (2), title (2), spacing (2), shadow (1)
-        min_box_height = 7
+        # Account for: borders (2), title (2), spacing (2), help text (1), shadow (1)
+        min_box_height = 8
         max_box_height = terminal_height - 4
         if max_box_height < min_box_height:
             return 0
-        # Items that fit = box_height - (borders + title + spacing)
-        return max(0, max_box_height - 6)
+        # Items that fit = box_height - (borders + title + spacing + help text)
+        return max(0, max_box_height - 7)
 
     def _adjust_scroll_offset(self, stdscr) -> None:
         """Adjust scroll offset to keep current selection visible."""
@@ -272,7 +272,8 @@ class MenuApp:
 
         box_width = min(w - 10, 70)
         # Box height accounts for visible items, not all items
-        box_height = min(visible_items + 6, h - 4)
+        # Add 7 for: borders (2) + title (2) + spacing (2) + help text (1)
+        box_height = min(visible_items + 7, h - 4)
         start_y = max(1, (h - box_height) // 2)
         start_x = max(1, (w - box_width) // 2)
 
@@ -346,11 +347,23 @@ class MenuApp:
         if self.scroll_offset + visible_items < len(options):
             indicator = SCROLL_DOWN
             indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
-            indicator_y = start_y + box_height - 2
+            indicator_y = start_y + box_height - 3  # One row above help text
             try:
                 stdscr.addstr(indicator_y, indicator_x, indicator, curses.color_pair(REGULAR_ROW))
             except curses.error:
                 pass
+
+        # Always draw help text at the bottom of the box
+        help_text = "Use ↑ ↓ to navigate, ENTER to select and q/ESC to quit"
+        help_x = max(start_x + 1, start_x + (box_width - len(help_text)) // 2)
+        help_y = start_y + box_height - 2
+        try:
+            # Use dim attribute for subtle text (like italics)
+            stdscr.addstr(
+                help_y, help_x, help_text[: max(0, box_width - 2)], curses.color_pair(REGULAR_ROW) | curses.A_DIM
+            )
+        except curses.error:
+            pass
 
         stdscr.refresh()
 
