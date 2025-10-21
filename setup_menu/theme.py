@@ -36,4 +36,8 @@ BR = '┘'  # bottom-right
 HOR = '─'
 VERT = '│'
 
-__all__.extend(["TL", "TR", "BL", "BR", "HOR", "VERT"])
+# Scroll indicators
+SCROLL_UP = '▲'
+SCROLL_DOWN = '▼'
+
+__all__.extend(["TL", "TR", "BL", "BR", "HOR", "VERT", "SCROLL_UP", "SCROLL_DOWN"])

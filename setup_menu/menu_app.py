@@ -48,6 +48,8 @@ from .theme import (
     BR,
     HOR,
     VERT,
+    SCROLL_UP,
+    SCROLL_DOWN,
 )
 
 
@@ -117,12 +119,12 @@ class MenuApp:
             self.current_index = (self.current_index + 1) % len(options)
             self._adjust_scroll_offset(stdscr)
         elif key == curses.KEY_PPAGE:  # Page Up
-            h, w = stdscr.getmaxyx()
+            h, _ = stdscr.getmaxyx()
             page_size = max(1, self._calculate_visible_items(h) - 1)
             self.current_index = max(0, self.current_index - page_size)
             self._adjust_scroll_offset(stdscr)
         elif key == curses.KEY_NPAGE:  # Page Down
-            h, w = stdscr.getmaxyx()
+            h, _ = stdscr.getmaxyx()
             page_size = max(1, self._calculate_visible_items(h) - 1)
             self.current_index = min(len(options) - 1, self.current_index + page_size)
             self._adjust_scroll_offset(stdscr)
@@ -287,10 +289,10 @@ class MenuApp:
 
         # Draw scroll indicator at top if scrolled down
         if self.scroll_offset > 0:
-            indicator = "↑ More above ↑"
+            indicator = SCROLL_UP
             indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
             try:
-                stdscr.addstr(start_y + 2, indicator_x, indicator, curses.color_pair(HIGHLIGHTED_ROW))
+                stdscr.addstr(start_y + 2, indicator_x, indicator, curses.color_pair(REGULAR_ROW))
             except curses.error:
                 pass
 
@@ -342,11 +344,11 @@ class MenuApp:
 
         # Draw scroll indicator at bottom if there are more items
         if self.scroll_offset + visible_items < len(options):
-            indicator = "↓ More below ↓"
+            indicator = SCROLL_DOWN
             indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
             indicator_y = start_y + box_height - 2
             try:
-                stdscr.addstr(indicator_y, indicator_x, indicator, curses.color_pair(HIGHLIGHTED_ROW))
+                stdscr.addstr(indicator_y, indicator_x, indicator, curses.color_pair(REGULAR_ROW))
             except curses.error:
                 pass
 
