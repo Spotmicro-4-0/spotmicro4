@@ -80,6 +80,7 @@ class MenuApp:
         self.menus = dict(menus)
         self.menu_stack = [entry_menu]
         self.current_index = 0
+        self.scroll_offset = 0  # Track scroll position for viewport
 
     # -------------------------------------------------------------------------
     # Main Execution Loop
@@ -106,16 +107,30 @@ class MenuApp:
         """Handle key input for menu navigation."""
         key = stdscr.getch()
         options = self.menus[self.menu_stack[-1]].get("options", [])
+
         if key in (curses.KEY_UP, ord("k")):
             self.current_index = (self.current_index - 1) % len(options)
+            self._adjust_scroll_offset(stdscr)
         elif key in (curses.KEY_DOWN, ord("j")):
             self.current_index = (self.current_index + 1) % len(options)
+            self._adjust_scroll_offset(stdscr)
+        elif key == curses.KEY_PPAGE:  # Page Up
+            h, w = stdscr.getmaxyx()
+            page_size = max(1, self._calculate_visible_items(h) - 1)
+            self.current_index = max(0, self.current_index - page_size)
+            self._adjust_scroll_offset(stdscr)
+        elif key == curses.KEY_NPAGE:  # Page Down
+            h, w = stdscr.getmaxyx()
+            page_size = max(1, self._calculate_visible_items(h) - 1)
+            self.current_index = min(len(options) - 1, self.current_index + page_size)
+            self._adjust_scroll_offset(stdscr)
         elif key in (curses.KEY_ENTER, ord("\n"), ord("\r")):
             self._execute_option(options[self.current_index])
         elif key in (ord("q"), ord("Q"), 27):
             if len(self.menu_stack) > 1:
                 self.menu_stack.pop()
                 self.current_index = 0
+                self.scroll_offset = 0
             else:
                 return False
         return True
@@ -168,6 +183,32 @@ class MenuApp:
                 except curses.error:
                     pass
 
+    def _calculate_visible_items(self, terminal_height: int) -> int:
+        """Calculate how many menu items can fit in the terminal."""
+        # Account for: borders (2), title (2), spacing (2), shadow (1)
+        min_box_height = 7
+        max_box_height = terminal_height - 4
+        if max_box_height < min_box_height:
+            return 0
+        # Items that fit = box_height - (borders + title + spacing)
+        return max(0, max_box_height - 6)
+
+    def _adjust_scroll_offset(self, stdscr) -> None:
+        """Adjust scroll offset to keep current selection visible."""
+        h, _ = stdscr.getmaxyx()
+        visible_items = self._calculate_visible_items(h)
+
+        if visible_items <= 0:
+            return
+
+        # Scroll down if current index is below viewport
+        if self.current_index >= self.scroll_offset + visible_items:
+            self.scroll_offset = self.current_index - visible_items + 1
+
+        # Scroll up if current index is above viewport
+        if self.current_index < self.scroll_offset:
+            self.scroll_offset = self.current_index
+
     def _draw_menu(self, stdscr) -> None:
         """Draw menu safely, responsive to resize."""
         h, w = stdscr.getmaxyx()
@@ -176,8 +217,14 @@ class MenuApp:
         stdscr.clear()
 
         # Avoid crash if terminal is too small
-        if h < 5 or w < 20:
-            stdscr.addstr(0, 0, "Terminal too small!", curses.color_pair(REGULAR_ROW))
+        if h < 10 or w < 30:
+            try:
+                stdscr.addstr(h // 2, max(0, (w - 20) // 2), "Terminal too small!", curses.color_pair(REGULAR_ROW))
+                stdscr.addstr(
+                    h // 2 + 1, max(0, (w - 30) // 2), "Please resize to continue", curses.color_pair(REGULAR_ROW)
+                )
+            except curses.error:
+                pass
             stdscr.refresh()
             return
 
@@ -185,8 +232,22 @@ class MenuApp:
         title = current_menu.get("title", "Menu")
         options = current_menu.get("options", [])
 
+        # Calculate visible items based on terminal height
+        visible_items = self._calculate_visible_items(h)
+
+        if visible_items == 0:
+            try:
+                stdscr.addstr(
+                    h // 2, max(0, (w - 25) // 2), "Terminal height too small", curses.color_pair(REGULAR_ROW)
+                )
+            except curses.error:
+                pass
+            stdscr.refresh()
+            return
+
         box_width = min(w - 10, 70)
-        box_height = min(len(options) + 6, h - 4)
+        # Box height accounts for visible items, not all items
+        box_height = min(visible_items + 6, h - 4)
         start_y = max(1, (h - box_height) // 2)
         start_x = max(1, (w - box_width) // 2)
 
@@ -201,13 +262,28 @@ class MenuApp:
         except curses.error:
             pass
 
-        # Options
-        for i, opt in enumerate(options):
+        # Draw scroll indicator at top if scrolled down
+        if self.scroll_offset > 0:
+            indicator = "↑ More above ↑"
+            indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
+            try:
+                stdscr.addstr(start_y + 2, indicator_x, indicator, curses.color_pair(HIGHLIGHTED_ROW))
+            except curses.error:
+                pass
+
+        # Options - draw only visible items
+        items_end = min(self.scroll_offset + visible_items, len(options))
+        for i in range(self.scroll_offset, items_end):
+            opt = options[i]
             label = opt['label']
-            y_pos = start_y + 3 + i
+            # Calculate display position relative to viewport
+            display_index = i - self.scroll_offset
+            y_pos = start_y + 3 + display_index
             x_pos = start_x + 4
-            if y_pos >= h - 1:
-                break  # stop drawing when hitting bottom
+
+            # Safety check - should never happen with proper calculations
+            if y_pos >= start_y + box_height - 2:
+                break
 
             try:
                 if i == self.current_index:
@@ -215,6 +291,16 @@ class MenuApp:
                     stdscr.addstr(y_pos, x_pos, label[: max(0, box_width - 8)], curses.color_pair(HIGHLIGHTED_ROW))
                 else:
                     stdscr.addstr(y_pos, x_pos, label[: max(0, box_width - 8)], curses.color_pair(REGULAR_ROW))
+            except curses.error:
+                pass
+
+        # Draw scroll indicator at bottom if there are more items
+        if self.scroll_offset + visible_items < len(options):
+            indicator = "↓ More below ↓"
+            indicator_x = max(start_x + 1, start_x + (box_width - len(indicator)) // 2)
+            indicator_y = start_y + box_height - 2
+            try:
+                stdscr.addstr(indicator_y, indicator_x, indicator, curses.color_pair(HIGHLIGHTED_ROW))
             except curses.error:
                 pass
 
@@ -242,11 +328,13 @@ class MenuApp:
                 return
             self.menu_stack.append(target)
             self.current_index = 0
+            self.scroll_offset = 0
 
         elif action == MenuAction.BACK:
             if len(self.menu_stack) > 1:
                 self.menu_stack.pop()
                 self.current_index = 0
+                self.scroll_offset = 0
 
         elif action == MenuAction.EXIT:
             sys.exit(0)
