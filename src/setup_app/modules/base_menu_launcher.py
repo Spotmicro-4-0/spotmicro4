@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from setup_app.menu_app import MenuApp
+from ..menu_app import MenuApp
 
 
 class BaseMenuLauncher:

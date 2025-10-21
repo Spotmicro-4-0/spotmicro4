@@ -31,13 +31,12 @@ Example JSON:
 """
 
 import curses
+from enum import Enum
 import subprocess
 import sys
-from enum import Enum
-from typing import Mapping, Any
+from typing import Any, Mapping
 
-from . import theme as THEME
-from . import labels as LABELS
+from setup_app import labels as LABELS, theme as THEME
 
 
 class MenuAction(Enum):
