@@ -45,7 +45,7 @@ RSYNC_EXCLUDES = [
     ".pytest_cache/",
     ".mypy_cache/",
 ]
-TOTAL_STEPS = 8
+TOTAL_STEPS = 9
 VERSION = "SpotmicroAI Setup Tool v4.0"
 USE_COLORS = True
 
@@ -300,6 +300,22 @@ class SetupTool:
         self._post_deploy_finalize()
         return True
 
+    def launch_setup_app(self):
+        self.print_step(9, "Launch Setup Application")
+        cmd = f"cd ~/{PROJECT_DIR} && bash setup_app.sh"
+        self.print_info("Launching setup_app on Raspberry Pi...")
+        host = f"{self.config['username']}@{self.config['hostname']}"
+        key = self.config.get("ssh_key_path")
+        base = f"ssh -t -o ConnectTimeout={SSH_CONNECT_TIMEOUT} {SSH_OPTS}"
+        ssh_prefix = f'{base} -i "{key}" {host}' if key else f"{base} {host}"
+        full = f'{ssh_prefix} "{cmd}"'
+        try:
+            result = subprocess.run(full, shell=True, timeout=3600, check=False)
+            return result.returncode == 0
+        except Exception as e:
+            self.print_err(f"SSH command failed: {e}")
+            return False
+
     def sync_code_changes(self):
         print("\n" + "=" * 60)
         self.print_info("Syncing Code Changes to Raspberry Pi")
@@ -320,7 +336,7 @@ class SetupTool:
         if result.returncode == 0:
             self.print_info("✓ Files synced successfully")
             self._post_deploy_finalize()
-            return True
+            return self.launch_setup_app()
         self.print_err("Sync failed")
         return False
 
@@ -337,6 +353,7 @@ class SetupTool:
             (self.copy_project_files, "Copy Project Files"),
             (self.install_python_packages, "Install Python Packages"),
             (self.set_permissions_and_copy_config, "Finalize"),
+            (self.launch_setup_app, "Launch Setup Application"),
         ]
         for func, name in steps:
             if not func():
