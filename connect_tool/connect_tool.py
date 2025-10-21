@@ -406,7 +406,9 @@ class SetupTool:
             f'-e "ssh -i \'{key}\' {SSH_OPTS}" '
             f'"{src_dir}/" "{host}:~/{PROJECT_DIR}/"'
         )
-        result = subprocess.run(rsync_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(
+            rsync_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False
+        )
         if result.stdout:
             self._log(f"[RSYNC] {result.stdout.strip()}")
         if result.stderr:
