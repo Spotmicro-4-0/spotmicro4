@@ -12,7 +12,7 @@ Run:
 import json
 from pathlib import Path
 
-from setup_app import MenuApp
+from setup_app.menu_app import MenuApp
 
 
 def load_menus(base_dir: Path) -> dict:
