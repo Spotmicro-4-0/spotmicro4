@@ -1,9 +1,5 @@
-setuptools
-jmespath
-throttle
 adafruit-circuitpython-motor
 adafruit-circuitpython-pca9685
-inputs
 smbus
 RPi.GPIO
 pick
