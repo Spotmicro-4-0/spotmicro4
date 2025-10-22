@@ -4,8 +4,8 @@ import signal
 import sys
 import time
 
-from spotmicroai.core.config import Config
-from spotmicroai.core.log import Logger
+from shared.config_provider import Config
+from shared.logger import Logger
 from spotmicroai.drivers.lcd_16x2 import Lcd16x2
 import spotmicroai.runtime.queues as queues
 

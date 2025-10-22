@@ -6,8 +6,8 @@ import struct
 import sys
 import time
 
-from spotmicroai.core.config import Config
-from spotmicroai.core.log import Logger
+from shared.config_provider import Config
+from shared.logger import Logger
 import spotmicroai.runtime.queues as queues
 
 # Import tunable constants

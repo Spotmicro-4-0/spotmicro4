@@ -6,8 +6,8 @@ import time
 
 from RPi import GPIO  # type: ignore
 
-from spotmicroai.core.config import Config
-from spotmicroai.core.singleton import Singleton
+from shared.config_provider import Config
+from shared.singleton import Singleton
 from spotmicroai.runtime.motion_controller.constants import BEEP_DURATION
 
 

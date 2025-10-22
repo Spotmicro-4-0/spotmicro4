@@ -1,5 +1,5 @@
-from spotmicroai.core.config import Config
-from spotmicroai.core.singleton import Singleton
+from shared.config_provider import Config
+from shared.singleton import Singleton
 from spotmicroai.runtime.motion_controller.models.pose import Pose
 from spotmicroai.runtime.motion_controller.models.servo_angles import ServoAngles
 

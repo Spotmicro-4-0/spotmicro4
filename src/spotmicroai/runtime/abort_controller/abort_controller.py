@@ -5,8 +5,8 @@ from typing import Optional
 
 import RPi.GPIO as GPIO
 
-from spotmicroai.core.config import Config
-from spotmicroai.core.log import Logger
+from shared.config_provider import Config
+from shared.logger import Logger
 import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('Abort controller')

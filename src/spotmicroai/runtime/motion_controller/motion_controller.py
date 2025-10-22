@@ -4,7 +4,7 @@ import signal
 import sys
 import time
 
-from spotmicroai.core.log import Logger
+from shared.logger import Logger
 from spotmicroai.drivers.buzzer import Buzzer
 from spotmicroai.drivers.pca9685 import PCA9685
 from spotmicroai.runtime.motion_controller.constants import (

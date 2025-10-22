@@ -2,8 +2,8 @@ import math
 import time
 from typing import List, Tuple
 
-from spotmicroai.core.config import Config
-from spotmicroai.core.singleton import Singleton
+from shared.config_provider import Config
+from shared.singleton import Singleton
 from spotmicroai.runtime.motion_controller.constants import (
     HEIGHT_MULTIPLIER,
     LEAN_MULTIPLIER,

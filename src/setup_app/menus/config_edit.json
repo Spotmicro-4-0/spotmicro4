@@ -5,32 +5,32 @@
       {
         "label": "Servo Abort GPIO Pin",
         "action": "run",
-        "command": "bash setup_app/config_editor.sh abort_controller"
+        "command": "bash setup_app/scripts/config_editor.sh abort_controller"
       },
       {
         "label": "LCD Screen I2C Address",
         "action": "run",
-        "command": "bash setup_app/config_editor.sh lcd_screen"
+        "command": "bash setup_app/scripts/config_editor.sh lcd_screen"
       },
       {
         "label": "Remote Controller Device ID",
         "action": "run",
-        "command": "bash setup_app/config_editor.sh remote_controller"
+        "command": "bash setup_app/scripts/config_editor.sh remote_controller"
       },
       {
         "label": "Buzzer GPIO Port",
         "action": "run",
-        "command": "bash setup_app/config_editor.sh buzzer"
+        "command": "bash setup_app/scripts/config_editor.sh buzzer"
       },
       {
         "label": "PCA9685 I2C Address",
         "action": "run",
-        "command": "bash setup_app/config_editor.sh pca9685_address"
+        "command": "bash setup_app/scripts/config_editor.sh pca9685_address"
       },
       {
         "label": "PCA9685 Frequency",
         "action": "run",
-        "command": "bash setup_app/config_editor.sh pca9685_frequency"
+        "command": "bash setup_app/scripts/config_editor.sh pca9685_frequency"
       },
       {
         "label": "Back",

@@ -8,8 +8,8 @@ from adafruit_pca9685 import PCA9685
 from board import SCL, SDA
 import busio
 
-from spotmicroai.core.config import Config
-from spotmicroai.core.log import Logger
+from shared.config_provider import Config
+from shared.logger import Logger
 
 log = Logger().setup_logger('Test Motion')
 
