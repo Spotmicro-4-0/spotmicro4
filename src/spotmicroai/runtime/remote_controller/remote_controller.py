@@ -6,7 +6,7 @@ import struct
 import sys
 import time
 
-from shared.config_provider import Config
+from shared.config_provider import ConfigProvider
 from shared.logger import Logger
 import spotmicroai.runtime.queues as queues
 
@@ -24,7 +24,8 @@ log = Logger().setup_logger('Remote controller')
 
 
 class RemoteControllerController:
-    config = Config()
+    _config_provider = ConfigProvider()
+    _connected_device = False
 
     def __init__(self, communication_queues):
         try:
@@ -34,7 +35,7 @@ class RemoteControllerController:
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
             # We'll store the states here.
-            self.connected_device = False
+            self._connected_device = False
             self.axis_states = {}
             self.button_states = {}
             self.button_map = []
@@ -63,7 +64,7 @@ class RemoteControllerController:
         remote_controller_connected_already = False
 
         while True:
-            if self.connected_device and not remote_controller_connected_already:
+            if self._connected_device and not remote_controller_connected_already:
                 self._lcd_screen_queue.put(queues.LCD_SCREEN_CONTROLLER_ACTION_ON)
                 self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_OK)
                 remote_controller_connected_already = True
@@ -128,13 +129,13 @@ class RemoteControllerController:
         """
         Scans /dev/input for the configured joystick device and opens it.
         """
-        connected_device = self.config.remote_controller.device
+        connected_device = self._config_provider.get_remote_controller_device()
 
         log.info('The remote controller is not detected, looking for connected devices')
-        self.connected_device = False
+        self._connected_device = False
         for fn in os.listdir('/dev/input'):
             if fn.startswith(str(connected_device)):
-                self.connected_device = True
+                self._connected_device = True
 
                 # These constants were borrowed from linux/input.h
                 axis_names = {

@@ -2,7 +2,7 @@ import math
 import time
 from typing import List, Tuple
 
-from shared.config_provider import Config
+from shared.config_provider import ConfigProvider
 from shared.singleton import Singleton
 from spotmicroai.runtime.motion_controller.constants import (
     HEIGHT_MULTIPLIER,
@@ -44,8 +44,8 @@ class KeyframeService(metaclass=Singleton):
         self.prev_index = 0
 
         if not self._walking_cycle:
-            config = Config()
-            walking_cycle_data = config.motion_controller.walking_cycle
+            _config_provider = ConfigProvider()
+            walking_cycle_data = _config_provider.get_walking_cycle()
             self.__class__._walking_cycle = [Coordinate(*pos) for pos in walking_cycle_data]
 
     @property

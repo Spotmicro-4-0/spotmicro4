@@ -4,7 +4,6 @@
   "remote_controller_device": "js0",
   "buzzer_gpio_port": 21,
   "pca9685_address": 64,
-  "pca9685_reference_clock_speed": "25000000",
   "pca9685_frequency": 50,
   "servo_front_shoulder_left": {
     "channel": 6,

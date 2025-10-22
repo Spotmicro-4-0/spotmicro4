@@ -1,4 +1,4 @@
-from shared.config_provider import Config
+from shared.config_provider import ConfigProvider
 from shared.singleton import Singleton
 from spotmicroai.runtime.motion_controller.models.pose import Pose
 from spotmicroai.runtime.motion_controller.models.servo_angles import ServoAngles
@@ -16,8 +16,8 @@ class PoseService(metaclass=Singleton):
     current_index: int
 
     def __init__(self):
-        config = Config()
-        poses_data = config.motion_controller.poses
+        _config_provider = ConfigProvider()
+        poses_data = _config_provider.get_all_poses()
 
         self.poses = {}
 
@@ -27,7 +27,7 @@ class PoseService(metaclass=Singleton):
             front_left = ServoAngles(*pose_angles[2])
             front_right = ServoAngles(*pose_angles[3])
 
-            self.poses[pose_name] = Pose(rear_left, rear_right, front_left, front_right)
+            self.poses[pose_name] = Pose(front_left, front_right, rear_left, rear_right)
 
         self.current_index = 0
 

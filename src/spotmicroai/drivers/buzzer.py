@@ -6,7 +6,7 @@ import time
 
 from RPi import GPIO  # type: ignore
 
-from shared.config_provider import Config
+from shared.config_provider import ConfigProvider
 from shared.singleton import Singleton
 from spotmicroai.runtime.motion_controller.constants import BEEP_DURATION
 
@@ -16,17 +16,17 @@ class Buzzer(metaclass=Singleton):
 
     Attributes
     ----------
-    config : Config
+    config : ConfigProvider
         Configuration object for motion controller settings
     _port : int
         GPIO port number for the buzzer
     """
 
-    config = Config()
+    config_provider = ConfigProvider()
 
     def __init__(self):
         """Initialize the Buzzer."""
-        self._port = self.config.motion_controller.buzzer.gpio_port
+        self._port = self.config_provider.get_buzzer_gpio_port()
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self._port, GPIO.OUT)

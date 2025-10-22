@@ -5,7 +5,7 @@ from typing import Optional
 
 import RPi.GPIO as GPIO
 
-from shared.config_provider import Config
+from shared.config_provider import ConfigProvider
 from shared.logger import Logger
 import spotmicroai.runtime.queues as queues
 
@@ -14,7 +14,7 @@ log = Logger().setup_logger('Abort controller')
 
 class AbortController:
     _gpio_port: Optional[int] = None
-    _config: Config = Config()
+    _config_provider: ConfigProvider = ConfigProvider()
 
     def __init__(self, communication_queues):
 
@@ -25,7 +25,7 @@ class AbortController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self._gpio_port = self._config.abort_controller.gpio_port
+            self._gpio_port = self._config_provider.get_abort_gpio_port()
 
             retries = 10
             while retries > 0:

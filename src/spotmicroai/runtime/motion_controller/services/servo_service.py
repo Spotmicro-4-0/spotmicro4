@@ -1,52 +1,71 @@
 from adafruit_motor import servo  # type: ignore
 
-from shared.config_provider import Config
+from shared.config_provider import ConfigProvider, ServoName
 from shared.singleton import Singleton
+from spotmicroai.drivers.pca9685 import PCA9685
 from spotmicroai.runtime.motion_controller.constants import FOOT_SERVO_OFFSET, LEG_SERVO_OFFSET
 from spotmicroai.runtime.motion_controller.models.pose import Pose
-from spotmicroai.runtime.motion_controller.wrappers.pca9685 import PCA9685Board
 
 
 class ServoService(metaclass=Singleton):
     """Manages and controls all 12 servos using configuration loaded via Config (DotDict-enabled)."""
 
     def __init__(self):
-        self._config = Config()
-        _pca9685_board = PCA9685Board()
-
-        # Access servos directly via dot notation
-        servo_configs = self._config.motion_controller.servos
+        self._config_provider = ConfigProvider()
+        _pca9685_board = PCA9685()
 
         # --- Initialize physical servo objects ---
-        self._rear_shoulder_left = self._make_servo(_pca9685_board, servo_configs.rear_shoulder_left)
-        self._rear_leg_left = self._make_servo(_pca9685_board, servo_configs.rear_leg_left)
-        self._rear_foot_left = self._make_servo(_pca9685_board, servo_configs.rear_foot_left)
+        self._rear_shoulder_left = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.REAR_SHOULDER_LEFT)
+        )
+        self._rear_leg_left = self._make_servo(_pca9685_board, self._config_provider.get_servo(ServoName.REAR_LEG_LEFT))
+        self._rear_foot_left = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.REAR_FOOT_LEFT)
+        )
 
-        self._rear_shoulder_right = self._make_servo(_pca9685_board, servo_configs.rear_shoulder_right)
-        self._rear_leg_right = self._make_servo(_pca9685_board, servo_configs.rear_leg_right)
-        self._rear_foot_right = self._make_servo(_pca9685_board, servo_configs.rear_foot_right)
+        self._rear_shoulder_right = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.REAR_SHOULDER_RIGHT)
+        )
+        self._rear_leg_right = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.REAR_LEG_RIGHT)
+        )
+        self._rear_foot_right = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.REAR_FOOT_RIGHT)
+        )
 
-        self._front_shoulder_left = self._make_servo(_pca9685_board, servo_configs.front_shoulder_left)
-        self._front_leg_left = self._make_servo(_pca9685_board, servo_configs.front_leg_left)
-        self._front_foot_left = self._make_servo(_pca9685_board, servo_configs.front_foot_left)
+        self._front_shoulder_left = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.FRONT_SHOULDER_LEFT)
+        )
+        self._front_leg_left = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.FRONT_LEG_LEFT)
+        )
+        self._front_foot_left = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.FRONT_FOOT_LEFT)
+        )
 
-        self._front_shoulder_right = self._make_servo(_pca9685_board, servo_configs.front_shoulder_right)
-        self._front_leg_right = self._make_servo(_pca9685_board, servo_configs.front_leg_right)
-        self._front_foot_right = self._make_servo(_pca9685_board, servo_configs.front_foot_right)
+        self._front_shoulder_right = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.FRONT_SHOULDER_RIGHT)
+        )
+        self._front_leg_right = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.FRONT_LEG_RIGHT)
+        )
+        self._front_foot_right = self._make_servo(
+            _pca9685_board, self._config_provider.get_servo(ServoName.FRONT_FOOT_RIGHT)
+        )
 
         # Initialize staged angles to rest positions
-        self.rear_shoulder_left_angle = servo_configs.rear_shoulder_left.rest_angle
-        self.rear_leg_left_angle = servo_configs.rear_leg_left.rest_angle
-        self.rear_foot_left_angle = servo_configs.rear_foot_left.rest_angle
-        self.rear_shoulder_right_angle = servo_configs.rear_shoulder_right.rest_angle
-        self.rear_leg_right_angle = servo_configs.rear_leg_right.rest_angle
-        self.rear_foot_right_angle = servo_configs.rear_foot_right.rest_angle
-        self.front_shoulder_left_angle = servo_configs.front_shoulder_left.rest_angle
-        self.front_leg_left_angle = servo_configs.front_leg_left.rest_angle
-        self.front_foot_left_angle = servo_configs.front_foot_left.rest_angle
-        self.front_shoulder_right_angle = servo_configs.front_shoulder_right.rest_angle
-        self.front_leg_right_angle = servo_configs.front_leg_right.rest_angle
-        self.front_foot_right_angle = servo_configs.front_foot_right.rest_angle
+        self.rear_shoulder_left_angle = self._config_provider.get_servo(ServoName.REAR_SHOULDER_LEFT).rest_angle
+        self.rear_leg_left_angle = self._config_provider.get_servo(ServoName.REAR_LEG_LEFT).rest_angle
+        self.rear_foot_left_angle = self._config_provider.get_servo(ServoName.REAR_FOOT_LEFT).rest_angle
+        self.rear_shoulder_right_angle = self._config_provider.get_servo(ServoName.REAR_SHOULDER_RIGHT).rest_angle
+        self.rear_leg_right_angle = self._config_provider.get_servo(ServoName.REAR_LEG_RIGHT).rest_angle
+        self.rear_foot_right_angle = self._config_provider.get_servo(ServoName.REAR_FOOT_RIGHT).rest_angle
+        self.front_shoulder_left_angle = self._config_provider.get_servo(ServoName.FRONT_SHOULDER_LEFT).rest_angle
+        self.front_leg_left_angle = self._config_provider.get_servo(ServoName.FRONT_LEG_LEFT).rest_angle
+        self.front_foot_left_angle = self._config_provider.get_servo(ServoName.FRONT_FOOT_LEFT).rest_angle
+        self.front_shoulder_right_angle = self._config_provider.get_servo(ServoName.FRONT_SHOULDER_RIGHT).rest_angle
+        self.front_leg_right_angle = self._config_provider.get_servo(ServoName.FRONT_LEG_RIGHT).rest_angle
+        self.front_foot_right_angle = self._config_provider.get_servo(ServoName.FRONT_FOOT_RIGHT).rest_angle
 
         # Initialize staged angles
         self.clear_staged()
@@ -83,19 +102,18 @@ class ServoService(metaclass=Singleton):
 
     def clear_staged(self):
         """Reset all staged servo angles to their configured rest angles."""
-        servos = self._config.motion_controller.servos
-        self.rear_shoulder_left_angle = servos.rear_shoulder_left.rest_angle
-        self.rear_leg_left_angle = servos.rear_leg_left.rest_angle
-        self.rear_foot_left_angle = servos.rear_foot_left.rest_angle
-        self.rear_shoulder_right_angle = servos.rear_shoulder_right.rest_angle
-        self.rear_leg_right_angle = servos.rear_leg_right.rest_angle
-        self.rear_foot_right_angle = servos.rear_foot_right.rest_angle
-        self.front_shoulder_left_angle = servos.front_shoulder_left.rest_angle
-        self.front_leg_left_angle = servos.front_leg_left.rest_angle
-        self.front_foot_left_angle = servos.front_foot_left.rest_angle
-        self.front_shoulder_right_angle = servos.front_shoulder_right.rest_angle
-        self.front_leg_right_angle = servos.front_leg_right.rest_angle
-        self.front_foot_right_angle = servos.front_foot_right.rest_angle
+        self.rear_shoulder_left_angle = self._config_provider.get_servo(ServoName.REAR_SHOULDER_LEFT).rest_angle
+        self.rear_leg_left_angle = self._config_provider.get_servo(ServoName.REAR_LEG_LEFT).rest_angle
+        self.rear_foot_left_angle = self._config_provider.get_servo(ServoName.REAR_FOOT_LEFT).rest_angle
+        self.rear_shoulder_right_angle = self._config_provider.get_servo(ServoName.REAR_SHOULDER_RIGHT).rest_angle
+        self.rear_leg_right_angle = self._config_provider.get_servo(ServoName.REAR_LEG_RIGHT).rest_angle
+        self.rear_foot_right_angle = self._config_provider.get_servo(ServoName.REAR_FOOT_RIGHT).rest_angle
+        self.front_shoulder_left_angle = self._config_provider.get_servo(ServoName.FRONT_SHOULDER_LEFT).rest_angle
+        self.front_leg_left_angle = self._config_provider.get_servo(ServoName.FRONT_LEG_LEFT).rest_angle
+        self.front_foot_left_angle = self._config_provider.get_servo(ServoName.FRONT_FOOT_LEFT).rest_angle
+        self.front_shoulder_right_angle = self._config_provider.get_servo(ServoName.FRONT_SHOULDER_RIGHT).rest_angle
+        self.front_leg_right_angle = self._config_provider.get_servo(ServoName.FRONT_LEG_RIGHT).rest_angle
+        self.front_foot_right_angle = self._config_provider.get_servo(ServoName.FRONT_FOOT_RIGHT).rest_angle
 
     def rest_position(self):
         """Return the robot to its rest position."""

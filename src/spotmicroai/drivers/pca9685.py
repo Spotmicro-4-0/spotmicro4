@@ -4,11 +4,11 @@ PCA9685 handler for controlling PWM board on I2C.
 
 from adafruit_pca9685 import PCA9685 as _PCA9685  # type: ignore
 from board import SCL, SDA  # type: ignore
-import busio
+import busio  # type: ignore
 
-from shared.config_provider import Config
+from shared.config_provider import ConfigProvider
 from shared.logger import Logger
-from shared.singleton import Singleton  # type: ignore
+from shared.singleton import Singleton
 
 log = Logger().setup_logger('Motion controller')
 
@@ -32,15 +32,15 @@ class PCA9685(metaclass=Singleton):
         PWM frequency
     """
 
-    config = Config()
+    config_provider = ConfigProvider()
 
     def __init__(self):
         """Initialize the PCA9685Board."""
         self._i2c = busio.I2C(SCL, SDA)
         self._pca9685 = None
-        self._address = int(self.config.motion_controller.pca9685.address, 0)
-        self._reference_clock_speed = int(self.config.motion_controller.pca9685.reference_clock_speed)
-        self._frequency = int(self.config.motion_controller.pca9685.frequency)
+        self._address: int = self.config_provider.get_pca9685_address()
+        self._reference_clock_speed: int = self.config_provider.get_pca9685_reference_clock_speed()
+        self._frequency: int = self.config_provider.get_pca9685_frequency()
 
     def activate_board(self):
         """Activate the PCA9685 board."""
