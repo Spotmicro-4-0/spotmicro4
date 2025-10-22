@@ -3,20 +3,8 @@
     "title": "Spotmicro Setup",
     "options": [
       {
-        "label": "Upload Runtime",
-        "description": "Transfers the latest runtime code changes to the robot",
-        "action": "submenu",
-        "target": "upload_runtime"
-      },
-      {
-        "label": "Start Runtime on Boot",
-        "description": "Can enable/disable the runtime to run automatically upon boot",
-        "action": "submenu",
-        "target": "config_boot"
-      },
-      {
-        "label": "Edit Configuration",
-        "description": "Edit configuration values in the spotmicroai.json file",
+        "label": "Configuration Editor",
+        "description": "Edit configuration values such as GPIO ports and I2C addresses",
         "action": "submenu",
         "target": "config_edit"
       },
@@ -25,6 +13,12 @@
         "description": "Launches the servo calibration menu",
         "action": "submenu",
         "target": "calibrate_servos"
+      },
+      {
+        "label": "Start/Stop Runtime on Boot",
+        "description": "Can enable/disable the runtime to run automatically upon boot",
+        "action": "submenu",
+        "target": "config_boot"
       },
       {
         "label": "Run Diagnostics",
