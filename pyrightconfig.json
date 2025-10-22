@@ -1,0 +1,40 @@
+{
+  // Root directory of your Python sources
+  "include": ["src"],
+
+  // Match your project’s target Python version
+  "pythonVersion": "3.11",
+
+  // Maximum strictness (like a static language)
+  // "typeCheckingMode": "strict",
+
+  // Use type information from installed packages
+  "useLibraryCodeForTypes": true,
+
+  // Ignore generated, virtual-env, and build artifacts
+  "exclude": ["**/venv", "**/__pycache__", "build", "dist", "tests/helpers"]
+
+  // Diagnostic rules — everything that matters is treated as an error
+  // "reportMissingTypeStubs": "error",
+  // "reportMissingImports": "error",
+  // "reportUnknownVariableType": "error",
+  // "reportUnknownMemberType": "error",
+  // "reportUnknownArgumentType": "error",
+  // "reportUnknownParameterType": "error",
+  // "reportMissingParameterType": "error",
+  // "reportMissingTypeArgument": "error",
+  // "reportUntypedFunctionDecorator": "error",
+  // "reportUntypedClassDecorator": "error",
+  // "reportPrivateImportUsage": "error",
+  // "reportUnnecessaryTypeIgnoreComment": "error",
+  // "reportIncompatibleMethodOverride": "error",
+  // "reportIncompatibleVariableOverride": "error",
+
+  // Optional fine-tuning
+  // "verboseOutput": false,
+  // "analyzeUnannotatedFunctions": true,
+  // "strictListInference": true,
+  // "strictDictionaryInference": true,
+  // "strictSetInference": true,
+  // "deprecateTypingAliases": true
+}
