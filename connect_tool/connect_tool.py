@@ -501,6 +501,8 @@ def main():
     args = parser.parse_args()
     setup = SetupTool(args)
     ok = setup.sync_code_changes() if args.deploy else setup.run()
+    if not ok:
+        print("See connect_tool/setup.log for more details")
     sys.exit(0 if ok else 1)
 
 
