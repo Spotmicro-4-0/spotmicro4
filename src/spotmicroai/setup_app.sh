@@ -4,11 +4,11 @@
 cd "$(dirname "$0")" || exit
 
 # Detect environment by checking venv location
-if [ -d "../venv" ]; then
+if [ -d "../.venv" ]; then
     # Local mode: venv is at project root (parent directory)
     export PYTHONPATH="$(pwd)"
-    ../venv/bin/python3 -m setup_app
-elif [ -d "./venv" ]; then
+    ../.venv/bin/python3 -m setup_app
+elif [ -d "./.venv" ]; then
     # Remote mode: venv is in current directory (~/spotmicroai)
     export PYTHONPATH="$(pwd)"
     ./venv/bin/python3 -m setup_app

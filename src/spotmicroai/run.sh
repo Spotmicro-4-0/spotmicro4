@@ -13,7 +13,7 @@ echo $$ > "$pidfile"
 trap 'rm -f "$pidfile"' EXIT
 
 # Activate the venv in home dir
-source "$HOME/venv/bin/activate"
+source "$HOME/.venv/bin/activate"
 
 # Safely set PYTHONPATH - ensure spotmicroai parent directory is in path
 export PYTHONPATH="${HOME}:${PYTHONPATH:-}"
