@@ -1,35 +1,17 @@
 #!/usr/bin/env python3
 
 import curses
+import sys
 from typing import Dict, Optional
 
-from pca9685 import PCA9685
-from servo import Servo
-
-
-class CalibrationHardwareConfig:
-    I2C_ADDR = 0x40
-    NEUTRAL_ANGLE = 135.0  # Midpoint for 1500us on a 270° servo
-    PWM_FREQUENCY = 50
-    MIN_PULSE_US = 500
-    MAX_PULSE_US = 2500
-    ACTUATION_RANGE_DEGREES = 270
-    MIN_ANGLE = 0.0
-    MAX_ANGLE = 270.0
-    SERVOS = {
-        "front_shoulder_left": 6,
-        "front_leg_left": 7,
-        "front_foot_left": 8,
-        "front_shoulder_right": 9,
-        "front_leg_right": 10,
-        "front_foot_right": 11,
-        "rear_shoulder_left": 3,
-        "rear_leg_left": 4,
-        "rear_foot_left": 5,
-        "rear_shoulder_right": 0,
-        "rear_leg_right": 1,
-        "rear_foot_right": 2,
-    }
+try:
+    from spotmicroai.configuration import ConfigProvider, ServoName
+    from spotmicroai.drivers import PCA9685, Servo
+except ImportError as e:
+    print(f"ERROR: Missing required dependencies: {e}", file=sys.stderr)
+    print("\nPlease install dependencies with:", file=sys.stderr)
+    print("  pip install -r spotmicroai/requirements.txt", file=sys.stderr)
+    sys.exit(1)
 
 
 class CalibrationUIConfig:
@@ -44,7 +26,7 @@ class CalibrationUIConfig:
     ANGLE_STEP_DEGREES = 1.0
     EXIT_OPTION_LABEL = "Exit"
     EXIT_SHORTCUT_KEY = "q"
-    DEFAULT_SERVO_ANGLE = CalibrationHardwareConfig.NEUTRAL_ANGLE
+    DEFAULT_SERVO_ANGLE = 135
     PANEL_EXTRA_HEIGHT = 10
     PANEL_WIDTH = 60
     MIN_WINDOW_MARGIN = 2
@@ -78,33 +60,31 @@ _servo_objects: Dict[str, Servo] = {}
 # ============================================================
 def init_servo_controller() -> None:
     """Initialise the PWM controller and create Servo objects."""
-    global _pca9685
-
-    if _pca9685 is None:
-        _pca9685 = PCA9685(
-            CalibrationHardwareConfig.I2C_ADDR,
-            CalibrationHardwareConfig.PWM_FREQUENCY,
-        )
+    global _pca9685, _servo_objects
 
     if _servo_objects:
         return
 
-    for name, channel in CalibrationHardwareConfig.SERVOS.items():
-        _servo_objects[name] = Servo(
-            _pca9685.channel(channel),
-            min_pulse=CalibrationHardwareConfig.MIN_PULSE_US,
-            max_pulse=CalibrationHardwareConfig.MAX_PULSE_US,
-            actuation_range=CalibrationHardwareConfig.ACTUATION_RANGE_DEGREES,
-            neutral_angle=CalibrationHardwareConfig.NEUTRAL_ANGLE,
-            min_angle=CalibrationHardwareConfig.MIN_ANGLE,
-            max_angle=CalibrationHardwareConfig.MAX_ANGLE,
+    _pca9685 = PCA9685()
+    _pca9685.activate_board()
+    config_provider = ConfigProvider()
+    _servo_objects = {}
+
+    for servo_name in ServoName:
+        servo_config = config_provider.get_servo(servo_name)
+        _servo_objects[servo_name.value] = Servo(
+            _pca9685.get_channel(servo_config.channel),
+            min_pulse=servo_config.min_pulse,
+            max_pulse=servo_config.max_pulse,
+            actuation_range=servo_config.range,
+            rest_angle=servo_config.rest_angle,
         )
 
 
 def clamp_angle(angle: float) -> float:
     return max(
-        CalibrationHardwareConfig.MIN_ANGLE,
-        min(CalibrationHardwareConfig.MAX_ANGLE, angle),
+        0,
+        min(270, angle),
     )
 
 
@@ -119,7 +99,8 @@ def set_servo_angle(name: str, angle: float) -> float:
         raise KeyError(f"Servo '{name}' is not defined in hardware configuration.")
 
     target = clamp_angle(angle)
-    return _servo_objects[name].set_angle(target)
+    _servo_objects[name].angle = target
+    return target
 
 
 # ============================================================
@@ -142,11 +123,16 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
     input_row = prompt_row + 2
     status_row = prompt_row + 3
 
+    # Get servo config for pulse width calculation
+    config_provider = ConfigProvider()
+    servo_name = ServoName(name)
+    servo_config = config_provider.get_servo(servo_name)
+
     def angle_to_pulse_us(angle: float) -> float:
         """Convert angle to pulse width in microseconds."""
-        min_pulse = CalibrationHardwareConfig.MIN_PULSE_US
-        max_pulse = CalibrationHardwareConfig.MAX_PULSE_US
-        actuation_range = CalibrationHardwareConfig.ACTUATION_RANGE_DEGREES
+        min_pulse = servo_config.min_pulse
+        max_pulse = servo_config.max_pulse
+        actuation_range = servo_config.range
         return min_pulse + (angle / actuation_range) * (max_pulse - min_pulse)
 
     try:
@@ -155,7 +141,7 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
 
             # Calculate pulse width
             pulse_us = angle_to_pulse_us(current_angle)
-            
+
             # Use proper indentation to avoid overwriting the border
             indent = CalibrationUIConfig.PANEL_LIST_COL
 
@@ -305,11 +291,11 @@ def main_menu(stdscr):
     stdscr.bkgd(" ", curses.color_pair(CalibrationUIConfig.SCREEN_BACKGROUND_PAIR))
     stdscr.attrset(curses.color_pair(CalibrationUIConfig.SCREEN_BACKGROUND_PAIR))
 
-    servo_names = list(CalibrationHardwareConfig.SERVOS) + [CalibrationUIConfig.EXIT_OPTION_LABEL]
+    servo_names = [servo.value for servo in ServoName] + [CalibrationUIConfig.EXIT_OPTION_LABEL]
     selected = 0
     num_items = len(servo_names)
     angle_memory = {
-        name: CalibrationUIConfig.DEFAULT_SERVO_ANGLE for name in CalibrationHardwareConfig.SERVOS
+        name: CalibrationUIConfig.DEFAULT_SERVO_ANGLE for name in [servo.value for servo in ServoName]
     }  # remember angles only for servos
 
     init_servo_controller()

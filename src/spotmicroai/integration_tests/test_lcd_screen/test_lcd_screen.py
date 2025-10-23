@@ -19,7 +19,7 @@ Usage:
 
 import time
 
-from spotmicroai.configuration.config_provider import Config
+from spotmicroai.configuration import ConfigProvider
 from spotmicroai.drivers.lcd_16x2 import Lcd16x2
 from spotmicroai.logger import Logger
 
@@ -141,8 +141,8 @@ def main():
     log = Logger().setup_logger("LCD Screen Test")
     log.info("Starting LCD Screen Test Suite...")
 
-    config = Config()
-    i2c_address = int(config.lcd_screen_controller.address, 0)
+    config_provider = ConfigProvider()
+    i2c_address = int(config_provider.lcd_screen_controller.address, 0)
 
     log.info('Use "i2cdetect -y 1" to list connected I2C devices.')
     log.info(f"Configured LCD address: {hex(i2c_address)}")

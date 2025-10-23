@@ -17,11 +17,11 @@ Usage:
 import time
 
 import RPi.GPIO as GPIO
-from adafruit_pca9685 import PCA9685  # type: ignore
+from adafruit_pca9685 import PCA9685
 import board
 import busio
 
-from spotmicroai.configuration.config_provider import Config
+from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger
 
 
@@ -41,11 +41,11 @@ def main():
     log = Logger().setup_logger("Test Abort (Safe)")
     log.info("Starting safe abort mechanism test...")
 
-    config = Config()
-    gpio_port = config.abort_controller.gpio_port
+    config_provider = ConfigProvider()
+    gpio_port = config_provider.abort_controller.gpio_port
 
     # Read PCA configuration for clearing outputs
-    pca = config.motion_controller.pca9685
+    pca = config_provider.motion_controller.pca9685
     pca_address = int(pca.address, 0)
     ref_clock = pca.reference_clock_speed
     freq = pca.frequency

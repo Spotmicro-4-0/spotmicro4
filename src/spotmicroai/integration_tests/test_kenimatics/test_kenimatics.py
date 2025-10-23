@@ -11,9 +11,8 @@ from board import SCL, SDA
 import busio
 from pick import pick
 
-from spotmicroai.configuration.config_provider import Config
+from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger
-from spotmicroai.runtime.motion_controller.InverseKinematics import InverseKinematics
 
 LEG_SERVO_OFFSET = 120
 
@@ -21,7 +20,7 @@ LEG_SERVO_OFFSET = 120
 class ServoConfig:
     PCA9685_address = None
     PCA9685_reference_clock_speed = None
-    PCA9685_frequency = None
+    pca9685_frequency = None
     channel = None
     min_pulse = None
     max_pulse = None
@@ -35,44 +34,39 @@ class ServoConfig:
     def __init__(self, servo_name):
         log.info(f'Initializing ServoConfig with name: {servo_name}')
 
-        config = Config()
-        servo = config.get_servo(servo_name)
-        pca = config.motion_controller.pca9685
-
-        PCA9685_address = pca.address
-        PCA9685_reference_clock_speed = pca.reference_clock_speed
-        PCA9685_frequency = pca.frequency
-        channel = servo.channel
-        min_pulse = servo.min_pulse
-        max_pulse = servo.max_pulse
-        rest_angle = servo.rest_angle
-        log.info('Initializing ServoConfig with values:')
-        log.info(f'PCA9685_address: {PCA9685_address}')
-        log.info(f'PCA9685_reference_clock_speed: {PCA9685_reference_clock_speed}')
-        log.info(f'PCA9685_frequency: {PCA9685_frequency}')
-        log.info(f'Channel: {channel}')
-        log.info(f'Min Pulse: {min_pulse}')
-        log.info(f'Max Pulse: {max_pulse}')
-        log.info(f'Rest Angle: {rest_angle}')
-
+        config_provider = ConfigProvider()
+        servo = config_provider.get_servo(servo_name)
+        pca = config_provider.motion_controller.pca9685
         i2c = busio.I2C(SCL, SDA)
 
         self.i2c = i2c
-        self.PCA9685_address = PCA9685_address
-        self.PCA9685_reference_clock_speed = PCA9685_reference_clock_speed
-        self.PCA9685_frequency = PCA9685_frequency
-        self.channel = channel
-        self.min_pulse = min_pulse
-        self.max_pulse = max_pulse
-        self.rest_angle = rest_angle
-        self.pca = PCA9685(i2c, address=int(PCA9685_address, 0), reference_clock_speed=PCA9685_reference_clock_speed)
-        self.pca.frequency = self.PCA9685_frequency
+        self.pca9685_address = pca.address
+        self.pca9685_reference_clock_speed = pca.reference_clock_speed
+        self.pca9685_frequency = pca.frequency
+        self.channel = servo.channel
+        self.min_pulse = servo.min_pulse
+        self.max_pulse = servo.max_pulse
+        self.rest_angle = servo.rest_angle
 
-        log.info(f'Creating Servo object on channel: {channel}')
-        self.servo = servo.Servo(self.pca.channels[channel])
-        log.info(f'Setting pulse width range with min: {min_pulse} and max: {max_pulse}')
-        self.servo.set_pulse_width_range(min_pulse=int(min_pulse), max_pulse=int(max_pulse))
-        log.info(f'Setting angle to rest angle: {rest_angle}')
+        log.info('Initializing ServoConfig with values:')
+        log.info(f'PCA9685_address: {self.pca9685_address}')
+        log.info(f'PCA9685_reference_clock_speed: {self.pca9685_reference_clock_speed}')
+        log.info(f'PCA9685_frequency: {self.pca9685_frequency}')
+        log.info(f'Channel: {self.channel}')
+        log.info(f'Min Pulse: {self.min_pulse}')
+        log.info(f'Max Pulse: {self.max_pulse}')
+        log.info(f'Rest Angle: {self.rest_angle}')
+
+        self.pca = PCA9685(
+            i2c, address=int(self.pca9685_address, 0), reference_clock_speed=self.pca9685_reference_clock_speed
+        )
+        self.pca.frequency = self.pca9685_frequency
+
+        log.info(f'Creating Servo object on channel: {self.channel}')
+        self.servo = servo.Servo(self.pca.channels[self.channel])
+        log.info(f'Setting pulse width range with min: {self.min_pulse} and max: {self.max_pulse}')
+        self.servo.set_pulse_width_range(min_pulse=int(self.min_pulse), max_pulse=int(self.max_pulse))
+        log.info(f'Setting angle to rest angle: {self.rest_angle}')
 
     def deinit(self):
         self.pca.deinit()
@@ -113,7 +107,7 @@ class KenimaticsTest:
 log = Logger().setup_logger('Kenimatics Test')
 log.info('Testing Kenimatics...')
 
-config = Config()
+config = ConfigProvider()
 gpio_port = config.abort_controller.gpio_port
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpio_port, GPIO.OUT)

@@ -38,6 +38,7 @@ disable = [
     "C0116",  # missing-function-docstring
     "W0718",  # broad-exception-caught
     "R0402",  # consider-using-from-import
+    "R0904",  # too-many-public-methods
 ]
 # Explicitly enable rule to disallow relative imports
 enable = [

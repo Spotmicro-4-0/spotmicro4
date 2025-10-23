@@ -36,7 +36,7 @@ import subprocess
 import sys
 from typing import Any, Mapping
 
-from setup_app import labels as LABELS, theme as THEME
+from . import labels as LABELS, theme as THEME
 
 
 class MenuAction(Enum):

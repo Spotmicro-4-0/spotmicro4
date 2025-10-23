@@ -19,7 +19,7 @@ import time
 import RPi.GPIO as GPIO
 from pick import pick
 
-from spotmicroai.configuration.config_provider import Config
+from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger
 
 
@@ -51,8 +51,8 @@ def main() -> None:
     log = Logger().setup_logger("Buzzer Test")
     log.info("Initializing Buzzer Test...")
 
-    config = Config()
-    gpio_port = config.motion_controller.buzzer.gpio_port
+    config_provider = ConfigProvider()
+    gpio_port = config_provider.motion_controller.buzzer.gpio_port
 
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
