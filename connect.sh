@@ -1,11 +1,10 @@
 #!/bin/bash
 # =============================================================
-# SpotmicroAI Setup Tool (Bootstrap Script)
+# Spotmicro Connectivity Tool
 # =============================================================
-# Ensures Python, pip, and venv are ready, then launches connect_tool.py.
-# Includes spinner animation + preview delay.
+# For help, pass -h or --help as an argument
 # =============================================================
-
+VERSION="0.1.0"
 set -e
 
 # --- Color definitions ---
@@ -19,6 +18,31 @@ print_warn()    { echo -e "${YELLOW}[WARN]${NC} $1"; }
 print_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
+
+# --- Usage function ---
+usage() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Valid arguments:
+  --help            Show this help message
+  --clean-venv      Delete and recreate the Python virtual environment
+  --reset           Clear existing setup information and start fresh
+  --skip-menu       Skips the launch of the menu at the end
+  --verbose         Show verbose output during setup
+  --version         Show version information
+
+Examples:
+  $0 --help
+  $0 --clean-venv
+  $0 --reset
+  $0 --skip-menu
+  $0 --verbose
+  $0 --version
+
+EOF
+    exit 0
+}
 
 # --- Spinner animation ---
 show_spinner() {
@@ -36,12 +60,53 @@ show_spinner() {
 
 # --- Parse args ---
 VERBOSE=false
+CLEAN_ENV=false
+ARGS=()
+
 for arg in "$@"; do
-    if [[ "$arg" == "--verbose" ]]; then
+    if [[ "$arg" == "--help" ]]; then
+        usage
+    elif [[ "$arg" == "--version" ]]; then
+        echo "Spotmicro Connectivity Tool v$VERSION"
+        exit 0
+    elif [[ "$arg" == "--clean-venv" ]]; then
+        CLEAN_ENV=true
+    elif [[ "$arg" == "--reset" ]]; then
+        ARGS+=("--reset")
+    elif [[ "$arg" == "--skip-menu" ]]; then
+        ARGS+=("--skip-menu")
+    elif [[ "$arg" == "--verbose" ]]; then
         VERBOSE=true
-        shift
+        ARGS+=("--verbose")
+    else
+        print_error "Unknown argument: $arg"
+        print_error "Use --help for usage information"
+        exit 1
     fi
 done
+
+# --- Navigate to src folder ---
+cd src
+
+# --- Handle --clean-env flag ---
+if [ "$CLEAN_ENV" = true ]; then
+    if [ -d ".venv" ]; then
+        print_warn "This will delete and recreate your virtual environment (.venv)"
+        read -p "Are you sure? (y/n): " confirm
+        if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+            print_info "Cancelled. Keeping existing virtual environment."
+            CLEAN_ENV=false
+        else
+            print_info "Removing existing virtual environment..."
+            rm -rf .venv
+            print_info "Virtual environment deleted."
+            SKIP_SETUP=false
+        fi
+    else
+        print_warn "--clean-venv specified, but no virtual environment found."
+        CLEAN_ENV=false
+    fi
+fi
 
 # --- Check if .venv already exists ---
 if [ -d ".venv" ]; then
@@ -115,11 +180,11 @@ if [ "$SKIP_SETUP" = false ]; then
 fi
 
 # --- Locate connect_tool.py ---
-SETUP_TOOL="connect_tool/connect_tool.py"
-if [ ! -f "$SETUP_TOOL" ]; then
-    print_error "Connect tool not found: $SETUP_TOOL"
+CONNECT_TOOL="./connect_tool/connect_tool.py"
+if [ ! -f "$CONNECT_TOOL" ]; then
+    print_error "Connect tool not found: $CONNECT_TOOL"
     exit 1
 fi
 
 print_info "Environment ready. Launching connect tool..."
-exec $PYTHON_CMD "$SETUP_TOOL" "$@"
+exec $PYTHON_CMD "$CONNECT_TOOL" "${ARGS[@]}"

@@ -1,13 +1,13 @@
-import json
 from dataclasses import dataclass
 from enum import Enum
+import json
 from pathlib import Path
 import shutil
 import sys
 from typing import Any, Dict, List
 
-from shared.logger import Logger
-from shared.singleton import Singleton
+from spotmicroai import Singleton
+from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Configuration')
 
@@ -71,7 +71,7 @@ class ConfigProvider(metaclass=Singleton):
         """Load configuration from JSON file"""
         try:
             config_path = Path.home() / 'spotmicroai.json'
-            default_path = Path.home() / 'spotmicroai' / 'shared' / 'spotmicroai.template'
+            default_path = Path.home() / 'spotmicroai' / 'configuration' / 'spotmicroai.template'
 
             # Copy default if config doesn't exist
             if not config_path.exists() and default_path.exists():

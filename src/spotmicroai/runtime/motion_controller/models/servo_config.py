@@ -1,3 +1,7 @@
+"""
+This module defines the ServoConfig class for static servo configurations.
+"""
+
 from dataclasses import dataclass
 
 

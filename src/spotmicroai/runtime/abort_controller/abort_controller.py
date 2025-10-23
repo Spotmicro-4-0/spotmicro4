@@ -1,18 +1,24 @@
+"""
+This module provides the AbortController class for handling shutdown signals.
+"""
+
 import signal
 import sys
 import time
 from typing import Optional
 
-import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO  # type: ignore
 
-from shared.config_provider import ConfigProvider
-from shared.logger import Logger
+from spotmicroai.configuration import ConfigProvider
+from spotmicroai.logger import Logger
 import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('Abort controller')
 
 
 class AbortController:
+    """Handles abort signals and GPIO for graceful shutdown."""
+
     _gpio_port: Optional[int] = None
     _config_provider: ConfigProvider = ConfigProvider()
 

@@ -1,3 +1,7 @@
+"""
+This module defines the Keyframe class for representing foot positions at a point in time.
+"""
+
 from dataclasses import dataclass, field
 
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate

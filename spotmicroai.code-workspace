@@ -54,13 +54,13 @@
       "editor.defaultFormatter": "esbenp.prettier-vscode",
       "editor.formatOnSave": true
     },
-    "flake8.args": ["--config=${workspaceFolder}/pyproject.toml"],
+    "flake8.args": ["--config=${workspaceFolder}/src/pyproject.toml"],
 
     // TESTING
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
-    "python.testing.pytestArgs": ["src/integration_tests"],
+    "python.testing.pytestArgs": ["src/spotmicroai/integration_tests"],
 
     // TERMINAL & ENVIRONMENT
     "terminal.integrated.cwd": "${workspaceFolder}",

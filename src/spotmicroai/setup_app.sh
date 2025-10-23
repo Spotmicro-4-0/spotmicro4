@@ -10,7 +10,7 @@ if [ -d "../venv" ]; then
     ../venv/bin/python3 -m setup_app
 elif [ -d "./venv" ]; then
     # Remote mode: venv is in current directory (~/spotmicroai)
-    export PYTHONPATH=.
+    export PYTHONPATH="$(pwd)"
     ./venv/bin/python3 -m setup_app
 else
     echo "Error: Cannot find venv in expected locations"

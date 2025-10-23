@@ -6,9 +6,8 @@ import time
 
 from RPi import GPIO  # type: ignore
 
-from shared.config_provider import ConfigProvider
-from shared.singleton import Singleton
-from spotmicroai.runtime.motion_controller.constants import BEEP_DURATION
+from spotmicroai import BEEP_DURATION, Singleton
+from spotmicroai.configuration import ConfigProvider
 
 
 class Buzzer(metaclass=Singleton):

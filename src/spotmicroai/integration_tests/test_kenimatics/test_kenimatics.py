@@ -11,8 +11,8 @@ from board import SCL, SDA
 import busio
 from pick import pick
 
-from shared.config_provider import Config
-from shared.logger import Logger
+from spotmicroai.configuration.config_provider import Config
+from spotmicroai.logger import Logger
 from spotmicroai.runtime.motion_controller.InverseKinematics import InverseKinematics
 
 LEG_SERVO_OFFSET = 120

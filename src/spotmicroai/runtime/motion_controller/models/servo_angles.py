@@ -1,3 +1,7 @@
+"""
+This module defines the ServoAngles class for representing servo motor angles.
+"""
+
 from dataclasses import dataclass
 
 

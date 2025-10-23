@@ -1,3 +1,7 @@
+"""
+This module defines the Pose class for holding servo angles for all legs.
+"""
+
 from dataclasses import dataclass
 
 from spotmicroai.runtime.motion_controller.models.servo_angles import ServoAngles

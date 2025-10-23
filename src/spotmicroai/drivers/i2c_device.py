@@ -4,7 +4,7 @@ from time import sleep
 
 import smbus  # type: ignore
 
-from shared.singleton import Singleton
+from spotmicroai import Singleton
 
 # Delay between I2C transactions (in seconds)
 I2C_TRANSACTION_DELAY = 0.0001  # 100 microseconds

@@ -4,7 +4,8 @@ Debounced button handler for managing button state and preventing rapid re-trigg
 
 import time
 from typing import Callable, Optional
-from spotmicroai.runtime.motion_controller.constants import DEFAULT_DEBOUNCE_TIME
+
+from spotmicroai import DEFAULT_DEBOUNCE_TIME
 
 
 class DebouncedButton:

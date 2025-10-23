@@ -19,8 +19,8 @@ import time
 import RPi.GPIO as GPIO
 from pick import pick
 
-from shared.config_provider import Config
-from shared.logger import Logger
+from spotmicroai.configuration.config_provider import Config
+from spotmicroai.logger import Logger
 
 
 def beep(gpio_port: int, duration: float, count: int = 1, delay: float = 0.5) -> None:

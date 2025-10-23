@@ -1,8 +1,18 @@
+"""
+This module defines the ControllerEvent dataclass for handling controller inputs.
+"""
+
 from dataclasses import dataclass
 
 
 @dataclass
 class ControllerEvent:
+    """
+    Represents a controller event with inputs from thumbsticks, triggers, D-Pad, buttons, etc.
+
+    Attributes are initialized from a dictionary containing controller input values.
+    """
+
     # Thumbsticks (analog, -1.0 to 1.0)
     left_stick_x: float
     left_stick_y: float

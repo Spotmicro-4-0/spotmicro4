@@ -1,9 +1,11 @@
-from adafruit_motor import servo  # type: ignore
+"""
+Servo service for managing and controlling all 12 servos on the SpotMicroAI robot.
+Provides high-level interface for setting servo angles, committing changes, and managing poses.
+"""
 
-from shared.config_provider import ConfigProvider, ServoName
-from shared.singleton import Singleton
-from spotmicroai.drivers.pca9685 import PCA9685
-from spotmicroai.runtime.motion_controller.constants import FOOT_SERVO_OFFSET, LEG_SERVO_OFFSET
+from spotmicroai import FOOT_SERVO_OFFSET, LEG_SERVO_OFFSET, Singleton
+from spotmicroai.configuration import ConfigProvider, ServoName
+from spotmicroai.drivers import PCA9685, Servo
 from spotmicroai.runtime.motion_controller.models.pose import Pose
 
 
@@ -76,11 +78,12 @@ class ServoService(metaclass=Singleton):
 
     def _make_servo(self, board, config):
         """Create and configure one Adafruit servo object."""
-        s = servo.Servo(
+        s = Servo(
             board.get_channel(config.channel),
             min_pulse=config.min_pulse,
             max_pulse=config.max_pulse,
             actuation_range=config.range,
+            rest_angle=config.rest_angle,
         )
         return s
 

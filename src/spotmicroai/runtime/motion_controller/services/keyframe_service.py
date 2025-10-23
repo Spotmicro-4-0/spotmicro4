@@ -2,15 +2,15 @@ import math
 import time
 from typing import List, Tuple
 
-from shared.config_provider import ConfigProvider
-from shared.singleton import Singleton
-from spotmicroai.runtime.motion_controller.constants import (
+from spotmicroai import (
     HEIGHT_MULTIPLIER,
     LEAN_MULTIPLIER,
     MAX_WALKING_SPEED,
     ROTATION_INCREMENT,
     ROTATION_OFFSET,
+    Singleton,
 )
+from spotmicroai.configuration import ConfigProvider
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate
 from spotmicroai.runtime.motion_controller.models.keyframe import Keyframe
 

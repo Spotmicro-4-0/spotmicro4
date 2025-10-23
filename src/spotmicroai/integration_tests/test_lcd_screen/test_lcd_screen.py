@@ -19,9 +19,9 @@ Usage:
 
 import time
 
-from shared.config_provider import Config
-from shared.logger import Logger
+from spotmicroai.configuration.config_provider import Config
 from spotmicroai.drivers.lcd_16x2 import Lcd16x2
+from spotmicroai.logger import Logger
 
 # ------------------------------------------------------------------------------------------
 # Test Functions

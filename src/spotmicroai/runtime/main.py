@@ -3,7 +3,7 @@
 import multiprocessing
 import sys
 
-from shared.logger import Logger
+from spotmicroai.logger import Logger
 from spotmicroai.runtime.abort_controller.abort_controller import AbortController
 from spotmicroai.runtime.lcd_screen_controller.lcd_screen_controller import LCDScreenController
 from spotmicroai.runtime.motion_controller.motion_controller import MotionController

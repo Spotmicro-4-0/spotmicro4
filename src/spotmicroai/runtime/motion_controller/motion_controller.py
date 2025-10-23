@@ -4,15 +4,10 @@ import signal
 import sys
 import time
 
-from shared.logger import Logger
+from spotmicroai import DEFAULT_SLEEP, FRAME_DURATION, INACTIVITY_TIME, TELEMETRY_UPDATE_INTERVAL
 from spotmicroai.drivers.buzzer import Buzzer
 from spotmicroai.drivers.pca9685 import PCA9685
-from spotmicroai.runtime.motion_controller.constants import (
-    DEFAULT_SLEEP,
-    FRAME_DURATION,
-    INACTIVITY_TIME,
-    TELEMETRY_UPDATE_INTERVAL,
-)
+from spotmicroai.logger import Logger
 from spotmicroai.runtime.motion_controller.enums import ControllerEvent
 from spotmicroai.runtime.motion_controller.services.button_manager import ButtonManager
 from spotmicroai.runtime.motion_controller.services.keyframe_service import KeyframeService

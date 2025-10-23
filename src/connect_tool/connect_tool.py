@@ -57,6 +57,8 @@ USE_COLORS = True
 # Console colors
 # ------------------------------------------------------------------
 class Colors:
+    """Console color codes for terminal output."""
+
     RED = '\033[0;31m'
     GREEN = '\033[0;32m'
     YELLOW = '\033[1;33m'
@@ -76,7 +78,10 @@ if not USE_COLORS:
 # Setup Tool
 # ------------------------------------------------------------------
 class SetupTool:
+    """Tool for automating setup and deployment of SpotmicroAI to Raspberry Pi."""
+
     def __init__(self, args=None):
+        """Initialize the setup tool with command line arguments."""
         self.script_dir = Path(__file__).parent
         self.config_file = self.script_dir / CONFIG_FILE_NAME
         self.config = {}
@@ -90,19 +95,24 @@ class SetupTool:
     # Printing helpers
     # ------------------------------------------------------------------
     def print_info(self, msg):
+        """Print an informational message in green."""
         print(f"{Colors.GREEN}{LABELS.INFO_PREFIX}{Colors.NC} {msg}")
 
     def print_warn(self, msg):
+        """Print a warning message in yellow."""
         print(f"{Colors.YELLOW}{LABELS.WARN_PREFIX}{Colors.NC} {msg}")
 
     def print_err(self, msg):
+        """Print an error message in red."""
         print(f"{Colors.RED}{LABELS.ERROR_PREFIX}{Colors.NC} {msg}")
 
     def print_step(self, n, msg):
+        """Print a step message with step number in blue."""
         prefix = LABELS.STEP_PREFIX.format(n=n, TOTAL_STEPS=TOTAL_STEPS)
         print(f"{Colors.BLUE}{prefix}{Colors.NC} {msg}")
 
     def print_input(self, msg):
+        """Print an input prompt in magenta."""
         print(f"{Colors.MAGENTA}[INPUT]{Colors.NC} {msg}", end=" ", flush=True)
 
     def _log(self, msg):
@@ -147,6 +157,7 @@ class SetupTool:
     # Config handling
     # ------------------------------------------------------------------
     def load_config(self):
+        """Load configuration from the config file."""
         if self.config_file.exists():
             try:
                 with open(self.config_file, "r", encoding="utf-8") as f:
@@ -157,6 +168,7 @@ class SetupTool:
         return False
 
     def save_config(self):
+        """Save current configuration to the config file."""
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2)
@@ -170,16 +182,19 @@ class SetupTool:
     # SSH helpers
     # ------------------------------------------------------------------
     def _ssh_prefix(self):
+        """Generate SSH command prefix with authentication."""
         host = f"{self.config['username']}@{self.config['hostname']}"
         key = self.config.get("ssh_key_path")
         base = f"ssh -o ConnectTimeout={SSH_CONNECT_TIMEOUT} {SSH_OPTS}"
         return f'{base} -i "{key}" {host}' if key else f"{base} {host}"
 
     def _scp_prefix(self):
+        """Generate SCP command prefix with authentication."""
         key = self.config.get("ssh_key_path")
         return f'scp -i "{key}" {SSH_OPTS}' if key else f"scp {SSH_OPTS}"
 
     def _run_remote(self, cmd, desc=None, capture=False):
+        """Execute a command on the remote Raspberry Pi."""
         if desc:
             self.print_info(desc)
         full = f'{self._ssh_prefix()} "{cmd}"'
@@ -210,6 +225,7 @@ class SetupTool:
     # User interaction
     # ------------------------------------------------------------------
     def ask(self, prompt, default=None, secret=False):
+        """Prompt user for input, optionally with a default value."""
         if default:
             full_prompt = f"{prompt} [{default}]: "
         else:
@@ -221,6 +237,7 @@ class SetupTool:
         return val if val else default
 
     def confirm(self, prompt, default=True):
+        """Prompt user for yes/no confirmation."""
         default_str = "Y/n" if default else "y/N"
         full_prompt = f"{prompt} [{default_str}]:"
         self.print_input(full_prompt)
@@ -233,6 +250,7 @@ class SetupTool:
     # Setup steps
     # ------------------------------------------------------------------
     def collect_initial_config(self):
+        """Collect initial configuration from user input."""
         self.print_info(LABELS.UI_INITIAL_SETUP_HEADER)
         self.print_info(LABELS.UI_ACCEPT_DEFAULTS)
         hostname = self.ask(LABELS.PROMPT_HOSTNAME, "spotmicroai.local")
@@ -251,6 +269,7 @@ class SetupTool:
         return self.save_config()
 
     def test_ssh_connection(self):
+        """Test SSH connection to the Raspberry Pi."""
         self.print_info(LABELS.SUBSTEP_TESTING_SSH)
         out = self._run_remote('echo "SSH test successful"', capture=True)
         if isinstance(out, str) and "SSH test successful" in out:
@@ -260,6 +279,7 @@ class SetupTool:
         return False
 
     def generate_ssh_keys(self):
+        """Generate SSH key pair for authentication."""
         ssh_dir = Path.home() / ".ssh"
         ssh_dir.mkdir(exist_ok=True)
         keyfile = ssh_dir / SSH_KEY_FILE
@@ -271,6 +291,7 @@ class SetupTool:
         return ok
 
     def copy_ssh_key_to_pi(self):
+        """Copy SSH public key to Raspberry Pi for passwordless authentication."""
         pubkey = Path.home() / ".ssh" / f"{SSH_KEY_FILE}.pub"
         if not pubkey.exists():
             self.print_err(LABELS.ERR_PUBLIC_KEY_NOT_FOUND)
@@ -290,6 +311,7 @@ class SetupTool:
         return False
 
     def perform_system_update(self):
+        """Update system packages on the Raspberry Pi."""
         self.print_step(1, LABELS.STEP_SYSTEM_UPDATE)
         cmds = [
             ("sudo apt update", LABELS.SUBSTEP_UPDATING_PACKAGES),
@@ -298,10 +320,12 @@ class SetupTool:
         return all(self._run_remote(c, d) for c, d in cmds)
 
     def enable_i2c(self):
+        """Enable I2C interface on the Raspberry Pi."""
         self.print_step(2, LABELS.STEP_ENABLE_I2C)
         return all(self._run_remote(c) for c in ENABLE_I2C_CMDS)
 
     def create_project_directory(self):
+        """Create the project directory on the Raspberry Pi."""
         self.print_step(3, LABELS.STEP_CREATE_PROJECT_DIR)
         out = self._run_remote(f"test -d ~/{PROJECT_DIR} && echo EXISTS || echo NOT_EXISTS", capture=True)
         if out == "EXISTS":
@@ -314,20 +338,27 @@ class SetupTool:
         return self._run_remote(f"mkdir -p ~/{PROJECT_DIR} && cd ~/{PROJECT_DIR} && pwd")
 
     def install_python_and_dependencies(self):
+        """Install Python and required system dependencies."""
         self.print_step(4, LABELS.STEP_INSTALL_PYTHON_DEPS)
         return self._run_remote(f"sudo apt install -y {APT_PACKAGES}")
 
     def create_virtual_environment(self):
+        """Create and setup Python virtual environment."""
         self.print_step(5, LABELS.STEP_CREATE_VENV)
         cmds = [
-            f"cd ~/{PROJECT_DIR} && python3 -m venv {REMOTE_VENV_DIR}",
-            f"cd ~/{PROJECT_DIR} && source {REMOTE_VENV_DIR}/bin/activate && pip install --upgrade pip",
+            f"python3 -m venv ~/{REMOTE_VENV_DIR}",
+            f"source ~/{REMOTE_VENV_DIR}/bin/activate && pip install --upgrade pip",
         ]
         return all(self._run_remote(c) for c in cmds)
 
-    def copy_project_files(self):
+    def copy_project_files_initial_setup(self):
+        """Copy project files to the Raspberry Pi during initial setup.
+
+        This is part of the complete 9-step setup process. It transfers the spotmicroai/
+        folder to ~/spotmicroai on the Pi without additional post-processing.
+        """
         self.print_step(6, LABELS.STEP_COPY_FILES)
-        src_dir = self.script_dir.parent / SRC_FOLDER_NAME
+        src_dir = self.script_dir.parent / PROJECT_DIR
         if not src_dir.exists():
             self.print_err(LABELS.ERR_MISSING_SOURCE_DIR.format(src_dir=src_dir))
             return False
@@ -354,30 +385,23 @@ class SetupTool:
         return False
 
     def install_python_packages(self):
+        """Install Python packages from requirements.txt."""
         self.print_step(7, LABELS.STEP_INSTALL_PACKAGES)
         return self._run_remote(
-            f"cd ~/{PROJECT_DIR} && source {REMOTE_VENV_DIR}/bin/activate && pip install -r requirements.txt"
+            f"cd ~/{PROJECT_DIR} && source ~/{REMOTE_VENV_DIR}/bin/activate && pip install -r requirements.txt"
         )
 
     def _post_deploy_finalize(self):
+        """Set executable permissions on shell scripts after deployment."""
+        self.print_step(8, LABELS.STEP_FINALIZE)
         self._run_remote(
             f"cd ~/{PROJECT_DIR} && find . -name '*.sh' -exec chmod +x {{}} \\;",
             desc=LABELS.MSG_EXEC_PERMISSIONS_SET,
         )
-        json_file = self.script_dir.parent / SRC_FOLDER_NAME / CONFIG_FILENAME
-        if json_file.exists():
-            scp_cmd = f'{self._scp_prefix()} "{json_file}" {self.config["username"]}@{self.config["hostname"]}:~/'
-            subprocess.run(scp_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-            self.print_info(LABELS.MSG_CONFIG_FILE_COPIED)
-        else:
-            self.print_warn(LABELS.WARN_CONFIG_FILE_NOT_FOUND.format(config_filename=CONFIG_FILENAME))
-
-    def set_permissions_and_copy_config(self):
-        self.print_step(8, LABELS.STEP_FINALIZE)
-        self._post_deploy_finalize()
         return True
 
     def launch_setup_app(self):
+        """Launch the setup application on the Raspberry Pi."""
         self.print_step(9, LABELS.STEP_LAUNCH_APP)
         cmd = f"cd ~/{PROJECT_DIR} && bash setup_app.sh"
         self.print_info(LABELS.MSG_LAUNCHING_SETUP_APP)
@@ -393,11 +417,19 @@ class SetupTool:
             self.print_err(LABELS.ERR_SSH_COMMAND_FAILED.format(e=e))
             return False
 
-    def sync_code_changes(self):
-        src_dir = self.script_dir.parent / SRC_FOLDER_NAME
+    def sync_code_changes_after_setup(self):
+        """Sync code changes to the Raspberry Pi after initial setup is complete.
+
+        This is called when the robot has already been fully configured and we just
+        need to deploy updated code. It transfers the spotmicroai/ folder and refreshes
+        permissions and the menu app.
+        """
+        src_dir = self.script_dir.parent / PROJECT_DIR
         if not src_dir.exists():
             self.print_err(LABELS.ERR_SOURCE_DIR_NOT_FOUND.format(src_dir=src_dir))
             return False
+
+        self.print_info(LABELS.MSG_SYNCING_CHANGES)
         host = f"{self.config['username']}@{self.config['hostname']}"
         key = self.config.get("ssh_key_path", "")
         exclude_args = " ".join([f'--exclude=\"{x}\"' for x in RSYNC_EXCLUDES])
@@ -416,7 +448,9 @@ class SetupTool:
         if result.returncode == 0:
             self.print_info(LABELS.MSG_FILES_SYNCED)
             self._post_deploy_finalize()
-            return self.launch_setup_app()
+            if not getattr(self.args, "skip_menu", False):
+                return self.launch_setup_app()
+            return True
         self.print_err(LABELS.ERR_SYNC_FAILED)
         return False
 
@@ -424,17 +458,21 @@ class SetupTool:
     # Flow control
     # ------------------------------------------------------------------
     def run_complete_setup(self):
+        """Execute the complete setup process."""
         steps = [
             (self.perform_system_update, LABELS.STEP_SYSTEM_UPDATE),
             (self.enable_i2c, LABELS.STEP_ENABLE_I2C),
             (self.create_project_directory, LABELS.STEP_CREATE_PROJECT_DIR),
             (self.install_python_and_dependencies, LABELS.STEP_INSTALL_PYTHON_DEPS),
             (self.create_virtual_environment, LABELS.STEP_CREATE_VENV),
-            (self.copy_project_files, LABELS.STEP_COPY_FILES),
+            (self.copy_project_files_initial_setup, LABELS.STEP_COPY_FILES),
             (self.install_python_packages, LABELS.STEP_INSTALL_PACKAGES),
-            (self.set_permissions_and_copy_config, LABELS.STEP_FINALIZE),
-            (self.launch_setup_app, LABELS.STEP_LAUNCH_APP),
+            (self._post_deploy_finalize, LABELS.STEP_FINALIZE),
         ]
+        # Only add the menu launch step if not skipping
+        if not getattr(self.args, "skip_menu", False):
+            steps.append((self.launch_setup_app, LABELS.STEP_LAUNCH_APP))
+
         for func, name in steps:
             if not func():
                 self.print_err(LABELS.ERR_SETUP_FAILED_AT_STEP.format(name=name))
@@ -445,9 +483,10 @@ class SetupTool:
         return True
 
     def run(self):
+        """Main execution flow for the setup tool."""
         try:
             self._hide_cursor()
-            if getattr(self.args, "clean", False) and self.config_file.exists():
+            if getattr(self.args, "reset", False) and self.config_file.exists():
                 self.config_file.unlink()
                 self.print_info(LABELS.MSG_CONFIG_CLEARED)
 
@@ -466,8 +505,7 @@ class SetupTool:
             else:
                 self.print_info(LABELS.MSG_CONFIG_FOUND)
                 if self.config.get("setup_completed"):
-                    self.print_info(LABELS.MSG_SYNCING_CHANGES)
-                    return self.sync_code_changes()
+                    return self.sync_code_changes_after_setup()
                 else:
                     pwd = self.ask(LABELS.PROMPT_PASSWORD, secret=True)
                     self.current_password = pwd
@@ -494,13 +532,14 @@ class SetupTool:
 # Main entry point
 # ------------------------------------------------------------------
 def main():
+    """Parse command line arguments and run the setup tool."""
     parser = argparse.ArgumentParser(description=LABELS.CLI_DESCRIPTION)
-    parser.add_argument("--clean", action="store_true", help=LABELS.CLI_CLEAN_HELP)
-    parser.add_argument("--deploy", action="store_true", help=LABELS.CLI_DEPLOY_HELP)
-    parser.add_argument("--version", action="version", version=VERSION)
+    parser.add_argument("--reset", action="store_true", help=LABELS.CLI_CLEAN_HELP)
+    parser.add_argument("--skip-menu", action="store_true", help="Skip launching the setup menu app")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
     setup = SetupTool(args)
-    ok = setup.sync_code_changes() if args.deploy else setup.run()
+    ok = setup.run()
     if not ok:
         print("See connect_tool/setup.log for more details")
     sys.exit(0 if ok else 1)

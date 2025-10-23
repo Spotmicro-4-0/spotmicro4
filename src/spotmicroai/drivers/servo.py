@@ -53,27 +53,19 @@ class Servo:
         self._last_angle = None
 
         # Move servo to its defined rest position immediately
-        self.set_angle(rest_angle)
-
-    def set_angle(self, angle: float) -> float:
-        """
-        Move the servo to the requested angle, clamped to [0, actuation_range].
-
-        Args:
-            angle: Desired logical angle in degrees.
-
-        Returns:
-            The clamped angle actually applied to the servo.
-        """
-        clamp = max(0.0, min(self._range, angle))
-        try:
-            self._servo.angle = clamp
-            self._last_angle = clamp
-        except Exception as e:
-            print(f"[WARN] Servo command failed: {e}")
-        return clamp
+        self.angle = rest_angle
 
     @property
     def angle(self) -> float:
         """Return the last commanded angle."""
         return self._last_angle if self._last_angle is not None else self._rest_angle
+
+    @angle.setter
+    def angle(self, value: float) -> None:
+        """Set the servo to the requested angle."""
+        clamp = max(0.0, min(self._range, value))
+        try:
+            self._servo.angle = clamp
+            self._last_angle = clamp
+        except Exception as e:
+            print(f"[WARN] Servo command failed: {e}")

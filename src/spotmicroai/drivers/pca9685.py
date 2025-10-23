@@ -6,9 +6,9 @@ from adafruit_pca9685 import PCA9685 as _PCA9685  # type: ignore
 from board import SCL, SDA  # type: ignore
 import busio  # type: ignore
 
-from shared.config_provider import ConfigProvider
-from shared.logger import Logger
-from shared.singleton import Singleton
+from spotmicroai import Singleton
+from spotmicroai.configuration import ConfigProvider
+from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Motion controller')
 

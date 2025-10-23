@@ -1,7 +1,11 @@
+"""
+This module defines the Coordinate class for representing 3D points.
+"""
+
 import math
 
-from shared.logger import Logger
-from spotmicroai.runtime.motion_controller.constants import FOOT_LENGTH, LEG_LENGTH, SAFE_NEUTRAL, SHOULDER_LENGTH
+from spotmicroai import FOOT_LENGTH, LEG_LENGTH, SAFE_NEUTRAL, SHOULDER_LENGTH
+from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Motion controller')
 

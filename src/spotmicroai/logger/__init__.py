@@ -1,14 +1,20 @@
+"""
+This module provides logging functionality for the Spotmicro application.
+"""
+
 import logging
 from pathlib import Path
 
-from shared.singleton import Singleton
+from spotmicroai import Singleton
 
 SPOTMICRO = 'Spotmicro'
 
 
 class Logger(metaclass=Singleton):
+    """A singleton logger class for setting up logging handlers."""
 
     def __init__(self):
+        """Initialize the logger with file and stream handlers."""
         logs_folder = 'logs/'
         Path(logs_folder).mkdir(parents=True, exist_ok=True)
 
@@ -26,12 +32,13 @@ class Logger(metaclass=Singleton):
         self.logging_stream_handler.setFormatter(formatter)
 
     def setup_logger(self, logger_name=None):
+        """Set up a logger with the given name and return it."""
         if not logger_name:
             logger_name = SPOTMICRO
         else:
             logger_name = SPOTMICRO + ' ' + logger_name
 
-        logger = logging.getLogger("{:<32}".format(logger_name))
+        logger = logging.getLogger(f"{logger_name:<32}")
 
         logger.setLevel(logging.INFO)
 

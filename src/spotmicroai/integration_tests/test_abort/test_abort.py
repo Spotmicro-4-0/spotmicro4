@@ -21,8 +21,8 @@ from adafruit_pca9685 import PCA9685  # type: ignore
 import board
 import busio
 
-from shared.config_provider import Config
-from shared.logger import Logger
+from spotmicroai.configuration.config_provider import Config
+from spotmicroai.logger import Logger
 
 
 def safe_clear_pca_outputs(pca_address: int, ref_clock: int, freq: int):

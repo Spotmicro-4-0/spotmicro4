@@ -11,8 +11,8 @@ from board import SCL, SDA  # type: ignore
 import busio  # type: ignore
 from pick import pick  # type: ignore
 
-from shared.config_provider import Config
-from shared.logger import Logger
+from spotmicroai.configuration.config_provider import Config
+from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Servo Range Test')
 
