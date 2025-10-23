@@ -4,10 +4,11 @@ Buzzer handler for controlling audio feedback on GPIO.
 
 import time
 
-from RPi import GPIO  # type: ignore
+from RPi import GPIO
 
-from spotmicroai import BEEP_DURATION, Singleton
+from spotmicroai import Singleton
 from spotmicroai.configuration import ConfigProvider
+import spotmicroai.constants as constants
 
 
 class Buzzer(metaclass=Singleton):
@@ -34,5 +35,5 @@ class Buzzer(metaclass=Singleton):
     def beep(self):
         """Plays a beep sound by activating the buzzer for the configured beep duration."""
         GPIO.output(self._port, True)
-        time.sleep(BEEP_DURATION)
+        time.sleep(constants.BEEP_DURATION)
         GPIO.output(self._port, False)

@@ -7,7 +7,7 @@ import sys
 import time
 from typing import Optional
 
-import RPi.GPIO as GPIO  # type: ignore
+import RPi.GPIO as GPIO
 
 from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger

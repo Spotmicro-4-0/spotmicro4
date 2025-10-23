@@ -3,8 +3,9 @@ Servo service for managing and controlling all 12 servos on the SpotMicroAI robo
 Provides high-level interface for setting servo angles, committing changes, and managing poses.
 """
 
-from spotmicroai import FOOT_SERVO_OFFSET, LEG_SERVO_OFFSET, Singleton
+from spotmicroai import Singleton
 from spotmicroai.configuration import ConfigProvider, ServoName
+import spotmicroai.constants as constants
 from spotmicroai.drivers import PCA9685, Servo
 from spotmicroai.runtime.motion_controller.models.pose import Pose
 
@@ -153,8 +154,8 @@ class ServoService(metaclass=Singleton):
             Servo angle for shoulder in degrees.
         """
         self.front_shoulder_right_angle = shoulder_angle
-        self.front_leg_right_angle = max(self._complement(leg_angle + LEG_SERVO_OFFSET), 0)
-        self.front_foot_right_angle = self._complement(max(foot_angle - FOOT_SERVO_OFFSET, 0))
+        self.front_leg_right_angle = max(self._complement(leg_angle + constants.LEG_SERVO_OFFSET), 0)
+        self.front_foot_right_angle = self._complement(max(foot_angle - constants.FOOT_SERVO_OFFSET, 0))
 
     def set_front_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the front left leg.
@@ -169,8 +170,8 @@ class ServoService(metaclass=Singleton):
             Servo angle for shoulder in degrees.
         """
         self.front_shoulder_left_angle = self._complement(shoulder_angle)
-        self.front_leg_left_angle = min(leg_angle + LEG_SERVO_OFFSET, 180)
-        self.front_foot_left_angle = max(foot_angle - FOOT_SERVO_OFFSET, 0)
+        self.front_leg_left_angle = min(leg_angle + constants.LEG_SERVO_OFFSET, 180)
+        self.front_foot_left_angle = max(foot_angle - constants.FOOT_SERVO_OFFSET, 0)
 
     def set_rear_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the back right leg.
@@ -185,8 +186,8 @@ class ServoService(metaclass=Singleton):
             Servo angle for shoulder in degrees.
         """
         self.rear_shoulder_right_angle = self._complement(shoulder_angle)
-        self.rear_leg_right_angle = max(self._complement(leg_angle + LEG_SERVO_OFFSET), 0)
-        self.rear_foot_right_angle = self._complement(max(foot_angle - FOOT_SERVO_OFFSET, 0))
+        self.rear_leg_right_angle = max(self._complement(leg_angle + constants.LEG_SERVO_OFFSET), 0)
+        self.rear_foot_right_angle = self._complement(max(foot_angle - constants.FOOT_SERVO_OFFSET, 0))
 
     def set_rear_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the back left leg.
@@ -201,5 +202,5 @@ class ServoService(metaclass=Singleton):
             Servo angle for shoulder in degrees.
         """
         self.rear_shoulder_left_angle = shoulder_angle
-        self.rear_leg_left_angle = min(leg_angle + LEG_SERVO_OFFSET, 180)
-        self.rear_foot_left_angle = max(foot_angle - FOOT_SERVO_OFFSET, 0)
+        self.rear_leg_left_angle = min(leg_angle + constants.LEG_SERVO_OFFSET, 180)
+        self.rear_foot_left_angle = max(foot_angle - constants.FOOT_SERVO_OFFSET, 0)

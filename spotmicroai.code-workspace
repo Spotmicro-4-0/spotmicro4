@@ -56,6 +56,11 @@
     },
     "flake8.args": ["--config=${workspaceFolder}/src/pyproject.toml"],
 
+    // PYLINT CONFIGURATION
+    "pylint.enabled": true,
+    "pylint.args": ["--rcfile=${workspaceFolder}/src/pyproject.toml"],
+    "pylint.cwd": "${workspaceFolder}/src",
+
     // TESTING
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,

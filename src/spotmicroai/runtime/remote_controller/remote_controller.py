@@ -6,16 +6,8 @@ import struct
 import sys
 import time
 
-# Import tunable constants
-from spotmicroai import (
-    AXIS_UPDATE_THRESHOLD,
-    DEADZONE,
-    DEVICE_SEARCH_INTERVAL,
-    PUBLISH_RATE_HZ,
-    READ_LOOP_SLEEP,
-    RECONNECT_RETRY_DELAY,
-)
 from spotmicroai.configuration import ConfigProvider
+import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
 import spotmicroai.runtime.queues as queues
 
@@ -68,7 +60,7 @@ class RemoteControllerController:
                 self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_OK)
                 remote_controller_connected_already = True
             else:
-                time.sleep(DEVICE_SEARCH_INTERVAL)
+                time.sleep(constants.DEVICE_SEARCH_INTERVAL)
                 self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                 self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_SEARCHING)
                 remote_controller_connected_already = False
@@ -102,20 +94,20 @@ class RemoteControllerController:
                                 fvalue = round(value / 32767.0, 3)
 
                                 # Apply deadzone filter
-                                if abs(fvalue) < DEADZONE:
+                                if abs(fvalue) < constants.DEADZONE:
                                     fvalue = 0.0
 
                                 # Only update if significantly changed
-                                if abs(fvalue - self.axis_states.get(axis, 0.0)) >= AXIS_UPDATE_THRESHOLD:
+                                if abs(fvalue - self.axis_states.get(axis, 0.0)) >= constants.AXIS_UPDATE_THRESHOLD:
                                     self.axis_states[axis] = fvalue
 
                     now = time.time()
-                    if now - last_publish_time >= 1.0 / PUBLISH_RATE_HZ:
+                    if now - last_publish_time >= 1.0 / constants.PUBLISH_RATE_HZ:
                         combined = {**self.button_states, **self.axis_states}
                         self._motion_queue.put(combined)
                         last_publish_time = now
 
-                    time.sleep(READ_LOOP_SLEEP)
+                    time.sleep(constants.READ_LOOP_SLEEP)
 
                 except Exception as e:
                     log.error('Unknown problem while processing the queue of the remote controller: %s', e)
@@ -217,8 +209,10 @@ class RemoteControllerController:
                         log.info('%s opened successfully.', fn)
                         break
                     except Exception:
-                        log.warning('Unable to access %s yet. Will retry in %s seconds...', fn, RECONNECT_RETRY_DELAY)
-                        time.sleep(RECONNECT_RETRY_DELAY)
+                        log.warning(
+                            'Unable to access %s yet. Will retry in %s seconds...', fn, constants.RECONNECT_RETRY_DELAY
+                        )
+                        time.sleep(constants.RECONNECT_RETRY_DELAY)
 
                 # Get the device name
                 buf = array.array('B', [0] * 64)

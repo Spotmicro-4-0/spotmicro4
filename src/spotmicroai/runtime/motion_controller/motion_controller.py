@@ -4,7 +4,7 @@ import signal
 import sys
 import time
 
-from spotmicroai import DEFAULT_SLEEP, FRAME_DURATION, INACTIVITY_TIME, TELEMETRY_UPDATE_INTERVAL
+import spotmicroai.constants as constants
 from spotmicroai.drivers.buzzer import Buzzer
 from spotmicroai.drivers.pca9685 import PCA9685
 from spotmicroai.logger import Logger
@@ -70,7 +70,7 @@ class MotionController:
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
             self._lcd_screen_queue.put(queues.MOTION_CONTROLLER + ' OK')
 
-            time.sleep(DEFAULT_SLEEP)
+            time.sleep(constants.DEFAULT_SLEEP)
             self._buzzer.beep()
 
         except Exception as e:
@@ -122,7 +122,7 @@ class MotionController:
         # Initialize telemetry display
         log.info("Initializing telemetry display...")
         self._telemetry_display.initialize()
-        time.sleep(DEFAULT_SLEEP)  # Give time for display to initialize
+        time.sleep(constants.DEFAULT_SLEEP)  # Give time for display to initialize
 
         while True:
             frame_start = time.time()
@@ -142,8 +142,8 @@ class MotionController:
 
             if event == {}:
                 # if there is no user input, check to see if it have been long enough to warn the user
-                if (time.time() - inactivity_counter) >= INACTIVITY_TIME:
-                    log.info(f'Inactivity lasted {INACTIVITY_TIME} seconds. Press start to reactivate')
+                if (time.time() - inactivity_counter) >= constants.INACTIVITY_TIME:
+                    log.info(f'Inactivity lasted {constants.INACTIVITY_TIME} seconds. Press start to reactivate')
                     log.info('Shutting down the servos.')
                     log.info('Press START/OPTIONS to enable the servos')
                     self._deactivate()
@@ -280,13 +280,13 @@ class MotionController:
 
             # Calculate timing metrics
             elapsed_time = time.time() - frame_start
-            idle_time = max(FRAME_DURATION - elapsed_time, 0)
+            idle_time = max(constants.FRAME_DURATION - elapsed_time, 0)
             loop_time_ms = elapsed_time * 1000
             idle_time_ms = idle_time * 1000
 
             # Update telemetry display periodically (not every frame to reduce overhead)
             telemetry_update_counter += 1
-            if telemetry_update_counter >= TELEMETRY_UPDATE_INTERVAL:
+            if telemetry_update_counter >= constants.TELEMETRY_UPDATE_INTERVAL:
                 telemetry_update_counter = 0
                 try:
                     telemetry_data = self._telemetry_service.collect(
@@ -302,8 +302,8 @@ class MotionController:
                     # Don't let telemetry errors crash the robot
                     log.warning(f"Telemetry display error: {e}")
 
-            if elapsed_time < FRAME_DURATION:
-                time.sleep(FRAME_DURATION - elapsed_time)
+            if elapsed_time < constants.FRAME_DURATION:
+                time.sleep(constants.FRAME_DURATION - elapsed_time)
 
     def _update_servo_angles(self):
         """

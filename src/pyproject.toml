@@ -18,16 +18,15 @@ src_paths = ["src"]
 
 [tool.pylint.master]
 ignore = ["venv"]
-extension-pkg-whitelist = ["RPi.GPIO"]
-# Ensure absolute imports work by adding src/ to sys.path
-init-hook = "import sys, os; sys.path.insert(0, os.path.abspath('src'))"
+# Ensure absolute imports work by adding current directory to sys.path
+init-hook = "import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))"
 
 [tool.pylint.typecheck]
 ignored-modules = [
     "board",
     "adafruit_pca9685",
     "adafruit_motor",
-    "RPI.GPIO",
+    "RPi.GPIO",
     "busio",
 ]
 
@@ -37,8 +36,8 @@ disable = [
     "C0114",  # missing-module-docstring
     "C0115",  # missing-class-docstring
     "C0116",  # missing-function-docstring
-    "E0401",  # import-error (e.g., when running outside Pi hardware)
     "W0718",  # broad-exception-caught
+    "R0402",  # consider-using-from-import
 ]
 # Explicitly enable rule to disallow relative imports
 enable = [

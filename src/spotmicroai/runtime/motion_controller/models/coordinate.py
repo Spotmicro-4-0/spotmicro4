@@ -4,7 +4,7 @@ This module defines the Coordinate class for representing 3D points.
 
 import math
 
-from spotmicroai import FOOT_LENGTH, LEG_LENGTH, SAFE_NEUTRAL, SHOULDER_LENGTH
+import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Motion controller')
@@ -40,7 +40,7 @@ class Coordinate:
 
         try:
             # (1) Projected Shoulder Distance
-            term = y * y + z * z - SHOULDER_LENGTH * SHOULDER_LENGTH
+            term = y * y + z * z - constants.SHOULDER_LENGTH * constants.SHOULDER_LENGTH
             if term < 0:
                 term = 0.0  # clamp to avoid sqrt of negative
             distance_yz = math.sqrt(term)
@@ -51,17 +51,21 @@ class Coordinate:
                 distance_total = 1e-6  # prevent divide-by-zero
 
             # (3) Shoulder Rotation
-            omega = math.atan(distance_total / max(SHOULDER_LENGTH, 1e-6)) + math.atan2(z, y)
+            omega = math.atan(distance_total / max(constants.SHOULDER_LENGTH, 1e-6)) + math.atan2(z, y)
 
             # (4) Knee (Foot) Angle
-            num = distance_total * distance_total - LEG_LENGTH * LEG_LENGTH - FOOT_LENGTH * FOOT_LENGTH
-            denom = -2 * LEG_LENGTH * FOOT_LENGTH
+            num = (
+                distance_total * distance_total
+                - constants.LEG_LENGTH * constants.LEG_LENGTH
+                - constants.FOOT_LENGTH * constants.FOOT_LENGTH
+            )
+            denom = -2 * constants.LEG_LENGTH * constants.FOOT_LENGTH
             ratio_phi = num / denom if denom != 0 else 0
             ratio_phi = self._clamp(ratio_phi, -1.0, 1.0)
             phi = math.acos(ratio_phi)
 
             # (5) Hip (Leg) Angle
-            ratio_theta = (LEG_LENGTH * math.sin(phi)) / distance_total
+            ratio_theta = (constants.LEG_LENGTH * math.sin(phi)) / distance_total
             ratio_theta = self._clamp(ratio_theta, -1.0, 1.0)
             theta = math.atan2(x, distance_yz) + math.asin(ratio_theta)
 
@@ -72,7 +76,7 @@ class Coordinate:
 
             # Replace NaN/Inf with safe neutral values
             if not all(math.isfinite(a) for a in (phi, theta, omega)):
-                return SAFE_NEUTRAL
+                return constants.SAFE_NEUTRAL
 
             return phi, theta, omega
 
@@ -80,7 +84,7 @@ class Coordinate:
             # Never raise — robot must stay alive
             if hasattr(self, "log"):
                 log.warning(f"IK fallback due to {ex} for ({x}, {y}, {z})")
-            return SAFE_NEUTRAL
+            return constants.SAFE_NEUTRAL
 
     def interpolate_to(self, other: 'Coordinate', ratio: float) -> 'Coordinate':
         """Interpolate between this coordinate (from) and another coordinate (to).

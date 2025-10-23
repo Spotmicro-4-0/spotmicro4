@@ -2,15 +2,9 @@ import math
 import time
 from typing import List, Tuple
 
-from spotmicroai import (
-    HEIGHT_MULTIPLIER,
-    LEAN_MULTIPLIER,
-    MAX_WALKING_SPEED,
-    ROTATION_INCREMENT,
-    ROTATION_OFFSET,
-    Singleton,
-)
+from spotmicroai import Singleton
 from spotmicroai.configuration import ConfigProvider
+import spotmicroai.constants as constants
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate
 from spotmicroai.runtime.motion_controller.models.keyframe import Keyframe
 
@@ -115,12 +109,12 @@ class KeyframeService(metaclass=Singleton):
         """
         # This angle calculation is only used when rotating the bot clockwise or counter clockwise
         angle = 45.0 / 180.0 * math.pi
-        x_rot = math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
-        z_rot = math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
+        x_rot = math.sin(angle) * self._rotation_factor * constants.ROTATION_OFFSET
+        z_rot = math.cos(angle) * self._rotation_factor * constants.ROTATION_OFFSET
 
         angle = (45 + x) / 180.0 * math.pi
-        x_rot = x_rot - math.sin(angle) * self._rotation_factor * ROTATION_OFFSET
-        z_rot = z_rot - math.cos(angle) * self._rotation_factor * ROTATION_OFFSET
+        x_rot = x_rot - math.sin(angle) * self._rotation_factor * constants.ROTATION_OFFSET
+        z_rot = z_rot - math.cos(angle) * self._rotation_factor * constants.ROTATION_OFFSET
 
         return x_rot, z_rot
 
@@ -188,16 +182,16 @@ class KeyframeService(metaclass=Singleton):
             Positive values rotate right, negative values rotate left. Should be in the range -1.0 - 1.0.
         """
         if self._rotation_factor >= 0 and factor >= self._rotation_factor:
-            self._rotation_factor = min(self._rotation_factor + ROTATION_INCREMENT, 1)
+            self._rotation_factor = min(self._rotation_factor + constants.ROTATION_INCREMENT, 1)
 
         if self._rotation_factor > 0 and factor < 0:
-            self._rotation_factor = max(self._rotation_factor - ROTATION_INCREMENT, -1)
+            self._rotation_factor = max(self._rotation_factor - constants.ROTATION_INCREMENT, -1)
 
         if self._rotation_factor < 0 and factor > 0:
-            self._rotation_factor = min(self._rotation_factor + ROTATION_INCREMENT, 1)
+            self._rotation_factor = min(self._rotation_factor + constants.ROTATION_INCREMENT, 1)
 
         if self._rotation_factor < 0 and factor < self._rotation_factor:
-            self._rotation_factor = max(self._rotation_factor - ROTATION_INCREMENT, -1)
+            self._rotation_factor = max(self._rotation_factor - constants.ROTATION_INCREMENT, -1)
 
     def set_lean(self, lean: float):
         """Set the distance that it should lean left to right.
@@ -207,7 +201,7 @@ class KeyframeService(metaclass=Singleton):
         lean : float
             Positive values lean right, negative values lean left. Should be in the range -1.0 - 1.0.
         """
-        self._lean_factor = lean * LEAN_MULTIPLIER
+        self._lean_factor = lean * constants.LEAN_MULTIPLIER
 
     def set_height_offset(self, height: float):
         """Set the extra distance for the chassis to be off the ground.
@@ -217,7 +211,7 @@ class KeyframeService(metaclass=Singleton):
         height : float
             Should be in the range 0.0-1.0.
         """
-        self._height_factor = height * HEIGHT_MULTIPLIER
+        self._height_factor = height * constants.HEIGHT_MULTIPLIER
 
     def reset_movement(self):
         """Reset rotation and forward factors to zero."""
@@ -238,9 +232,9 @@ class KeyframeService(metaclass=Singleton):
             The amount to adjust speed by (can be positive or negative).
         """
         if delta > 0:
-            self._walking_speed = max(min(self._walking_speed + 1, MAX_WALKING_SPEED), 0)
+            self._walking_speed = max(min(self._walking_speed + 1, constants.MAX_WALKING_SPEED), 0)
         else:
-            self._walking_speed = min(max(self._walking_speed - 1, 0), MAX_WALKING_SPEED)
+            self._walking_speed = min(max(self._walking_speed - 1, 0), constants.MAX_WALKING_SPEED)
 
     def reset_walking_state(self):
         """Reset the walking state to initial values. Call this when starting a new walking session."""

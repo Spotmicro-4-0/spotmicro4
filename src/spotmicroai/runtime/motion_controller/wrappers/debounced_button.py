@@ -5,7 +5,7 @@ Debounced button handler for managing button state and preventing rapid re-trigg
 import time
 from typing import Callable, Optional
 
-from spotmicroai import DEFAULT_DEBOUNCE_TIME
+import spotmicroai.constants as constants
 
 
 class DebouncedButton:
@@ -22,7 +22,9 @@ class DebouncedButton:
         Callback function to execute when button is pressed
     """
 
-    def __init__(self, key: str, debounce_time: float = DEFAULT_DEBOUNCE_TIME, on_press: Optional[Callable] = None):
+    def __init__(
+        self, key: str, debounce_time: float = constants.DEFAULT_DEBOUNCE_TIME, on_press: Optional[Callable] = None
+    ):
         """
         Initialize a debounced button.
 
