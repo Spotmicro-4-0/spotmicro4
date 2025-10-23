@@ -5,12 +5,12 @@
       {
         "label": "Calibration Wizard",
         "action": "run",
-        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} auto"
+        "command": "bash setup_app/scripts/calibration_wizard.sh {SERVO_ID}"
       },
       {
         "label": "Manual Motion Test",
         "action": "run",
-        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} manual"
+        "command": "bash setup_app/scripts/servo_manual_control.sh {SERVO_ID}"
       },
       {
         "label": "Advanced Value Edit (DANGER!)",
