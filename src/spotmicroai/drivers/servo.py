@@ -49,6 +49,8 @@ class Servo:
             actuation_range=actuation_range,
         )
         self._range = actuation_range
+        self._min_pulse = min_pulse
+        self._max_pulse = max_pulse
         self._rest_angle = rest_angle
         self._last_angle = None
 
@@ -64,8 +66,40 @@ class Servo:
     def angle(self, value: float) -> None:
         """Set the servo to the requested angle."""
         clamp = max(0.0, min(self._range, value))
-        try:
-            self._servo.angle = clamp
-            self._last_angle = clamp
-        except Exception as e:
-            print(f"[WARN] Servo command failed: {e}")
+        self._servo.angle = clamp
+        self._last_angle = clamp
+
+    @property
+    def min_pulse(self) -> int:
+        """Get the minimum pulse width in microseconds."""
+        return self._min_pulse
+
+    @min_pulse.setter
+    def min_pulse(self, value: int) -> None:
+        """Set the minimum pulse width in microseconds."""
+        self._min_pulse = value
+
+    @property
+    def max_pulse(self) -> int:
+        """Get the maximum pulse width in microseconds."""
+        return self._max_pulse
+
+    @max_pulse.setter
+    def max_pulse(self, value: int) -> None:
+        """Set the maximum pulse width in microseconds."""
+        self._max_pulse = value
+
+    @property
+    def rest_angle(self) -> float:
+        """Get the rest angle in degrees."""
+        return self._rest_angle
+
+    @rest_angle.setter
+    def rest_angle(self, value: float) -> None:
+        """Set the rest angle in degrees."""
+        self._rest_angle = value
+
+    @property
+    def range(self) -> int:
+        """Get the actuation range in degrees."""
+        return self._range
