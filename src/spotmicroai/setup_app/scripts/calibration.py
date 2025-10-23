@@ -7,6 +7,7 @@ from typing import Dict, Optional
 try:
     from spotmicroai.configuration import ConfigProvider, ServoName
     from spotmicroai.drivers import PCA9685, Servo
+    from spotmicroai.setup_app import labels as LABELS, theme as THEME, ui_utils
 except ImportError as e:
     print(f"ERROR: Missing required dependencies: {e}", file=sys.stderr)
     print("\nPlease install dependencies with:", file=sys.stderr)
@@ -14,41 +15,30 @@ except ImportError as e:
     sys.exit(1)
 
 
-class CalibrationUIConfig:
-    HIGHLIGHTED_ROW_PAIR = 1
-    INFO_TEXT_PAIR = 2
-    SCREEN_BACKGROUND_PAIR = 3
-    PANEL_BACKGROUND_PAIR = 4
-    EXIT_COMMANDS = {"b", "back", "exit"}
-    ESCAPE_CHAR = "\x1b"
-    ADDITIONAL_INPUT_CHARACTERS = {".", "-", "+"}
-    EXIT_COMMAND_CHARACTERS = set("".join(EXIT_COMMANDS))
+class CalibrationUI:
+    """Configuration constants for the calibration UI."""
+
     ANGLE_STEP_DEGREES = 1.0
-    EXIT_OPTION_LABEL = "Exit"
-    EXIT_SHORTCUT_KEY = "q"
     DEFAULT_SERVO_ANGLE = 135
-    PANEL_EXTRA_HEIGHT = 10
     PANEL_WIDTH = 60
-    MIN_WINDOW_MARGIN = 2
-    OPTION_START_ROW = 4
-    PROMPT_ROW_OFFSET = 5
-    LIST_PADDING = 4
+    PANEL_HEIGHT_BASE = 10
+    MIN_WINDOW_HEIGHT = 20
+    MIN_WINDOW_WIDTH = 70
+
+    # UI Layout
     PANEL_TITLE_ROW = 1
     PANEL_TITLE_COL = 2
     PANEL_INSTRUCTION_ROW = 2
     PANEL_INSTRUCTION_COL = 2
     PANEL_SEPARATOR_ROW = 3
     PANEL_SEPARATOR_COL = 1
-    PANEL_TITLE_TEXT = "=== Servo Calibration Menu ==="
-    PANEL_INSTRUCTION_TEXT = "Use ↑ ↓ to select, ENTER to set angle, q/ESC to quit"
+    OPTION_START_ROW = 4
+    PROMPT_ROW_OFFSET = 5
+    PANEL_LIST_COL = 2
     SERVO_INDEX_FORMAT = "2d"
     SERVO_NAME_WIDTH = 24
     ANGLE_DISPLAY_WIDTH = 5
-    QUIT_KEY_CODES = (ord("q"), ord("Q"), 27)
-    ENTER_KEY_CODES = (10, 13)
     HLINE_PADDING = 2
-    PANEL_LIST_COL = 2
-    INPUT_PROMPT_LABEL = "Input: "
 
 
 _pca9685: Optional[PCA9685] = None
@@ -82,16 +72,11 @@ def init_servo_controller() -> None:
 
 
 def clamp_angle(angle: float) -> float:
-    return max(
-        0,
-        min(270, angle),
-    )
+    return max(0, min(270, angle))
 
 
 def set_servo_angle(name: str, angle: float) -> float:
-    """
-    Move the requested servo to the provided angle using the Adafruit Servo helper.
-    """
+    """Move the requested servo to the provided angle."""
     if _pca9685 is None:
         init_servo_controller()
 
@@ -104,12 +89,12 @@ def set_servo_angle(name: str, angle: float) -> float:
 
 
 # ============================================================
-# MAIN MENU LOGIC
+# SERVO ADJUSTMENT LOOP
 # ============================================================
 def servo_adjustment_loop(win, name, angle_memory, prompt_row):
     """Keep prompting for servo angles until the user opts to return."""
-    exit_commands = CalibrationUIConfig.EXIT_COMMANDS
-    angle_step = CalibrationUIConfig.ANGLE_STEP_DEGREES
+    exit_commands = {"b", "back", "exit"}
+    angle_step = CalibrationUI.ANGLE_STEP_DEGREES
 
     curses.noecho()
     win.keypad(True)
@@ -137,46 +122,31 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
 
     try:
         while True:
-            win.attrset(curses.color_pair(CalibrationUIConfig.PANEL_BACKGROUND_PAIR))
+            win.attrset(curses.color_pair(THEME.REGULAR_ROW))
 
             # Calculate pulse width
             pulse_us = angle_to_pulse_us(current_angle)
+            indent = CalibrationUI.PANEL_LIST_COL
 
-            # Use proper indentation to avoid overwriting the border
-            indent = CalibrationUIConfig.PANEL_LIST_COL
+            # Clear and draw instruction line
+            ui_utils.CursesUIHelper.clear_line(win, prompt_row)
+            instruction_text = LABELS.CAL_SERVO_ADJUST_INSTRUCTION.format(angle_step)
+            ui_utils.CursesUIHelper.draw_text(win, prompt_row, indent, instruction_text)
 
-            # Draw instruction line first
-            win.move(prompt_row, 0)
-            win.clrtoeol()
-            win.addstr(
-                prompt_row,
-                indent,
-                f"↑/↓ adjust ±{angle_step:.0f}°. ENTER moves. b/ESC exits.",
-            )
+            # Clear and draw angle/pulse line
+            ui_utils.CursesUIHelper.clear_line(win, instruction_row)
+            angle_text = LABELS.CAL_SERVO_DISPLAY.format(name, current_angle, pulse_us)
+            ui_utils.CursesUIHelper.draw_text(win, instruction_row, indent, angle_text)
 
-            # Draw angle and pulse width line
-            win.move(instruction_row, 0)
-            win.clrtoeol()
-            win.addstr(
-                instruction_row,
-                indent,
-                f"{name}: {current_angle:.1f}° [{pulse_us:.0f}µs]",
-            )
+            # Clear and draw input buffer line
+            ui_utils.CursesUIHelper.clear_line(win, input_row)
+            input_text = f"{LABELS.CAL_INPUT_PROMPT}{input_buffer}"
+            ui_utils.CursesUIHelper.draw_text(win, input_row, indent, input_text)
 
-            # Draw input buffer line
-            win.move(input_row, 0)
-            win.clrtoeol()
-            win.addstr(
-                input_row,
-                indent,
-                f"{CalibrationUIConfig.INPUT_PROMPT_LABEL}{input_buffer}",
-            )
-
-            # Draw status message if present
-            win.move(status_row, 0)
-            win.clrtoeol()
+            # Clear and draw status message if present
+            ui_utils.CursesUIHelper.clear_line(win, status_row)
             if status_message:
-                win.addstr(status_row, indent, status_message)
+                ui_utils.CursesUIHelper.draw_text(win, status_row, indent, status_message)
 
             win.refresh()
             status_message = ""
@@ -193,7 +163,7 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
                         # Reapply current angle for quick confirmation
                         current_angle = set_servo_angle(name, current_angle)
                         angle_memory[name] = current_angle
-                        status_message = f"Reapplied {name} to {current_angle:.1f}°"
+                        status_message = LABELS.CAL_STATUS_REAPPLIED.format(name, current_angle)
                         continue
 
                     if entry.lower() in exit_commands:
@@ -202,113 +172,93 @@ def servo_adjustment_loop(win, name, angle_memory, prompt_row):
                     try:
                         new_angle = float(entry)
                     except ValueError:
-                        status_message = "Invalid angle. Use a numeric value."
+                        status_message = LABELS.CAL_STATUS_INVALID_ANGLE
                         continue
 
                     applied_angle = set_servo_angle(name, new_angle)
                     current_angle = applied_angle
                     angle_memory[name] = applied_angle
-                    status_message = f"Moved {name} to {current_angle:.1f}°"
+                    status_message = LABELS.CAL_STATUS_MOVED.format(name, current_angle)
 
                 elif key in ("\b", "\x7f", "\x08"):  # handle backspace variations
                     input_buffer = input_buffer[:-1]
 
-                elif len(key) == 1 and (
-                    key.isdigit()
-                    or key in CalibrationUIConfig.ADDITIONAL_INPUT_CHARACTERS
-                    or key.lower() in CalibrationUIConfig.EXIT_COMMAND_CHARACTERS
-                ):
+                elif len(key) == 1 and (key.isdigit() or key in ".-+" or key.lower() in "bexta"):
                     input_buffer += key
 
-                elif key == CalibrationUIConfig.ESCAPE_CHAR:  # ESC clears current buffer
-                    status_message = "Returning to menu."
+                elif key == "\x1b":  # ESC
+                    status_message = LABELS.CAL_STATUS_RETURNING
                     break
 
                 else:
-                    status_message = "Unsupported key. Use digits, ENTER, arrows, or b/ESC."
+                    status_message = LABELS.CAL_STATUS_UNSUPPORTED_KEY
 
             else:  # Special keys (arrows, etc.)
                 if key == curses.KEY_UP:
                     applied_angle = set_servo_angle(name, current_angle + angle_step)
                     current_angle = applied_angle
                     angle_memory[name] = applied_angle
-                    status_message = f"Moved {name} to {current_angle:.1f}°"
+                    status_message = LABELS.CAL_STATUS_MOVED.format(name, current_angle)
 
                 elif key == curses.KEY_DOWN:
                     applied_angle = set_servo_angle(name, current_angle - angle_step)
                     current_angle = applied_angle
                     angle_memory[name] = applied_angle
-                    status_message = f"Moved {name} to {current_angle:.1f}°"
+                    status_message = LABELS.CAL_STATUS_MOVED.format(name, current_angle)
 
-                elif key == curses.KEY_ENTER:
+                elif key in (curses.KEY_ENTER, 10, 13):
                     # Treat keypad enter the same as newline
                     input_buffer = ""
                     current_angle = set_servo_angle(name, current_angle)
                     angle_memory[name] = current_angle
-                    status_message = f"Reapplied {name} to {current_angle:.1f}°"
+                    status_message = LABELS.CAL_STATUS_REAPPLIED.format(name, current_angle)
 
                 else:
-                    status_message = "Unsupported key. Use digits, ENTER, arrows, or b/ESC."
+                    status_message = LABELS.CAL_STATUS_UNSUPPORTED_KEY
 
     finally:
         # Clean up prompt area before returning to menu
-        win.move(prompt_row, 0)
-        win.clrtoeol()
-        win.move(instruction_row, 0)
-        win.clrtoeol()
-        win.move(input_row, 0)
-        win.clrtoeol()
-        win.move(status_row, 0)
-        win.clrtoeol()
+        ui_utils.CursesUIHelper.clear_line(win, prompt_row)
+        ui_utils.CursesUIHelper.clear_line(win, instruction_row)
+        ui_utils.CursesUIHelper.clear_line(win, input_row)
+        ui_utils.CursesUIHelper.clear_line(win, status_row)
         win.refresh()
 
 
+# ============================================================
+# MAIN MENU
+# ============================================================
 def main_menu(stdscr):
+    """Main calibration menu loop."""
     curses.curs_set(0)
     curses.start_color()
     curses.use_default_colors()
-    curses.init_pair(
-        CalibrationUIConfig.HIGHLIGHTED_ROW_PAIR,
-        curses.COLOR_WHITE,
-        curses.COLOR_RED,
-    )
-    curses.init_pair(
-        CalibrationUIConfig.INFO_TEXT_PAIR,
-        curses.COLOR_BLACK,
-        curses.COLOR_WHITE,
-    )
-    curses.init_pair(
-        CalibrationUIConfig.SCREEN_BACKGROUND_PAIR,
-        curses.COLOR_WHITE,
-        curses.COLOR_BLUE,
-    )
-    curses.init_pair(
-        CalibrationUIConfig.PANEL_BACKGROUND_PAIR,
-        curses.COLOR_BLACK,
-        curses.COLOR_WHITE,
-    )
-    stdscr.keypad(True)
-    stdscr.bkgd(" ", curses.color_pair(CalibrationUIConfig.SCREEN_BACKGROUND_PAIR))
-    stdscr.attrset(curses.color_pair(CalibrationUIConfig.SCREEN_BACKGROUND_PAIR))
 
-    servo_names = [servo.value for servo in ServoName] + [CalibrationUIConfig.EXIT_OPTION_LABEL]
+    # Initialize colors using the shared theme
+    ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
+
+    stdscr.keypad(True)
+    stdscr.bkgd(' ', curses.color_pair(THEME.BACKGROUND))
+    stdscr.attrset(curses.color_pair(THEME.BACKGROUND))
+
+    servo_names = [servo.value for servo in ServoName] + [LABELS.CAL_EXIT_LABEL]
     selected = 0
     num_items = len(servo_names)
-    angle_memory = {
-        name: CalibrationUIConfig.DEFAULT_SERVO_ANGLE for name in [servo.value for servo in ServoName]
-    }  # remember angles only for servos
+    angle_memory = {name: CalibrationUI.DEFAULT_SERVO_ANGLE for name in [servo.value for servo in ServoName]}
 
     init_servo_controller()
 
     max_y, max_x = stdscr.getmaxyx()
-    panel_height = num_items + CalibrationUIConfig.PANEL_EXTRA_HEIGHT
-    panel_width = CalibrationUIConfig.PANEL_WIDTH
-    required_height = panel_height + CalibrationUIConfig.MIN_WINDOW_MARGIN
-    required_width = panel_width + CalibrationUIConfig.MIN_WINDOW_MARGIN
-    if required_height > max_y or required_width > max_x:
+    panel_height = num_items + CalibrationUI.PANEL_HEIGHT_BASE
+    panel_width = CalibrationUI.PANEL_WIDTH
+
+    is_valid, error_msg = ui_utils.CursesUIHelper.validate_terminal_size(
+        max_y, max_x, CalibrationUI.MIN_WINDOW_HEIGHT, CalibrationUI.MIN_WINDOW_WIDTH
+    )
+
+    if not is_valid:
         stdscr.clear()
-        stdscr.addstr(0, 0, "Terminal window too small for interface.")
-        stdscr.addstr(1, 0, f"Requires at least {required_height}x{required_width}.")
+        stdscr.addstr(0, 0, error_msg)
         stdscr.refresh()
         stdscr.getch()
         return
@@ -317,62 +267,68 @@ def main_menu(stdscr):
     left = (max_x - panel_width) // 2
     panel_win = curses.newwin(panel_height, panel_width, top, left)
     panel_win.keypad(True)
-    panel_win.bkgd(" ", curses.color_pair(CalibrationUIConfig.PANEL_BACKGROUND_PAIR))
-    panel_win.attrset(curses.color_pair(CalibrationUIConfig.PANEL_BACKGROUND_PAIR))
+    panel_win.bkgd(' ', curses.color_pair(THEME.REGULAR_ROW))
+    panel_win.attrset(curses.color_pair(THEME.REGULAR_ROW))
 
     while True:
         stdscr.erase()
-        stdscr.attrset(curses.color_pair(CalibrationUIConfig.SCREEN_BACKGROUND_PAIR))
+        stdscr.attrset(curses.color_pair(THEME.BACKGROUND))
         stdscr.refresh()
 
         panel_win.erase()
-        panel_win.attrset(curses.color_pair(CalibrationUIConfig.PANEL_BACKGROUND_PAIR))
+        panel_win.attrset(curses.color_pair(THEME.REGULAR_ROW))
         panel_win.box()
-        panel_win.addstr(
-            CalibrationUIConfig.PANEL_TITLE_ROW,
-            CalibrationUIConfig.PANEL_TITLE_COL,
-            CalibrationUIConfig.PANEL_TITLE_TEXT,
-            curses.A_BOLD | curses.color_pair(CalibrationUIConfig.INFO_TEXT_PAIR),
-        )
-        panel_win.addstr(
-            CalibrationUIConfig.PANEL_INSTRUCTION_ROW,
-            CalibrationUIConfig.PANEL_INSTRUCTION_COL,
-            CalibrationUIConfig.PANEL_INSTRUCTION_TEXT,
-            curses.color_pair(CalibrationUIConfig.INFO_TEXT_PAIR),
-        )
-        panel_win.hline(
-            CalibrationUIConfig.PANEL_SEPARATOR_ROW,
-            CalibrationUIConfig.PANEL_SEPARATOR_COL,
-            curses.ACS_HLINE,
-            panel_width - CalibrationUIConfig.HLINE_PADDING,
+
+        # Draw title
+        ui_utils.CursesUIHelper.draw_text(
+            panel_win,
+            CalibrationUI.PANEL_TITLE_ROW,
+            CalibrationUI.PANEL_TITLE_COL,
+            LABELS.CAL_TITLE,
+            attrs=curses.A_BOLD,
         )
 
-        # Draw servo list inside panel
-        option_start_row = CalibrationUIConfig.OPTION_START_ROW
-        line_width = panel_width - CalibrationUIConfig.LIST_PADDING
+        # Draw instruction
+        ui_utils.CursesUIHelper.draw_text(
+            panel_win,
+            CalibrationUI.PANEL_INSTRUCTION_ROW,
+            CalibrationUI.PANEL_INSTRUCTION_COL,
+            LABELS.CAL_INSTRUCTION,
+        )
+
+        # Draw separator
+        try:
+            panel_win.hline(
+                CalibrationUI.PANEL_SEPARATOR_ROW,
+                CalibrationUI.PANEL_SEPARATOR_COL,
+                curses.ACS_HLINE,
+                panel_width - CalibrationUI.HLINE_PADDING,
+            )
+        except curses.error:
+            pass
+
+        # Draw servo list
+        option_start_row = CalibrationUI.OPTION_START_ROW
+        line_width = panel_width - 4
         for i, name in enumerate(servo_names):
             row = option_start_row + i
-            if name == CalibrationUIConfig.EXIT_OPTION_LABEL:
-                text = f"  {CalibrationUIConfig.EXIT_SHORTCUT_KEY}. {CalibrationUIConfig.EXIT_OPTION_LABEL}"
+            if name == LABELS.CAL_EXIT_LABEL:
+                text = f"  {LABELS.CAL_EXIT_SHORTCUT}. {LABELS.CAL_EXIT_LABEL}"
             else:
                 text = (
-                    f" {i+1:{CalibrationUIConfig.SERVO_INDEX_FORMAT}}. "
-                    f"{name:<{CalibrationUIConfig.SERVO_NAME_WIDTH}}  "
-                    f"[{angle_memory[name]:>{CalibrationUIConfig.ANGLE_DISPLAY_WIDTH}.1f}°]"
+                    f" {i+1:{CalibrationUI.SERVO_INDEX_FORMAT}}. "
+                    f"{name:<{CalibrationUI.SERVO_NAME_WIDTH}}  "
+                    f"[{angle_memory[name]:>{CalibrationUI.ANGLE_DISPLAY_WIDTH}.1f}°]"
                 )
             padded_text = text.ljust(line_width)
+
             if i == selected:
-                panel_win.addstr(
-                    row,
-                    CalibrationUIConfig.PANEL_LIST_COL,
-                    padded_text[:line_width],
-                    curses.color_pair(CalibrationUIConfig.HIGHLIGHTED_ROW_PAIR),
+                ui_utils.CursesUIHelper.draw_highlighted_text(
+                    panel_win, row, CalibrationUI.PANEL_LIST_COL, padded_text[:line_width]
                 )
             else:
-                panel_win.addstr(
-                    row,
-                    CalibrationUIConfig.PANEL_LIST_COL,
-                    padded_text[:line_width],
+                ui_utils.CursesUIHelper.draw_text(
+                    panel_win, row, CalibrationUI.PANEL_LIST_COL, padded_text[:line_width]
                 )
 
         panel_win.refresh()
@@ -383,14 +339,14 @@ def main_menu(stdscr):
             selected = (selected - 1) % num_items
         elif key == curses.KEY_DOWN:
             selected = (selected + 1) % num_items
-        elif key in CalibrationUIConfig.QUIT_KEY_CODES:
+        elif key in (ord("q"), ord("Q"), 27):  # q/Q or ESC
             break
-        elif key in CalibrationUIConfig.ENTER_KEY_CODES:
+        elif key in (curses.KEY_ENTER, 10, 13):
             name = servo_names[selected]
-            if name == CalibrationUIConfig.EXIT_OPTION_LABEL:
-                break  # Exit option chosen
+            if name == LABELS.CAL_EXIT_LABEL:
+                break
 
-            prompt_row = num_items + CalibrationUIConfig.PROMPT_ROW_OFFSET
+            prompt_row = num_items + CalibrationUI.PROMPT_ROW_OFFSET
             servo_adjustment_loop(panel_win, name, angle_memory, prompt_row)
 
         panel_win.refresh()

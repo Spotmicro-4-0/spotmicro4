@@ -36,7 +36,7 @@ import subprocess
 import sys
 from typing import Any, Mapping
 
-from . import labels as LABELS, theme as THEME
+from . import labels as LABELS, theme as THEME, ui_utils
 
 
 class MenuAction(Enum):
@@ -114,8 +114,7 @@ class MenuApp:
         stdscr.keypad(True)  # Enable number keypad
 
         # Initialize color pairs from the central DEFAULT_THEME
-        for pair_id, (fg, bg) in THEME.DEFAULT_THEME.items():
-            curses.init_pair(pair_id, fg, bg)
+        ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
 
         try:
             while True:
@@ -188,62 +187,14 @@ class MenuApp:
 
     def _draw_shadow(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int, h: int, w: int) -> None:
         """Draw shadow effect for the menu box safely."""
-        for y in range(start_y + 1, min(start_y + box_height + 1, h)):
-            if start_x + box_width < w:
-                try:
-                    stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(THEME.SHADOW))
-                except curses.error:
-                    pass
-        if start_y + box_height < h:
-            shadow_width = min(box_width, max(0, w - (start_x + 2)))
-            if shadow_width > 0:
-                try:
-                    stdscr.addstr(
-                        start_y + box_height, start_x + 2, ' ' * shadow_width, curses.color_pair(THEME.SHADOW)
-                    )
-                except curses.error:
-                    pass
+        ui_utils.CursesUIHelper.draw_shadow(stdscr, start_y, start_x, box_width, box_height, h, w)
 
     def _draw_borders(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int) -> None:
         """Draw borders for the menu box safely."""
-        h, w = stdscr.getmaxyx()
-        if start_y + box_height > h or start_x + box_width > w or start_y < 0 or start_x < 0:
-            return  # skip if box doesn’t fit
-
-        try:
-            stdscr.addstr(
-                start_y,
-                start_x,
-                THEME.TL + THEME.HOR * (box_width - 2) + THEME.TR,
-                curses.color_pair(THEME.REGULAR_ROW),
-            )
-            for y in range(start_y + 1, start_y + box_height - 1):
-                stdscr.addstr(y, start_x, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
-                stdscr.addstr(y, start_x + box_width - 1, THEME.VERT, curses.color_pair(THEME.REGULAR_ROW))
-            stdscr.addstr(
-                start_y + box_height - 1,
-                start_x,
-                THEME.BL + THEME.HOR * (box_width - 2) + THEME.BR,
-                curses.color_pair(THEME.REGULAR_ROW),
-            )
-        except curses.error:
-            pass
-
+        ui_utils.CursesUIHelper.draw_borders(stdscr, start_y, start_x, box_width, box_height)
     def _draw_box_content(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int) -> None:
         """Draw inner box content safely."""
-        h, w = stdscr.getmaxyx()
-        for y in range(start_y + 1, min(start_y + box_height - 1, h)):
-            if start_x + 1 < w:
-                try:
-                    stdscr.addstr(
-                        y,
-                        start_x + 1,
-                        ' ' * max(0, min(box_width - 2, w - start_x - 1)),
-                        curses.color_pair(THEME.REGULAR_ROW),
-                    )
-                except curses.error:
-                    pass
-
+        ui_utils.CursesUIHelper.draw_box_content(stdscr, start_y, start_x, box_width, box_height)
     def _calculate_visible_items(self, terminal_height: int) -> int:
         """Calculate how many menu items can fit in the terminal."""
         # Account for: borders (2), title (2), spacing (2), help text (1), shadow (1)
@@ -301,78 +252,7 @@ class MenuApp:
 
     def _draw_error_box(self, stdscr, message: str) -> None:
         """Draw an error message box and wait for user to press a key."""
-        h, w = stdscr.getmaxyx()
-
-        # Split message into lines if it's too long
-        max_line_width = min(self.BOX_MAX_WIDTH - 8, w - 20)
-        words = message.split()
-        lines = []
-        current_line = ""
-
-        for word in words:
-            if len(current_line) + len(word) + 1 <= max_line_width:
-                current_line += (" " if current_line else "") + word
-            else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
-        if current_line:
-            lines.append(current_line)
-
-        # Calculate box dimensions
-        box_width = min(max(len(line) for line in lines) + 8, self.BOX_MAX_WIDTH)
-        box_height = len(lines) + 6  # lines + title + spacing + prompt
-        start_y = max(1, (h - box_height) // 2)
-        start_x = max(1, (w - box_width) // 2)
-
-        # Reuse existing drawing helpers
-        self._draw_shadow(stdscr, start_y, start_x, box_width, box_height, h, w)
-        self._draw_borders(stdscr, start_y, start_x, box_width, box_height)
-        self._draw_box_content(stdscr, start_y, start_x, box_width, box_height)
-
-        # Draw title
-        title = "ERROR"
-        title_x = start_x + (box_width - len(title)) // 2
-        try:
-            stdscr.addstr(
-                start_y + 1,
-                title_x,
-                title,
-                curses.color_pair(THEME.REGULAR_ROW) | curses.A_BOLD,
-            )
-        except curses.error:
-            pass
-
-        # Draw message lines
-        for i, line in enumerate(lines):
-            line_x = start_x + 4
-            try:
-                stdscr.addstr(
-                    start_y + 3 + i,
-                    line_x,
-                    line[: box_width - 8],
-                    curses.color_pair(THEME.REGULAR_ROW),
-                )
-            except curses.error:
-                pass
-
-        # Draw prompt
-        prompt = "Press any key to continue..."
-        prompt_x = start_x + (box_width - len(prompt)) // 2
-        try:
-            stdscr.addstr(
-                start_y + box_height - 2,
-                prompt_x,
-                prompt,
-                curses.color_pair(THEME.REGULAR_ROW) | curses.A_DIM,
-            )
-        except curses.error:
-            pass
-
-        stdscr.refresh()
-
-        # Wait for key press
-        stdscr.getch()
+        ui_utils.CursesUIHelper.draw_error_box(stdscr, message, self.BOX_MAX_WIDTH)
 
     def _draw_help_text(self, stdscr, start_x, start_y, box_width, box_height):
         # Always draw help text at the bottom of the box

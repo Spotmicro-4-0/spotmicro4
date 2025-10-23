@@ -27,3 +27,17 @@ MSG_PRESS_ENTER_RETURN = "Press Enter to return to menu..."
 # General error messages
 MSG_ERROR_PREFIX = "[ERROR] {}"
 MSG_PRESS_ENTER_CONTINUE = "Press Enter to continue..."
+
+# Calibration UI strings
+CAL_TITLE = "=== Servo Calibration Menu ==="
+CAL_INSTRUCTION = "Use ↑ ↓ to select, ENTER to set angle, q/ESC to quit"
+CAL_EXIT_LABEL = "Exit"
+CAL_EXIT_SHORTCUT = "q"
+CAL_SERVO_ADJUST_INSTRUCTION = "↑/↓ adjust ±{:.0f}°. ENTER moves. b/ESC exits."
+CAL_SERVO_DISPLAY = "{}: {:.1f}° [{:.0f}µs]"
+CAL_INPUT_PROMPT = "Input: "
+CAL_STATUS_REAPPLIED = "Reapplied {} to {:.1f}°"
+CAL_STATUS_MOVED = "Moved {} to {:.1f}°"
+CAL_STATUS_INVALID_ANGLE = "Invalid angle. Use a numeric value."
+CAL_STATUS_RETURNING = "Returning to menu."
+CAL_STATUS_UNSUPPORTED_KEY = "Unsupported key. Use digits, ENTER, arrows, or b/ESC."
