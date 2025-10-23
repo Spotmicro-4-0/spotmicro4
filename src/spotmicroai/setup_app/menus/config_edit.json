@@ -33,6 +33,11 @@
         "command": "bash setup_app/scripts/config_editor.sh pca9685_frequency"
       },
       {
+        "label": "Reset Configurations to Factory Settings (DANGER!)",
+        "action": "run",
+        "command": "bash setup_app/scripts/reset_config.sh"
+      },
+      {
         "label": "Back",
         "action": "back"
       }

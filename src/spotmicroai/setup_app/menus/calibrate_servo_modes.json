@@ -1,0 +1,22 @@
+{
+  "calibrate_servo_modes": {
+    "title": "Calibrating: {SERVO_NAME}: Select Mode",
+    "options": [
+      {
+        "label": "Calibration Wizard",
+        "action": "run",
+        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} auto"
+      },
+      {
+        "label": "Manual Motion Test",
+        "action": "run",
+        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} manual"
+      },
+      {
+        "label": "Advanced Value Edit (DANGER!)",
+        "action": "submenu",
+        "target": "calibrate_servo"
+      }
+    ]
+  }
+}

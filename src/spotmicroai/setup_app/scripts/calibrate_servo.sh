@@ -21,11 +21,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Go up 3 levels: setup_app/scripts/ -> setup_app/ -> spotmicroai/ -> src/
 SRC_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 
-# The venv is in the home directory
-VENV_PATH="$HOME/venv"
+# The venv is in the src directory
+VENV_PATH="$SRC_DIR/.venv"
 
 if [ ! -d "$VENV_PATH/bin" ]; then
-    echo "Error: venv not found at $VENV_PATH"
+    echo "Error: .venv not found at $VENV_PATH"
     exit 1
 fi
 
