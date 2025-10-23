@@ -15,8 +15,8 @@ trap 'rm -f "$pidfile"' EXIT
 # Activate the venv in home dir
 source "$HOME/venv/bin/activate"
 
-# Safely set PYTHONPATH
-export PYTHONPATH="${HOME}/spotmicroai:${PYTHONPATH:-}"
+# Safely set PYTHONPATH - ensure spotmicroai parent directory is in path
+export PYTHONPATH="${HOME}:${PYTHONPATH:-}"
 
 # Run main
 python3 "$HOME/spotmicroai/runtime/main.py"

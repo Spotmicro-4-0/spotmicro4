@@ -3,6 +3,12 @@
     "title": "Spotmicro Setup",
     "options": [
       {
+        "label": "Start Spotmicro Runtime",
+        "description": "Starts the robot's runtime",
+        "action": "run",
+        "command": "./run.sh"
+      },
+      {
         "label": "Configuration Editor",
         "description": "Edit configuration values such as GPIO ports and I2C addresses",
         "action": "submenu",
