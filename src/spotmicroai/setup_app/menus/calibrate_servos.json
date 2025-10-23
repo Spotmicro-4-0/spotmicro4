@@ -3,9 +3,76 @@
     "title": "Servo Calibration Menu",
     "options": [
       {
-        "label": "Launch Servo Calibration Tool",
-        "action": "run",
-        "command": "python3 scripts/calibrate_servos.py"
+        "label": "Calibrate Front Shoulder Left",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Front Shoulder Left", "SERVO_ID": "front_shoulder_left" }
+      },
+      {
+        "label": "Calibrate Front Leg Left",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Front Leg Left", "SERVO_ID": "front_leg_left" }
+      },
+      {
+        "label": "Calibrate Front Foot Left",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Front Foot Left", "SERVO_ID": "front_foot_left" }
+      },
+      {
+        "label": "Calibrate Front Shoulder Right",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Front Shoulder Right", "SERVO_ID": "front_shoulder_right" }
+      },
+      {
+        "label": "Calibrate Front Leg Right",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Front Leg Right", "SERVO_ID": "front_leg_right" }
+      },
+      {
+        "label": "Calibrate Front Foot Right",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Front Foot Right", "SERVO_ID": "front_foot_right" }
+      },
+      {
+        "label": "Calibrate Rear Shoulder Left",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Rear Shoulder Left", "SERVO_ID": "rear_shoulder_left" }
+      },
+      {
+        "label": "Calibrate Rear Leg Left",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Rear Leg Left", "SERVO_ID": "rear_leg_left" }
+      },
+      {
+        "label": "Calibrate Rear Foot Left",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Rear Foot Left", "SERVO_ID": "rear_foot_left" }
+      },
+      {
+        "label": "Calibrate Rear Shoulder Right",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Rear Shoulder Right", "SERVO_ID": "rear_shoulder_right" }
+      },
+      {
+        "label": "Calibrate Rear Leg Right",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Rear Leg Right", "SERVO_ID": "rear_leg_right" }
+      },
+      {
+        "label": "Calibrate Rear Foot Right",
+        "action": "submenu",
+        "target": "calibrate_servo",
+        "params": { "SERVO_NAME": "Rear Foot Right", "SERVO_ID": "rear_foot_right" }
       },
       {
         "label": "Back",

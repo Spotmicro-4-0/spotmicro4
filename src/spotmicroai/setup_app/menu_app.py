@@ -52,7 +52,8 @@ class MenuApp:
 
     Attributes:
         menus (dict): Parsed JSON structure containing all menu definitions.
-        menu_stack (list[str]): Stack of active menus to support nested navigation.
+        menu_stack (list[tuple]): Stack of active menus as (menu_name, context_dict) tuples.
+        context_stack (list[dict]): Stack of context dictionaries for parameter interpolation.
         current_index (int): Currently highlighted menu item index.
     """
 
@@ -78,19 +79,20 @@ class MenuApp:
     HELP_INNER_MARGIN = 2
     TITLE_INNER_MARGIN = 1
 
-    def __init__(self, menus: Mapping[str, Any], entry_menu: str = "main") -> None:
+    def __init__(self, menus: Mapping[str, Any], entry_menu: str = "main", context: dict | None = None) -> None:
         """
         Initialize the MenuApp with in-memory menu definitions.
 
         Args:
             menus (Mapping[str, Any]): Menu definitions keyed by menu name.
             entry_menu (str): Entry point menu key. Defaults to "main".
+            context (dict | None): Initial context for parameter interpolation. Defaults to None.
         """
         if entry_menu not in menus:
             raise KeyError(f"Entry menu '{entry_menu}' not found in menu definitions.")
 
         self.menus = dict(menus)
-        self.menu_stack = [entry_menu]
+        self.menu_stack = [(entry_menu, context or {})]
         self.current_index = 0
         self.scroll_offset = 0  # Track scroll position for viewport
         self.stdscr = None  # Will be set in _main_loop
@@ -98,6 +100,25 @@ class MenuApp:
     # -------------------------------------------------------------------------
     # Main Execution Loop
     # -------------------------------------------------------------------------
+    def _get_current_menu_name(self) -> str:
+        """Get the current menu name from the top of the stack."""
+        return self.menu_stack[-1][0]
+
+    def _get_current_context(self) -> dict:
+        """Get the current context from the top of the stack."""
+        return self.menu_stack[-1][1]
+
+    def _interpolate(self, text: str | None) -> str:
+        """Interpolate context variables in text using {VARIABLE} format."""
+        if not text or not isinstance(text, str):
+            return ""
+        context = self._get_current_context()
+        try:
+            return text.format(**context)
+        except (KeyError, ValueError):
+            # If interpolation fails, return original text
+            return text
+
     def run(self) -> None:
         """Start the curses rendering loop."""
         try:
@@ -128,7 +149,7 @@ class MenuApp:
     def _handle_key_input(self, stdscr) -> bool:
         """Handle key input for menu navigation."""
         key = stdscr.getch()
-        options = self.menus[self.menu_stack[-1]].get("options", [])
+        options = self.menus[self._get_current_menu_name()].get("options", [])
 
         # Navigation keys
         if key in (curses.KEY_UP, ord("k")):
@@ -192,9 +213,11 @@ class MenuApp:
     def _draw_borders(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int) -> None:
         """Draw borders for the menu box safely."""
         ui_utils.CursesUIHelper.draw_borders(stdscr, start_y, start_x, box_width, box_height)
+
     def _draw_box_content(self, stdscr, start_y: int, start_x: int, box_width: int, box_height: int) -> None:
         """Draw inner box content safely."""
         ui_utils.CursesUIHelper.draw_box_content(stdscr, start_y, start_x, box_width, box_height)
+
     def _calculate_visible_items(self, terminal_height: int) -> int:
         """Calculate how many menu items can fit in the terminal."""
         # Account for: borders (2), title (2), spacing (2), help text (1), shadow (1)
@@ -282,8 +305,8 @@ class MenuApp:
             self._draw_terminal_too_small(stdscr, h, w)
             return
 
-        current_menu = self.menus[self.menu_stack[-1]]
-        title = current_menu.get("title", "Menu")
+        current_menu = self.menus[self._get_current_menu_name()]
+        title = self._interpolate(current_menu.get("title", "Menu"))
         options = current_menu.get("options", [])
 
         # Calculate visible items based on terminal height
@@ -342,7 +365,8 @@ class MenuApp:
 
         for i in range(self.scroll_offset, items_end):
             opt = options[i]
-            label = opt['label']
+            raw_label = opt.get('label', '')
+            label = self._interpolate(raw_label) if raw_label else ""
             action = opt.get('action', '')
 
             # Determine prefix based on position and action
@@ -423,13 +447,17 @@ class MenuApp:
 
         if action == MenuAction.SUBMENU:
             target = option.get("target")
+            params = option.get("params", {})
             if not isinstance(target, str):
                 self._error(LABELS.MSG_INVALID_SUBMENU_TARGET)
                 return
             if target not in self.menus:
                 self._error(LABELS.MSG_SUBMENU_NOT_FOUND.format(target))
                 return
-            self.menu_stack.append(target)
+            if not isinstance(params, dict):
+                self._error("Invalid parameters for submenu")
+                return
+            self.menu_stack.append((target, params))
             self.current_index = 0
             self.scroll_offset = 0
 
@@ -443,7 +471,9 @@ class MenuApp:
             sys.exit(0)
 
         elif action == MenuAction.RUN:
-            self._run_command(option.get("command"))
+            command = option.get("command")
+            interpolated_command = self._interpolate(command)
+            self._run_command(interpolated_command)
 
     # -------------------------------------------------------------------------
     # Command Runner

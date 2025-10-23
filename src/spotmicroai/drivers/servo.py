@@ -42,6 +42,7 @@ class Servo:
             actuation_range: Total angular span (degrees) defined by calibration.
             rest_angle: Default angle to move to on initialization.
         """
+        self._pwm_channel = pwm_channel
         self._servo = adafruit_servo.Servo(
             pwm_channel,
             min_pulse=min_pulse,
@@ -103,3 +104,8 @@ class Servo:
     def range(self) -> int:
         """Get the actuation range in degrees."""
         return self._range
+
+    @property
+    def channel(self):
+        """Get the underlying PWM channel for direct pulse control."""
+        return self._pwm_channel
