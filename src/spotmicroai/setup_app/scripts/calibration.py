@@ -70,6 +70,96 @@ class CalibrationUI:
 
 
 # ============================================================
+# SERVO CALIBRATION POPUP
+# ============================================================
+def servo_calibration_popup(stdscr, calibrator: ServoCalibrator, servo_name: str, angle_memory: Dict):
+    """Display a popup for calibrating a specific servo."""
+    config_provider = ConfigProvider()
+    servo_obj = calibrator.servo_objects[servo_name]
+
+    # Start with current angle from memory
+    current_angle = angle_memory[servo_name]
+    angle_step = CalibrationUI.ANGLE_STEP_DEGREES
+
+    # Calculate popup dimensions
+    h, w = stdscr.getmaxyx()
+    popup_height = 12
+    popup_width = 70
+    start_y = max(1, (h - popup_height) // 2)
+    start_x = max(1, (w - popup_width) // 2)
+
+    # Create popup window
+    popup_win = curses.newwin(popup_height, popup_width, start_y, start_x)
+    popup_win.keypad(True)
+    popup_win.bkgd(' ', curses.color_pair(THEME.REGULAR_ROW))
+    popup_win.attrset(curses.color_pair(THEME.REGULAR_ROW))
+
+    while True:
+        # Draw popup
+        popup_win.erase()
+        popup_win.box()
+
+        # Draw title
+        title = f"Calibrate {servo_name}"
+        title_x = (popup_width - len(title)) // 2
+        popup_win.addstr(1, title_x, title, curses.A_BOLD)
+
+        # Draw separator
+        popup_win.hline(2, 1, curses.ACS_HLINE, popup_width - 2)
+
+        # Calculate pulse width
+        pulse_us = servo_obj.min_pulse + (current_angle / servo_obj.range) * (servo_obj.max_pulse - servo_obj.min_pulse)
+
+        # Draw details
+        details = [
+            f"Current Angle: {current_angle:.1f}°",
+            f"Pulse Width: {pulse_us:.0f} µs",
+            f"Min Pulse: {servo_obj.min_pulse} µs",
+            f"Max Pulse: {servo_obj.max_pulse} µs",
+            f"Range: {servo_obj.range}°",
+        ]
+
+        for i, detail in enumerate(details):
+            popup_win.addstr(4 + i, 3, detail)
+
+        # Draw instructions
+        instructions = [
+            "↑/↓ adjust ±" + f"{angle_step:.0f}°",
+            "ENTER to save, ESC to cancel",
+        ]
+
+        for i, instruction in enumerate(instructions):
+            popup_win.addstr(10 + i, 3, instruction, curses.A_DIM)
+
+        popup_win.refresh()
+
+        key = popup_win.getch()
+
+        if key == curses.KEY_UP:
+            new_angle = calibrator.clamp_angle(current_angle + angle_step)
+            calibrator.set_servo_angle(servo_name, new_angle)
+            current_angle = new_angle
+
+        elif key == curses.KEY_DOWN:
+            new_angle = calibrator.clamp_angle(current_angle - angle_step)
+            calibrator.set_servo_angle(servo_name, new_angle)
+            current_angle = new_angle
+
+        elif key in (curses.KEY_ENTER, 10, 13):
+            # Save the calibrated angle to the JSON config
+            servo_name_enum = ServoName(servo_name)
+            config_provider.set_servo_rest_angle(servo_name_enum, int(current_angle))
+            config_provider.save_config()
+            angle_memory[servo_name] = current_angle
+            break
+
+        elif key == 27:  # ESC
+            # Restore previous angle
+            calibrator.set_servo_angle(servo_name, angle_memory[servo_name])
+            break
+
+
+# ============================================================
 # SERVO ADJUSTMENT LOOP
 # ============================================================
 def servo_adjustment_loop(calibrator: ServoCalibrator, win, name, angle_memory, prompt_row):
@@ -335,8 +425,7 @@ def main_menu(stdscr):
             if name == LABELS.CAL_EXIT_LABEL:
                 break
 
-            prompt_row = num_items + CalibrationUI.PROMPT_ROW_OFFSET
-            servo_adjustment_loop(calibrator, panel_win, name, angle_memory, prompt_row)
+            servo_calibration_popup(stdscr, calibrator, name, angle_memory)
 
         panel_win.refresh()
 
