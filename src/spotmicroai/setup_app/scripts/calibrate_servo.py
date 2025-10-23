@@ -38,15 +38,14 @@ class ServoCalibrator:
             servo_name: The ServoName enum value for the servo to calibrate.
         """
         self.servo_name = servo_name
-        config_provider = ConfigProvider()
-        self.config_provider = config_provider
+        self.config_provider = ConfigProvider()
 
         # Initialize PCA9685 board
         pca9685 = PCA9685()
         pca9685.activate_board()
 
         # Get the servo configuration
-        servo_config = config_provider.get_servo(servo_name)
+        servo_config = self.config_provider.get_servo(servo_name)
         channel = pca9685.get_channel(servo_config.channel)
 
         # Create the servo instance
@@ -364,14 +363,10 @@ def calibrate_range(stdscr, calibrator: ServoCalibrator) -> bool:
 def main(servo_id: str, mode: str) -> None:
     """Main entry point for interactive servo calibration."""
     try:
-        # Validate servo ID - find matching ServoName by value
-        servo_enum = None
-        for name in ServoName:
-            if name.value == servo_id:
-                servo_enum = name
-                break
-
-        if servo_enum is None:
+        # Validate servo ID
+        try:
+            servo_enum = ServoName(servo_id)
+        except ValueError:
             print(f"Error: Invalid servo ID '{servo_id}'")
             print(f"Valid servo IDs: {', '.join([s.value for s in ServoName])}")
             sys.exit(1)
