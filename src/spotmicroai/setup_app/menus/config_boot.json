@@ -1,0 +1,21 @@
+{
+  "config_edit": {
+    "title": "Configuration Editor",
+    "options": [
+      {
+        "label": "Enable Spotmicro Runtime upon boot",
+        "action": "run",
+        "command": "bash setup_app/scripts/config_boot.sh on"
+      },
+      {
+        "label": "Disable Spotmicro Runtime upon boot",
+        "action": "run",
+        "command": "bash setup_app/scripts/config_boot.sh off"
+      },
+      {
+        "label": "Back",
+        "action": "back"
+      }
+    ]
+  }
+}
