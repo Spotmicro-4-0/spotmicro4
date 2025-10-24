@@ -55,9 +55,6 @@ class Servo:
         self._rest_angle = rest_angle
         self._last_angle = None
 
-        # Move servo to its defined rest position immediately
-        self.angle = rest_angle
-
     @property
     def angle(self) -> float:
         """Return the last commanded angle."""

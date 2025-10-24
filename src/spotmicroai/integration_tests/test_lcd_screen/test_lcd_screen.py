@@ -10,7 +10,7 @@ It verifies:
     - Character animation and movement
     - Full-screen fill tests
 
-The I²C address is read from the main configuration file (`~/spotmicroai.json`).
+The I²C address is read from the main configuration file (`~/spotmicroai/spotmicroai.json`).
 Use `i2cdetect -y 1` to verify your device’s I²C address before running this test.
 
 Usage:

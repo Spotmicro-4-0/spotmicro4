@@ -32,7 +32,8 @@ class ServoManualControl:
         """
         self.stdscr = stdscr
         self.calibrator = calibrator
-        self.current_pulse = calibrator.servo.min_pulse
+        # Start at the midpoint between min and max pulse
+        self.current_pulse = (calibrator.servo.min_pulse + calibrator.servo.max_pulse) // 2
 
     def get_popup_position(self):
         """Calculate centered popup position."""

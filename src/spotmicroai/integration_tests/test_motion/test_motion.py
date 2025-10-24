@@ -23,7 +23,7 @@ pca9685_reference_clock_speed = pca.reference_clock_speed
 pca9685_frequency = pca.frequency
 
 log.info('Use the command "i2cdetect -y 1" to list your i2c devices connected and')
-log.info('write your pca9685 i2c address(es) and settings in your configuration file ~/spotmicroai.json')
+log.info('write your pca9685 i2c address(es) and settings in your configuration file ~/spotmicroai/spotmicroai.json')
 log.info('There is configuration present for the pca9685 board')
 
 input("Press Enter to start the tests...")

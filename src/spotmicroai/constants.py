@@ -100,17 +100,18 @@ LEG_CALIBRATION = {
 }
 
 # Shoulder calibration: Maps physical angles to servo pulse widths
-# Physical 90° -> 60° (digital), Physical 60° -> 120° (digital)
+# Physical 90° -> min_pulse (digital), Physical 180° -> max_pulse (digital)
+# Range: 90 +/- 30 = [60, 120] degrees
 SHOULDER_CALIBRATION = {
     "joint_type": "shoulder",
     "points": [
         {
-            "description": "Position 1 (leg flat/parallel to floor)",
+            "description": "Position 1 (shoulder at 90 degrees)",
             "physical_angle": 90.0,
         },
         {
-            "description": "Position 2 (leg lowered 30 degrees)",
-            "physical_angle": 60.0,
+            "description": "Position 2 (shoulder at 180 degrees)",
+            "physical_angle": 180.0,
         },
     ],
     "target_min_angle": 60.0,

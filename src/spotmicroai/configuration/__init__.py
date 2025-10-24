@@ -70,7 +70,7 @@ class ConfigProvider(metaclass=Singleton):
     def load_config(self):
         """Load configuration from JSON file"""
         try:
-            config_path = Path.home() / 'spotmicroai.json'
+            config_path = Path.home() / 'spotmicroai' / 'spotmicroai.json'
             default_path = Path.home() / 'spotmicroai' / 'configuration' / 'spotmicroai.template'
 
             # Copy default if config doesn't exist
@@ -94,7 +94,7 @@ class ConfigProvider(metaclass=Singleton):
     def save_config(self):
         """Save current configuration back to JSON file"""
         try:
-            config_path = Path.home() / 'spotmicroai.json'
+            config_path = Path.home() / 'spotmicroai' / 'spotmicroai.json'
             with open(config_path, 'w', encoding='utf-8') as outfile:
                 json.dump(self._raw_data, outfile, indent=2)
             log.info('Configuration saved to %s', config_path)
