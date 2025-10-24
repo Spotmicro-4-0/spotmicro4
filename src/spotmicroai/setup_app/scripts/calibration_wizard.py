@@ -107,6 +107,10 @@ class CalibrationWizard:
         start_x = max(1, (w - self.POPUP_WIDTH) // 2)
         return start_y, start_x
 
+    def _format_servo_name(self) -> str:
+        """Format servo name using shared UI utility."""
+        return ui_utils.CursesUIHelper.format_servo_name(self.calibrator.servo_name.value)
+
     def create_popup_window(self) -> curses.window:
         """Create and configure a popup window."""
         self.popup_start_y, self.popup_start_x = self.get_popup_position()
@@ -140,7 +144,7 @@ class CalibrationWizard:
                 popup_win.box()
 
                 # Title
-                title = LABELS.WIZARD_TITLE.format(self.calibrator.servo_name.value)
+                title = LABELS.WIZARD_TITLE.format(self._format_servo_name())
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 

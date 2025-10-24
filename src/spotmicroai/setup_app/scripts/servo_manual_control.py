@@ -22,7 +22,7 @@ class ServoManualControl:
 
     POPUP_HEIGHT = 16
     POPUP_WIDTH = 75
-    ANGLE_STEP_SIZE = 2  # degrees per adjustment
+    ANGLE_STEP_SIZE = 1  # degrees per adjustment
 
     def __init__(self, stdscr, calibrator: ServoCalibrator):
         """Initialize manual control interface.
@@ -38,6 +38,10 @@ class ServoManualControl:
         # Determine if servo is inverted
         servo_name = calibrator.servo_name.value.lower()
         self.is_inverted = "shoulder" in servo_name
+
+    def _format_servo_name(self) -> str:
+        """Format servo name using shared UI utility."""
+        return ui_utils.CursesUIHelper.format_servo_name(self.calibrator.servo_name.value)
 
     def get_popup_position(self):
         """Calculate centered popup position."""
@@ -131,7 +135,7 @@ class ServoManualControl:
                 popup_win.box()
 
                 # Title
-                title = LABELS.MANUAL_TITLE.format(self.calibrator.servo_name.value)
+                title = LABELS.MANUAL_TITLE.format(self._format_servo_name())
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -151,7 +155,7 @@ class ServoManualControl:
                 )
 
                 popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
-                popup_win.addstr(11, 3, f"  {self.calibrator.servo.rest_angle}°")
+                popup_win.addstr(11, 3, f"  {int(self.calibrator.servo.rest_angle)}°")
 
                 # Instructions
                 popup_win.addstr(13, 3, LABELS.MANUAL_ADJUST_INSTRUCTION.format(self.ANGLE_STEP_SIZE), curses.A_DIM)

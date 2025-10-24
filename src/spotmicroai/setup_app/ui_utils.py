@@ -232,3 +232,18 @@ class CursesUIHelper:
         if h < min_height or w < min_width:
             return False, f"Terminal too small! Requires at least {min_height}x{min_width}, got {h}x{w}"
         return True, ""
+
+    @staticmethod
+    def format_servo_name(servo_name_str: str) -> str:
+        """Format servo name by removing underscores and capitalizing each word.
+
+        Example: 'front_shoulder_left' -> 'Front Shoulder Left'
+
+        Args:
+            servo_name_str: The servo name string (e.g., from ServoName.value)
+
+        Returns:
+            Formatted servo name with title case.
+        """
+        words = servo_name_str.split('_')
+        return ' '.join(word.capitalize() for word in words)
