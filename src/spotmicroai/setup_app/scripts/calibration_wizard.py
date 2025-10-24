@@ -6,6 +6,7 @@ Interactive guided calibration for different joint types (foot, leg, shoulder).
 Walks the user through physical calibration points and calculates servo parameters.
 
 Usage: calibration_wizard.py <SERVO_ID>
+       calibration_wizard.py all (to calibrate all servos sequentially)
 """
 
 import curses
@@ -319,40 +320,35 @@ class CalibrationWizard:
 
 
 def main(servo_id: str) -> None:
-    """Main entry point for calibration wizard."""
+    """Main entry point for calibration wizard.
+
+    Args:
+        servo_id: The servo ID to calibrate, or "all" to calibrate all servos
+    """
     try:
-        # Validate servo ID
-        try:
-            servo_enum = ServoName(servo_id)
-        except ValueError:
-            print(f"Error: Invalid servo ID '{servo_id}'")
-            print(f"Valid servo IDs: {', '.join([s.value for s in ServoName])}")
-            sys.exit(1)
+        # Handle "all" case
+        if servo_id.lower() == "all":
+            servo_ids = [s.value for s in ServoName]
+            successful = []
+            failed = []
 
-        # Get joint type and calibration spec
-        joint_type = get_joint_type_from_servo_name(servo_enum)
-        spec = get_calibration_spec(joint_type)
+            for sid in servo_ids:
+                try:
+                    _calibrate_single_servo(sid)
+                    successful.append(sid)
+                except Exception as e:
+                    print(f"\n✗ Error calibrating {sid}: {e}")
+                    failed.append(sid)
 
-        # Initialize calibrator
-        calibrator = ServoCalibrator(servo_enum)
+            print(f"\n{'='*50}")
+            print(f"✓ Successfully calibrated: {len(successful)} servos")
+            print(f"✗ Failed: {len(failed)} servos")
+            if failed:
+                print(f"Failed servos: {', '.join(failed)}")
+            return
 
-        # Run wizard
-        def wizard_wrapper(stdscr):
-            curses.curs_set(0)
-            curses.start_color()
-            curses.use_default_colors()
-            ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
-            stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
-
-            wizard = CalibrationWizard(stdscr, calibrator, spec)
-            return wizard.run()
-
-        result = curses.wrapper(wizard_wrapper)
-
-        if result:
-            print(f"\n✓ Successfully calibrated {servo_id}")
-        else:
-            print(f"\n✗ Calibration cancelled for {servo_id}")
+        # Single servo calibration
+        _calibrate_single_servo(servo_id)
 
     except KeyboardInterrupt:
         print("\n✗ Calibration interrupted by user")
@@ -360,6 +356,49 @@ def main(servo_id: str) -> None:
     except Exception as e:
         print(f"\n✗ Error during calibration: {e}")
         sys.exit(1)
+
+
+def _calibrate_single_servo(servo_id: str) -> None:
+    """Calibrate a single servo.
+
+    Args:
+        servo_id: The servo ID to calibrate
+
+    Raises:
+        ValueError: If servo_id is invalid
+    """
+    # Validate servo ID
+    try:
+        servo_enum = ServoName(servo_id)
+    except ValueError:
+        print(f"Error: Invalid servo ID '{servo_id}'")
+        print(f"Valid servo IDs: {', '.join([s.value for s in ServoName])}")
+        raise
+
+    # Get joint type and calibration spec
+    joint_type = get_joint_type_from_servo_name(servo_enum)
+    spec = get_calibration_spec(joint_type)
+
+    # Initialize calibrator
+    calibrator = ServoCalibrator(servo_enum)
+
+    # Run wizard
+    def wizard_wrapper(stdscr):
+        curses.curs_set(0)
+        curses.start_color()
+        curses.use_default_colors()
+        ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
+        stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
+
+        wizard = CalibrationWizard(stdscr, calibrator, spec)
+        return wizard.run()
+
+    result = curses.wrapper(wizard_wrapper)
+
+    if result:
+        print(f"\n✓ Successfully calibrated {servo_id}")
+    else:
+        print(f"\n✗ Calibration cancelled for {servo_id}")
 
 
 if __name__ == "__main__":

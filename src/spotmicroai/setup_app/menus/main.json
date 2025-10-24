@@ -18,7 +18,7 @@
         "label": "Servo Calibration",
         "description": "Launches the servo calibration menu",
         "action": "submenu",
-        "target": "calibrate_servos"
+        "target": "calibrate_servo_select_mode"
       },
       {
         "label": "Start/Stop Runtime on Boot",

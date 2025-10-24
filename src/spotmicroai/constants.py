@@ -67,11 +67,11 @@ FOOT_CALIBRATION = {
     "joint_type": "foot",
     "points": [
         {
-            "description": "Minimum position (foot perpendicular to leg)",
+            "description": "Minimum position (foot inline with leg)",
             "physical_angle": 17.0,
         },
         {
-            "description": "Maximum position (foot inline with leg)",
+            "description": "Maximum position (foot perpendicular to leg)",
             "physical_angle": 131.0,
         },
     ],

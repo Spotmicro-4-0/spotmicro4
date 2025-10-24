@@ -1,0 +1,29 @@
+{
+  "calibrate_servo_select_mode": {
+    "title": "Servo Calibration: Select Mode",
+    "options": [
+      {
+        "label": "Calibration Wizard",
+        "description": "Interactive guided calibration for servo joints",
+        "action": "submenu",
+        "target": "calibrate_servo_wizard_select"
+      },
+      {
+        "label": "Manual Motion Test",
+        "description": "Real-time servo control for testing and verification",
+        "action": "submenu",
+        "target": "calibrate_servo_manual_select"
+      },
+      {
+        "label": "Advanced Value Edit (DANGER!)",
+        "description": "Manually edit servo calibration values",
+        "action": "submenu",
+        "target": "calibrate_servo_advanced_select"
+      },
+      {
+        "label": "Back",
+        "action": "back"
+      }
+    ]
+  }
+}
