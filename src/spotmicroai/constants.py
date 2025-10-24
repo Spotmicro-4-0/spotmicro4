@@ -81,16 +81,17 @@ FOOT_CALIBRATION = {
 }
 
 # Leg calibration: Maps physical angles to servo pulse widths
-# Physical 0° -> -20° (digital), Physical 90° -> 110° (digital)
+# Calibrate at two easily measurable reference points (0° and 90°)
+# and infer the target range through linear extrapolation
 LEG_CALIBRATION = {
     "joint_type": "leg",
     "points": [
         {
-            "description": "Minimum position (leg vertical/perpendicular to floor)",
+            "description": "Reference position 1 (leg vertical, 0°)",
             "physical_angle": 0.0,
         },
         {
-            "description": "Maximum position (leg flat/parallel to floor)",
+            "description": "Reference position 2 (leg horizontal, 90°)",
             "physical_angle": 90.0,
         },
     ],
@@ -100,17 +101,18 @@ LEG_CALIBRATION = {
 }
 
 # Shoulder calibration: Maps physical angles to servo pulse widths
-# Physical 90° -> min_pulse (digital), Physical 180° -> max_pulse (digital)
-# Range: 90 +/- 30 = [60, 120] degrees
+# Calibrate at two easily measurable reference points (90° and 180°)
+# and infer the target range [60°-120°] through linear extrapolation
+# Rest position is at 90° (the first reference point)
 SHOULDER_CALIBRATION = {
     "joint_type": "shoulder",
     "points": [
         {
-            "description": "Position 1 (shoulder at 90 degrees)",
+            "description": "Reference position 1 (shoulder at 90°, also the rest position)",
             "physical_angle": 90.0,
         },
         {
-            "description": "Position 2 (shoulder at 180 degrees)",
+            "description": "Reference position 2 (shoulder at 180°)",
             "physical_angle": 180.0,
         },
     ],

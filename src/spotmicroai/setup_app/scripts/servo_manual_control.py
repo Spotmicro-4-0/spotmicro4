@@ -145,7 +145,7 @@ class ServoManualControl:
                 # Current status
                 popup_win.addstr(4, 3, LABELS.MANUAL_CURRENT_PULSE_WIDTH, curses.A_BOLD)
                 calculated_angle = self.calculate_angle_from_pulse(self.current_pulse)
-                popup_win.addstr(5, 3, f"  {self.current_pulse} µs ({int(calculated_angle)}°)")
+                popup_win.addstr(5, 3, f"  {int(self.current_pulse)} µs ({int(calculated_angle)}°)")
 
                 popup_win.addstr(7, 3, LABELS.MANUAL_SERVO_RANGE)
                 popup_win.addstr(
@@ -155,7 +155,15 @@ class ServoManualControl:
                 )
 
                 popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
-                popup_win.addstr(11, 3, f"  {int(self.calibrator.servo.rest_angle)}°")
+                # For shoulders, rest is always 90° (Point 1). For other servos, calculate from local angle
+                if "shoulder" in self.calibrator.servo_name.value.lower():
+                    rest_angle_display = 90
+                else:
+                    rest_physical = self.calibrator.servo.min_pulse + (
+                        self.calibrator.servo.rest_angle / self.calibrator.servo.range
+                    ) * (self.calibrator.servo.max_pulse - self.calibrator.servo.min_pulse)
+                    rest_angle_display = self.calculate_angle_from_pulse(int(rest_physical))
+                popup_win.addstr(11, 3, f"  {int(rest_angle_display)}°")
 
                 # Instructions
                 popup_win.addstr(13, 3, LABELS.MANUAL_ADJUST_INSTRUCTION.format(self.ANGLE_STEP_SIZE), curses.A_DIM)

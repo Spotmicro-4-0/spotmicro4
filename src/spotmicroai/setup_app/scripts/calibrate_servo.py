@@ -13,9 +13,9 @@ import curses
 import sys
 from enum import Enum
 
-from spotmicroai.configuration import ConfigProvider, ServoName
-from spotmicroai.drivers import PCA9685, Servo
+from spotmicroai.configuration import ServoName
 from spotmicroai.setup_app import theme as THEME, ui_utils
+from spotmicroai.setup_app.scripts.servo_calibrator import ServoCalibrator
 
 
 class CalibrationMode(Enum):
@@ -25,60 +25,6 @@ class CalibrationMode(Enum):
     MAX = "max"
     REST = "rest"
     RANGE = "range"
-
-
-class ServoCalibrator:
-    """Manages a single servo hardware control and calibration."""
-
-    def __init__(self, servo_name: ServoName):
-        """
-        Initialize the servo calibrator for a specific servo.
-
-        Args:
-            servo_name: The ServoName enum value for the servo to calibrate.
-        """
-        self.servo_name = servo_name
-        self.config_provider = ConfigProvider()
-
-        # Initialize PCA9685 board
-        pca9685 = PCA9685()
-        pca9685.activate_board()
-
-        # Get the servo configuration
-        servo_config = self.config_provider.get_servo(servo_name)
-        channel = pca9685.get_channel(servo_config.channel)
-
-        # Create the servo instance
-        self.servo = Servo(
-            channel,
-            min_pulse=servo_config.min_pulse,
-            max_pulse=servo_config.max_pulse,
-            actuation_range=servo_config.range,
-            rest_angle=servo_config.rest_angle,
-        )
-
-    @staticmethod
-    def clamp_angle(angle: float) -> float:
-        """Clamp angle to valid servo range (0-270 degrees)."""
-        return max(0, min(270, angle))
-
-    @staticmethod
-    def clamp_pulse(pulse: float) -> float:
-        """Clamp pulse width to valid range (500-2500 microseconds)."""
-        return max(500, min(2500, pulse))
-
-    def set_servo_angle(self, angle: float) -> float:
-        """Move the servo to the provided angle."""
-        target = self.clamp_angle(angle)
-        self.servo.angle = target
-        return target
-
-    def set_servo_pulse(self, pulse_us: float) -> float:
-        """Set servo pulse width directly (for min/max calibration)."""
-        target = self.clamp_pulse(pulse_us)
-        # Directly set pulse width using the channel
-        self.servo.channel.duty_cycle = int((target / 20000) * 65535)
-        return target
 
 
 def calibrate_minimum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
