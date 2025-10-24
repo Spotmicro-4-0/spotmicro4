@@ -13,6 +13,7 @@ import sys
 
 from spotmicroai.configuration import ServoName
 from spotmicroai.setup_app import theme as THEME, ui_utils
+import spotmicroai.setup_app.labels as LABELS
 from spotmicroai.setup_app.scripts.servo_calibrator import ServoCalibrator
 
 
@@ -130,7 +131,7 @@ class ServoManualControl:
                 popup_win.box()
 
                 # Title
-                title = f"Manual Servo Control - {self.calibrator.servo_name.value}"
+                title = LABELS.MANUAL_TITLE.format(self.calibrator.servo_name.value)
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -138,23 +139,23 @@ class ServoManualControl:
                 popup_win.hline(2, 1, curses.ACS_HLINE, self.POPUP_WIDTH - 2)
 
                 # Current status
-                popup_win.addstr(4, 3, "Current Pulse Width:", curses.A_BOLD)
+                popup_win.addstr(4, 3, LABELS.MANUAL_CURRENT_PULSE_WIDTH, curses.A_BOLD)
                 calculated_angle = self.calculate_angle_from_pulse(self.current_pulse)
                 popup_win.addstr(5, 3, f"  {self.current_pulse} µs ({int(calculated_angle)}°)")
 
-                popup_win.addstr(7, 3, "Servo Range:")
+                popup_win.addstr(7, 3, LABELS.MANUAL_SERVO_RANGE)
                 popup_win.addstr(
                     8,
                     3,
                     f"  Min: {self.calibrator.servo.min_pulse} µs | Max: {self.calibrator.servo.max_pulse} µs",
                 )
 
-                popup_win.addstr(10, 3, "Rest Angle:")
+                popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
                 popup_win.addstr(11, 3, f"  {self.calibrator.servo.rest_angle}°")
 
                 # Instructions
-                popup_win.addstr(13, 3, f"↑/↓ adjust ±{self.ANGLE_STEP_SIZE}°", curses.A_DIM)
-                popup_win.addstr(14, 3, "ESC to exit", curses.A_DIM)
+                popup_win.addstr(13, 3, LABELS.MANUAL_ADJUST_INSTRUCTION.format(self.ANGLE_STEP_SIZE), curses.A_DIM)
+                popup_win.addstr(14, 3, LABELS.MANUAL_EXIT_INSTRUCTION, curses.A_DIM)
 
                 popup_win.refresh()
 
@@ -185,8 +186,8 @@ def main(servo_id: str) -> None:
         try:
             servo_enum = ServoName(servo_id)
         except ValueError:
-            print(f"Error: Invalid servo ID '{servo_id}'")
-            print(f"Valid servo IDs: {', '.join([s.value for s in ServoName])}")
+            print(LABELS.MANUAL_INVALID_SERVO_ID.format(servo_id))
+            print(LABELS.MANUAL_VALID_SERVO_IDS.format(', '.join([s.value for s in ServoName])))
             sys.exit(1)
 
         # Initialize calibrator
@@ -206,21 +207,21 @@ def main(servo_id: str) -> None:
         result = curses.wrapper(control_wrapper)
 
         if result:
-            print(f"\n✓ Manual control completed for {servo_id}")
+            print(LABELS.MANUAL_COMPLETED.format(servo_id))
         else:
-            print(f"\n✗ Manual control cancelled for {servo_id}")
+            print(LABELS.MANUAL_CANCELLED.format(servo_id))
 
     except KeyboardInterrupt:
-        print("\n✗ Manual control interrupted by user")
+        print(LABELS.MANUAL_INTERRUPTED)
         sys.exit(1)
     except Exception as e:
-        print(f"\n✗ Error during manual control: {e}")
+        print(LABELS.MANUAL_ERROR.format(e))
         sys.exit(1)
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: servo_manual_control.py <SERVO_ID>")
+        print(LABELS.MANUAL_USAGE)
         sys.exit(1)
 
     servo_id_arg = sys.argv[1]
