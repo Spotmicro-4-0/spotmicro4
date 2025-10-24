@@ -21,7 +21,7 @@ class ServoManualControl:
 
     POPUP_HEIGHT = 16
     POPUP_WIDTH = 75
-    STEP_SIZE = 10  # microseconds per adjustment
+    ANGLE_STEP_SIZE = 2  # degrees per adjustment
 
     def __init__(self, stdscr, calibrator: ServoCalibrator):
         """Initialize manual control interface.
@@ -34,6 +34,9 @@ class ServoManualControl:
         self.calibrator = calibrator
         # Start at the midpoint between min and max pulse
         self.current_pulse = (calibrator.servo.min_pulse + calibrator.servo.max_pulse) // 2
+        # Determine if servo is inverted
+        servo_name = calibrator.servo_name.value.lower()
+        self.is_inverted = "shoulder" in servo_name
 
     def get_popup_position(self):
         """Calculate centered popup position."""
@@ -41,6 +44,69 @@ class ServoManualControl:
         start_y = max(1, (h - self.POPUP_HEIGHT) // 2)
         start_x = max(1, (w - self.POPUP_WIDTH) // 2)
         return start_y, start_x
+
+    def get_servo_target_min_angle(self) -> float:
+        """Get the target minimum angle for the current servo type."""
+        if "shoulder" in self.calibrator.servo_name.value.lower():
+            return 60.0
+        elif "leg" in self.calibrator.servo_name.value.lower():
+            return -20.0
+        else:
+            return 0.0
+
+    def calculate_angle_from_pulse(self, pulse: int | float) -> float:
+        """Calculate servo angle based on current pulse width and calibration.
+
+        Args:
+            pulse: Pulse width in microseconds
+
+        Returns:
+            Calculated angle in degrees based on current calibration
+        """
+        servo = self.calibrator.servo
+        pulse_range = servo.max_pulse - servo.min_pulse
+
+        if pulse_range == 0:
+            return servo.rest_angle
+
+        target_min_angle = self.get_servo_target_min_angle()
+
+        # Calculate angle proportionally across the range
+        pulse_offset = pulse - servo.min_pulse
+
+        if self.is_inverted:
+            # For inverted servos (shoulder), the relationship is backwards
+            # So we invert the pulse offset calculation
+            angle_offset = ((servo.max_pulse - pulse) / pulse_range) * servo.range
+        else:
+            # For normal servos (leg), higher pulse = higher angle
+            angle_offset = (pulse_offset / pulse_range) * servo.range
+
+        # Add the minimum angle offset to get the actual angle
+        angle = target_min_angle + angle_offset
+
+        return angle
+
+    def adjust_pulse_for_angle_change(self, angle_delta: float) -> None:
+        """Adjust pulse width to achieve desired angle change.
+
+        Args:
+            angle_delta: Change in angle (positive = increase angle, negative = decrease angle)
+        """
+        servo = self.calibrator.servo
+        pulse_range = servo.max_pulse - servo.min_pulse
+
+        if pulse_range == 0:
+            return
+
+        # Calculate pulse change needed for the angle change
+        pulse_delta = (angle_delta / servo.range) * pulse_range
+
+        if self.is_inverted:
+            # For inverted servos, angle increase requires pulse decrease
+            pulse_delta = -pulse_delta
+
+        self.current_pulse = self.calibrator.clamp_pulse(self.current_pulse + pulse_delta)
 
     def create_popup_window(self):
         """Create and configure a popup window."""
@@ -73,7 +139,8 @@ class ServoManualControl:
 
                 # Current status
                 popup_win.addstr(4, 3, "Current Pulse Width:", curses.A_BOLD)
-                popup_win.addstr(5, 3, f"  {self.current_pulse} µs")
+                calculated_angle = self.calculate_angle_from_pulse(self.current_pulse)
+                popup_win.addstr(5, 3, f"  {self.current_pulse} µs ({int(calculated_angle)}°)")
 
                 popup_win.addstr(7, 3, "Servo Range:")
                 popup_win.addstr(
@@ -86,7 +153,7 @@ class ServoManualControl:
                 popup_win.addstr(11, 3, f"  {self.calibrator.servo.rest_angle}°")
 
                 # Instructions
-                popup_win.addstr(13, 3, f"↑/↓ adjust ±{self.STEP_SIZE} µs", curses.A_DIM)
+                popup_win.addstr(13, 3, f"↑/↓ adjust ±{self.ANGLE_STEP_SIZE}°", curses.A_DIM)
                 popup_win.addstr(14, 3, "ESC to exit", curses.A_DIM)
 
                 popup_win.refresh()
@@ -97,9 +164,9 @@ class ServoManualControl:
                 key = popup_win.getch()
 
                 if key == curses.KEY_UP:
-                    self.current_pulse = self.calibrator.clamp_pulse(self.current_pulse + self.STEP_SIZE)
+                    self.adjust_pulse_for_angle_change(self.ANGLE_STEP_SIZE)
                 elif key == curses.KEY_DOWN:
-                    self.current_pulse = self.calibrator.clamp_pulse(self.current_pulse - self.STEP_SIZE)
+                    self.adjust_pulse_for_angle_change(-self.ANGLE_STEP_SIZE)
                 elif key == 27:  # ESC
                     return True
 
@@ -131,7 +198,7 @@ def main(servo_id: str) -> None:
             curses.start_color()
             curses.use_default_colors()
             ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
-            stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
+            # stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
 
             control = ServoManualControl(stdscr, calibrator)
             return control.run()

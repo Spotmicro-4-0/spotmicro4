@@ -18,6 +18,7 @@ from typing import cast, Tuple
 from spotmicroai.configuration import ServoName
 from spotmicroai.constants import CALIBRATION_SPECS
 from spotmicroai.setup_app import theme as THEME, ui_utils
+import spotmicroai.setup_app.labels as LABELS
 from spotmicroai.setup_app.scripts.servo_calibrator import ServoCalibrator
 
 
@@ -58,7 +59,7 @@ def get_joint_type_from_servo_name(servo_name: ServoName) -> JointType:
         return JointType.LEG
     elif "shoulder" in name_str:
         return JointType.SHOULDER
-    raise ValueError(f"Could not determine joint type for servo: {servo_name}")
+    raise ValueError(LABELS.WIZARD_JOINT_TYPE_ERROR.format(servo_name))
 
 
 def get_calibration_spec(joint_type: JointType) -> JointCalibrationSpec:
@@ -139,7 +140,7 @@ class CalibrationWizard:
                 popup_win.box()
 
                 # Title
-                title = f"Calibration Wizard - {self.calibrator.servo_name.value}"
+                title = LABELS.WIZARD_TITLE.format(self.calibrator.servo_name.value)
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -148,22 +149,22 @@ class CalibrationWizard:
 
                 # Instructions
                 instructions = [
-                    f"Joint Type: {self.spec.joint_type.value.upper()}",
+                    LABELS.WIZARD_JOINT_TYPE_LINE.format(self.spec.joint_type.value.upper()),
                     "",
-                    "You will be guided through physical calibration.",
-                    "Follow the on-screen instructions to position",
-                    "the joint at specific angles.",
+                    LABELS.WIZARD_INSTRUCTION_1,
+                    LABELS.WIZARD_INSTRUCTION_2,
+                    LABELS.WIZARD_INSTRUCTION_3,
                     "",
-                    "The servo will move as you adjust it.",
-                    "Use arrow keys to fine-tune the position.",
+                    LABELS.WIZARD_INSTRUCTION_4,
+                    LABELS.WIZARD_INSTRUCTION_5,
                     "",
                 ]
 
                 for i, line in enumerate(instructions):
                     popup_win.addstr(4 + i, 3, line)
 
-                popup_win.addstr(13, 3, "Press ENTER to begin", curses.A_DIM)
-                popup_win.addstr(14, 3, "Press ESC to cancel", curses.A_DIM)
+                popup_win.addstr(13, 3, LABELS.WIZARD_PRESS_ENTER_BEGIN, curses.A_DIM)
+                popup_win.addstr(14, 3, LABELS.WIZARD_PRESS_ESC_CANCEL, curses.A_DIM)
 
                 popup_win.refresh()
                 self.refresh_popup_shadow()
@@ -189,7 +190,7 @@ class CalibrationWizard:
                 popup_win.box()
 
                 # Title
-                title = f"Point {point_index + 1}/{len(self.spec.points)}"
+                title = LABELS.WIZARD_POINT_TITLE.format(point_index + 1, len(self.spec.points))
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -197,33 +198,33 @@ class CalibrationWizard:
 
                 # Description
                 popup_win.addstr(4, 3, point.description)
-                popup_win.addstr(5, 3, f"Expected angle: {point.physical_angle}°")
+                popup_win.addstr(5, 3, LABELS.WIZARD_EXPECTED_ANGLE.format(point.physical_angle))
 
                 # Current values
-                popup_win.addstr(7, 3, f"Current Pulse: {current_pulse} µs")
+                popup_win.addstr(7, 3, LABELS.WIZARD_CURRENT_PULSE.format(current_pulse))
 
                 # Display Min Pulse: show only if point 1 has been captured
                 if len(self.captured_points) > 0:
                     min_pulse_str = f"{self.captured_points[0].pulse_width} µs"
                 else:
-                    min_pulse_str = "--"
-                popup_win.addstr(8, 3, f"Min Pulse: {min_pulse_str}")
+                    min_pulse_str = LABELS.WIZARD_DASH
+                popup_win.addstr(8, 3, LABELS.WIZARD_MIN_PULSE_LABEL.format(min_pulse_str))
 
                 # Display Max Pulse: show only if point 2 has been captured
                 if len(self.captured_points) > 1:
                     max_pulse_str = f"{self.captured_points[1].pulse_width} µs"
                 else:
-                    max_pulse_str = "--"
-                popup_win.addstr(9, 3, f"Max Pulse: {max_pulse_str}")
+                    max_pulse_str = LABELS.WIZARD_DASH
+                popup_win.addstr(9, 3, LABELS.WIZARD_MAX_PULSE_LABEL.format(max_pulse_str))
 
                 # Instructions
                 popup_win.addstr(
                     11,
                     3,
-                    f"↑/↓ adjust ±{self.STEP_SIZE} µs",
+                    LABELS.WIZARD_ADJUST_INSTRUCTION.format(self.STEP_SIZE),
                     curses.A_DIM,
                 )
-                popup_win.addstr(12, 3, "ENTER to confirm, ESC to cancel", curses.A_DIM)
+                popup_win.addstr(12, 3, LABELS.WIZARD_ENTER_CONFIRM_ESC_CANCEL, curses.A_DIM)
 
                 popup_win.refresh()
                 self.refresh_popup_shadow()
@@ -260,7 +261,7 @@ class CalibrationWizard:
                 popup_win.erase()
                 popup_win.box()
 
-                title = "Calibration Summary"
+                title = LABELS.WIZARD_SUMMARY_TITLE
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -272,7 +273,7 @@ class CalibrationWizard:
                     popup_win.addstr(
                         row,
                         3,
-                        f"Point {i + 1}: {point.pulse_width} µs @ {point.physical_angle}°",
+                        LABELS.WIZARD_POINT_SUMMARY.format(i + 1, point.pulse_width, point.physical_angle),
                     )
                     row += 1
 
@@ -281,12 +282,12 @@ class CalibrationWizard:
                 popup_win.addstr(
                     row,
                     3,
-                    f"Target Range: {self.spec.target_min_angle}° to {self.spec.target_max_angle}°",
+                    LABELS.WIZARD_TARGET_RANGE.format(self.spec.target_min_angle, self.spec.target_max_angle),
                 )
                 row += 1
-                popup_win.addstr(row, 3, f"Rest Angle: {self.spec.rest_angle}°")
+                popup_win.addstr(row, 3, LABELS.WIZARD_REST_ANGLE.format(self.spec.rest_angle))
 
-                popup_win.addstr(13, 3, "ENTER to save, ESC to cancel", curses.A_DIM)
+                popup_win.addstr(13, 3, LABELS.WIZARD_ENTER_SAVE_ESC_CANCEL, curses.A_DIM)
 
                 popup_win.refresh()
                 self.refresh_popup_shadow()
@@ -307,14 +308,14 @@ class CalibrationWizard:
         min and max pulses based on the target range through linear extrapolation.
         """
         if len(self.captured_points) < 2:
-            raise ValueError("Need at least 2 calibration points")
+            raise ValueError(LABELS.WIZARD_NEED_TWO_POINTS)
 
         point1 = self.captured_points[0]
         point2 = self.captured_points[1]
 
         # Validate that pulse widths were captured
-        assert point1.pulse_width is not None, "Pulse width not captured for point 1"
-        assert point2.pulse_width is not None, "Pulse width not captured for point 2"
+        assert point1.pulse_width is not None, LABELS.WIZARD_PULSE_NOT_CAPTURED_1
+        assert point2.pulse_width is not None, LABELS.WIZARD_PULSE_NOT_CAPTURED_2
 
         # For shoulder and leg servos, use captured points to infer full range
         if self.spec.joint_type in (JointType.SHOULDER, JointType.LEG):
@@ -355,6 +356,12 @@ class CalibrationWizard:
         self.calibrator.config_provider.set_servo_rest_angle(self.calibrator.servo_name, int(self.spec.rest_angle))
         self.calibrator.config_provider.save_config()
 
+        # Reload servo configuration with new calibrated values
+        servo_config = self.calibrator.config_provider.get_servo(self.calibrator.servo_name)
+        self.calibrator.servo.min_pulse = servo_config.min_pulse
+        self.calibrator.servo.max_pulse = servo_config.max_pulse
+        self.calibrator.servo.rest_angle = servo_config.rest_angle
+
         # Move servo to home/rest position after calibration is saved
         self.calibrator.set_servo_angle(int(self.spec.rest_angle))
 
@@ -375,7 +382,7 @@ class CalibrationWizard:
             return True
 
         except Exception as e:
-            print(f"Error during calibration: {e}")
+            print(LABELS.WIZARD_ERROR_CALIBRATION.format(e))
             return False
 
 
@@ -397,24 +404,24 @@ def main(servo_id: str) -> None:
                     _calibrate_single_servo(sid)
                     successful.append(sid)
                 except Exception as e:
-                    print(f"\n✗ Error calibrating {sid}: {e}")
+                    print(LABELS.WIZARD_ERROR_CALIBRATING.format(sid, e))
                     failed.append(sid)
 
-            print(f"\n{'='*50}")
-            print(f"✓ Successfully calibrated: {len(successful)} servos")
-            print(f"✗ Failed: {len(failed)} servos")
+            print(LABELS.WIZARD_SEPARATOR)
+            print(LABELS.WIZARD_SUCCESS_COUNT.format(len(successful)))
+            print(LABELS.WIZARD_FAILED_COUNT.format(len(failed)))
             if failed:
-                print(f"Failed servos: {', '.join(failed)}")
+                print(LABELS.WIZARD_FAILED_SERVOS.format(', '.join(failed)))
             return
 
         # Single servo calibration
         _calibrate_single_servo(servo_id)
 
     except KeyboardInterrupt:
-        print("\n✗ Calibration interrupted by user")
+        print(LABELS.WIZARD_INTERRUPTED)
         sys.exit(1)
     except Exception as e:
-        print(f"\n✗ Error during calibration: {e}")
+        print(LABELS.WIZARD_ERROR_GENERAL.format(e))
         sys.exit(1)
 
 
@@ -431,8 +438,8 @@ def _calibrate_single_servo(servo_id: str) -> None:
     try:
         servo_enum = ServoName(servo_id)
     except ValueError:
-        print(f"Error: Invalid servo ID '{servo_id}'")
-        print(f"Valid servo IDs: {', '.join([s.value for s in ServoName])}")
+        print(LABELS.WIZARD_INVALID_SERVO_ID.format(servo_id))
+        print(LABELS.WIZARD_VALID_SERVO_IDS.format(', '.join([s.value for s in ServoName])))
         raise
 
     # Get joint type and calibration spec
@@ -457,14 +464,14 @@ def _calibrate_single_servo(servo_id: str) -> None:
     result = curses.wrapper(wizard_wrapper)
 
     if result:
-        print(f"\n✓ Successfully calibrated {servo_id}")
+        print(LABELS.WIZARD_SUCCESS_SINGLE.format(servo_id))
     else:
-        print(f"\n✗ Calibration cancelled for {servo_id}")
+        print(LABELS.WIZARD_CANCELLED.format(servo_id))
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: calibration_wizard.py <SERVO_ID>")
+        print(LABELS.WIZARD_USAGE)
         sys.exit(1)
 
     servo_id_arg = sys.argv[1]
