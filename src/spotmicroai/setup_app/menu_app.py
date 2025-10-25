@@ -504,13 +504,6 @@ class MenuApp:
             error_message = "Command interrupted by user"
             print("\n[INFO] Command interrupted by user")
 
-        if not error_occurred:
-            try:
-                input(f"\n{LABELS.MSG_PRESS_ENTER_RETURN}")
-            except KeyboardInterrupt:
-                # Handle Ctrl+C during the input prompt
-                print("\n")
-
         if self.stdscr:
             # Restore curses mode
             curses.reset_prog_mode()
