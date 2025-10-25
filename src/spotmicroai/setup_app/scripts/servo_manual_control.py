@@ -14,7 +14,7 @@ import sys
 from spotmicroai.configuration import ServoName
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
-from spotmicroai.setup_app.scripts.servo_calibrator import ServoCalibrator
+from spotmicroai.setup_app.scripts.servo_controller import ServoController
 
 
 class ServoManualControl:
@@ -24,24 +24,24 @@ class ServoManualControl:
     POPUP_WIDTH = 75
     ANGLE_STEP_SIZE = 1  # degrees per adjustment
 
-    def __init__(self, stdscr, calibrator: ServoCalibrator):
+    def __init__(self, stdscr, servo_controller: ServoController):
         """Initialize manual control interface.
 
         Args:
             stdscr: curses window object
-            calibrator: ServoCalibrator instance for servo control
+            servo_controller: ServoController instance for servo control
         """
         self.stdscr = stdscr
-        self.calibrator = calibrator
+        self.servo_controller = servo_controller
         # Start at the midpoint between min and max pulse
-        self.current_pulse = (calibrator.servo.min_pulse + calibrator.servo.max_pulse) // 2
+        self.current_pulse = (servo_controller.servo.min_pulse + servo_controller.servo.max_pulse) // 2
         # Determine if servo is inverted
-        servo_name = calibrator.servo_name.value.lower()
+        servo_name = servo_controller.servo_name.value.lower()
         self.is_inverted = "shoulder" in servo_name
 
     def _format_servo_name(self) -> str:
         """Format servo name using shared UI utility."""
-        return ui_utils.CursesUIHelper.format_servo_name(self.calibrator.servo_name.value)
+        return ui_utils.CursesUIHelper.format_servo_name(self.servo_controller.servo_name.value)
 
     def get_popup_position(self):
         """Calculate centered popup position."""
@@ -52,9 +52,9 @@ class ServoManualControl:
 
     def get_servo_target_min_angle(self) -> float:
         """Get the target minimum angle for the current servo type."""
-        if "shoulder" in self.calibrator.servo_name.value.lower():
+        if "shoulder" in self.servo_controller.servo_name.value.lower():
             return 60.0
-        elif "leg" in self.calibrator.servo_name.value.lower():
+        elif "leg" in self.servo_controller.servo_name.value.lower():
             return -20.0
         else:
             return 0.0
@@ -68,7 +68,7 @@ class ServoManualControl:
         Returns:
             Calculated angle in degrees based on current calibration
         """
-        servo = self.calibrator.servo
+        servo = self.servo_controller.servo
         pulse_range = servo.max_pulse - servo.min_pulse
 
         if pulse_range == 0:
@@ -98,7 +98,7 @@ class ServoManualControl:
         Args:
             angle_delta: Change in angle (positive = increase angle, negative = decrease angle)
         """
-        servo = self.calibrator.servo
+        servo = self.servo_controller.servo
         pulse_range = servo.max_pulse - servo.min_pulse
 
         if pulse_range == 0:
@@ -111,7 +111,7 @@ class ServoManualControl:
             # For inverted servos, angle increase requires pulse decrease
             pulse_delta = -pulse_delta
 
-        self.current_pulse = self.calibrator.clamp_pulse(self.current_pulse + pulse_delta)
+        self.current_pulse = self.servo_controller.clamp_pulse(self.current_pulse + pulse_delta)
 
     def create_popup_window(self):
         """Create and configure a popup window."""
@@ -151,17 +151,17 @@ class ServoManualControl:
                 popup_win.addstr(
                     8,
                     3,
-                    f"  Min: {self.calibrator.servo.min_pulse} µs | Max: {self.calibrator.servo.max_pulse} µs",
+                    f"  Min: {self.servo_controller.servo.min_pulse} µs | Max: {self.servo_controller.servo.max_pulse} µs",
                 )
 
                 popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
                 # For shoulders, rest is always 90° (Point 1). For other servos, calculate from local angle
-                if "shoulder" in self.calibrator.servo_name.value.lower():
+                if "shoulder" in self.servo_controller.servo_name.value.lower():
                     rest_angle_display = 90
                 else:
-                    rest_physical = self.calibrator.servo.min_pulse + (
-                        self.calibrator.servo.rest_angle / self.calibrator.servo.range
-                    ) * (self.calibrator.servo.max_pulse - self.calibrator.servo.min_pulse)
+                    rest_physical = self.servo_controller.servo.min_pulse + (
+                        self.servo_controller.servo.rest_angle / self.servo_controller.servo.range
+                    ) * (self.servo_controller.servo.max_pulse - self.servo_controller.servo.min_pulse)
                     rest_angle_display = self.calculate_angle_from_pulse(int(rest_physical))
                 popup_win.addstr(11, 3, f"  {int(rest_angle_display)}°")
 
@@ -172,7 +172,7 @@ class ServoManualControl:
                 popup_win.refresh()
 
                 # Move servo to current pulse
-                self.calibrator.set_servo_pulse(self.current_pulse)
+                self.servo_controller.set_servo_pulse(self.current_pulse)
 
                 key = popup_win.getch()
 
@@ -202,8 +202,8 @@ def main(servo_id: str) -> None:
             print(LABELS.MANUAL_VALID_SERVO_IDS.format(', '.join([s.value for s in ServoName])))
             sys.exit(1)
 
-        # Initialize calibrator
-        calibrator = ServoCalibrator(servo_enum)
+        # Initialize servo_controller
+        servo_controller = ServoController(servo_enum)
 
         # Run manual control
         def control_wrapper(stdscr):
@@ -213,7 +213,7 @@ def main(servo_id: str) -> None:
             ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
             # stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
 
-            control = ServoManualControl(stdscr, calibrator)
+            control = ServoManualControl(stdscr, servo_controller)
             return control.run()
 
         result = curses.wrapper(control_wrapper)

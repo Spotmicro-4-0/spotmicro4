@@ -15,7 +15,7 @@ from enum import Enum
 
 from spotmicroai.configuration import ServoName
 from spotmicroai.setup_app import theme as THEME, ui_utils
-from spotmicroai.setup_app.scripts.servo_calibrator import ServoCalibrator
+from spotmicroai.setup_app.scripts.servo_controller import ServoController
 
 
 class CalibrationMode(Enum):
@@ -27,9 +27,9 @@ class CalibrationMode(Enum):
     RANGE = "range"
 
 
-def calibrate_minimum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
+def calibrate_minimum_pulse(stdscr, servo_controller: ServoController) -> bool:
     """Interactive calibration for minimum pulse width."""
-    servo = calibrator.servo
+    servo = servo_controller.servo
 
     # Start with current min pulse
     current_pulse = servo.min_pulse
@@ -51,7 +51,7 @@ def calibrate_minimum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
             popup_win.box()
 
             # Title
-            title = f"Calibrate Minimum Pulse - {calibrator.servo_name.value}"
+            title = f"Calibrate Minimum Pulse - {servo_controller.servo_name.value}"
             title_x = (popup_width - len(title)) // 2
             popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -78,18 +78,18 @@ def calibrate_minimum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
             popup_win.refresh()
 
             # Set servo to minimum pulse position
-            calibrator.set_servo_pulse(current_pulse)
+            servo_controller.set_servo_pulse(current_pulse)
 
             key = popup_win.getch()
 
             if key == curses.KEY_UP:
-                current_pulse = calibrator.clamp_pulse(current_pulse + step)
+                current_pulse = servo_controller.clamp_pulse(current_pulse + step)
             elif key == curses.KEY_DOWN:
-                current_pulse = calibrator.clamp_pulse(current_pulse - step)
+                current_pulse = servo_controller.clamp_pulse(current_pulse - step)
             elif key in (curses.KEY_ENTER, 10, 13):
                 # Save to config
-                calibrator.config_provider.set_servo_min_pulse(calibrator.servo_name, int(current_pulse))
-                calibrator.config_provider.save_config()
+                servo_controller.config_provider.set_servo_min_pulse(servo_controller.servo_name, int(current_pulse))
+                servo_controller.config_provider.save_config()
                 return True
             elif key == 27:  # ESC
                 return False
@@ -97,9 +97,9 @@ def calibrate_minimum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
         curses.endwin()
 
 
-def calibrate_maximum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
+def calibrate_maximum_pulse(stdscr, servo_controller: ServoController) -> bool:
     """Interactive calibration for maximum pulse width."""
-    servo = calibrator.servo
+    servo = servo_controller.servo
 
     # Start with current max pulse
     current_pulse = servo.max_pulse
@@ -121,7 +121,7 @@ def calibrate_maximum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
             popup_win.box()
 
             # Title
-            title = f"Calibrate Maximum Pulse - {calibrator.servo_name.value}"
+            title = f"Calibrate Maximum Pulse - {servo_controller.servo_name.value}"
             title_x = (popup_width - len(title)) // 2
             popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -148,18 +148,18 @@ def calibrate_maximum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
             popup_win.refresh()
 
             # Set servo to maximum pulse position
-            calibrator.set_servo_pulse(current_pulse)
+            servo_controller.set_servo_pulse(current_pulse)
 
             key = popup_win.getch()
 
             if key == curses.KEY_UP:
-                current_pulse = calibrator.clamp_pulse(current_pulse + step)
+                current_pulse = servo_controller.clamp_pulse(current_pulse + step)
             elif key == curses.KEY_DOWN:
-                current_pulse = calibrator.clamp_pulse(current_pulse - step)
+                current_pulse = servo_controller.clamp_pulse(current_pulse - step)
             elif key in (curses.KEY_ENTER, 10, 13):
                 # Save to config
-                calibrator.config_provider.set_servo_max_pulse(calibrator.servo_name, int(current_pulse))
-                calibrator.config_provider.save_config()
+                servo_controller.config_provider.set_servo_max_pulse(servo_controller.servo_name, int(current_pulse))
+                servo_controller.config_provider.save_config()
                 return True
             elif key == 27:  # ESC
                 return False
@@ -167,9 +167,9 @@ def calibrate_maximum_pulse(stdscr, calibrator: ServoCalibrator) -> bool:
         curses.endwin()
 
 
-def calibrate_rest_angle(stdscr, calibrator: ServoCalibrator) -> bool:
+def calibrate_rest_angle(stdscr, servo_controller: ServoController) -> bool:
     """Interactive calibration for rest angle."""
-    servo = calibrator.servo
+    servo = servo_controller.servo
 
     # Start with current rest angle
     current_angle = servo.rest_angle
@@ -191,7 +191,7 @@ def calibrate_rest_angle(stdscr, calibrator: ServoCalibrator) -> bool:
             popup_win.box()
 
             # Title
-            title = f"Calibrate Rest Angle - {calibrator.servo_name.value}"
+            title = f"Calibrate Rest Angle - {servo_controller.servo_name.value}"
             title_x = (popup_width - len(title)) // 2
             popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -220,18 +220,18 @@ def calibrate_rest_angle(stdscr, calibrator: ServoCalibrator) -> bool:
             popup_win.refresh()
 
             # Set servo to current angle
-            calibrator.set_servo_angle(current_angle)
+            servo_controller.set_servo_angle(current_angle)
 
             key = popup_win.getch()
 
             if key == curses.KEY_UP:
-                current_angle = calibrator.clamp_angle(current_angle + step)
+                current_angle = servo_controller.clamp_angle(current_angle + step)
             elif key == curses.KEY_DOWN:
-                current_angle = calibrator.clamp_angle(current_angle - step)
+                current_angle = servo_controller.clamp_angle(current_angle - step)
             elif key in (curses.KEY_ENTER, 10, 13):
                 # Save to config
-                calibrator.config_provider.set_servo_rest_angle(calibrator.servo_name, int(current_angle))
-                calibrator.config_provider.save_config()
+                servo_controller.config_provider.set_servo_rest_angle(servo_controller.servo_name, int(current_angle))
+                servo_controller.config_provider.save_config()
                 return True
             elif key == 27:  # ESC
                 return False
@@ -239,9 +239,9 @@ def calibrate_rest_angle(stdscr, calibrator: ServoCalibrator) -> bool:
         curses.endwin()
 
 
-def calibrate_range(stdscr, calibrator: ServoCalibrator) -> bool:
+def calibrate_range(stdscr, servo_controller: ServoController) -> bool:
     """Interactive calibration for range."""
-    servo = calibrator.servo
+    servo = servo_controller.servo
 
     # Start with current range
     current_range = servo.range
@@ -263,7 +263,7 @@ def calibrate_range(stdscr, calibrator: ServoCalibrator) -> bool:
             popup_win.box()
 
             # Title
-            title = f"Calibrate Range - {calibrator.servo_name.value}"
+            title = f"Calibrate Range - {servo_controller.servo_name.value}"
             title_x = (popup_width - len(title)) // 2
             popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -297,8 +297,8 @@ def calibrate_range(stdscr, calibrator: ServoCalibrator) -> bool:
                 current_range = max(1, current_range - step)
             elif key in (curses.KEY_ENTER, 10, 13):
                 # Save to config
-                calibrator.config_provider.set_servo_range(calibrator.servo_name, int(current_range))
-                calibrator.config_provider.save_config()
+                servo_controller.config_provider.set_servo_range(servo_controller.servo_name, int(current_range))
+                servo_controller.config_provider.save_config()
                 return True
             elif key == 27:  # ESC
                 return False
@@ -325,8 +325,8 @@ def main(servo_id: str, mode: str) -> None:
             print(f"Error: Invalid mode '{mode}'. Must be one of: {', '.join(valid_modes)}")
             sys.exit(1)
 
-        # Initialize calibrator with the specific servo
-        calibrator = ServoCalibrator(servo_enum)
+        # Initialize the servo controller with the specific servo
+        servo_controller = ServoController(servo_enum)
 
         # Run the appropriate calibration mode
         def calibration_wrapper(stdscr):
@@ -337,13 +337,13 @@ def main(servo_id: str, mode: str) -> None:
             stdscr.bkgd(' ', curses.color_pair(THEME.BACKGROUND))
 
             if calibration_mode == CalibrationMode.MIN:
-                return calibrate_minimum_pulse(stdscr, calibrator)
+                return calibrate_minimum_pulse(stdscr, servo_controller)
             elif calibration_mode == CalibrationMode.MAX:
-                return calibrate_maximum_pulse(stdscr, calibrator)
+                return calibrate_maximum_pulse(stdscr, servo_controller)
             elif calibration_mode == CalibrationMode.REST:
-                return calibrate_rest_angle(stdscr, calibrator)
+                return calibrate_rest_angle(stdscr, servo_controller)
             elif calibration_mode == CalibrationMode.RANGE:
-                return calibrate_range(stdscr, calibrator)
+                return calibrate_range(stdscr, servo_controller)
 
         result = curses.wrapper(calibration_wrapper)
 

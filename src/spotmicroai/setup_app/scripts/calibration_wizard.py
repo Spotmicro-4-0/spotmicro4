@@ -20,7 +20,7 @@ from spotmicroai.constants import CALIBRATION_SPECS
 from spotmicroai.drivers import Servo
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
-from spotmicroai.setup_app.scripts.servo_calibrator import ServoCalibrator
+from spotmicroai.setup_app.scripts.servo_controller import ServoController
 
 
 class JointType(Enum):
@@ -91,12 +91,12 @@ class CalibrationWizard:
     POPUP_WIDTH = 75
     STEP_SIZE = 10  # microseconds or degrees
 
-    def __init__(self, stdscr, calibrator: ServoCalibrator, spec: JointCalibrationSpec):
-        """Initialize wizard with calibrator and spec."""
+    def __init__(self, stdscr, servo_controller: ServoController, spec: JointCalibrationSpec):
+        """Initialize wizard with servo_controller and spec."""
         self.stdscr = stdscr
-        self.calibrator = calibrator
+        self.servo_controller = servo_controller
         self.spec = spec
-        self.current_pulse = calibrator.servo.min_pulse
+        self.current_pulse = servo_controller.servo.min_pulse
         self.captured_points: list[CalibrationPoint] = []
         self.popup_start_y = 0
         self.popup_start_x = 0
@@ -110,7 +110,7 @@ class CalibrationWizard:
 
     def _format_servo_name(self) -> str:
         """Format servo name using shared UI utility."""
-        return ui_utils.CursesUIHelper.format_servo_name(self.calibrator.servo_name.value)
+        return ui_utils.CursesUIHelper.format_servo_name(self.servo_controller.servo_name.value)
 
     def create_popup_window(self) -> curses.window:
         """Create and configure a popup window."""
@@ -187,7 +187,7 @@ class CalibrationWizard:
         """Guide user to capture a single calibration point."""
         popup_win = self.create_popup_window()
         # Start at the midpoint between min and max pulse
-        current_pulse = (self.calibrator.servo.min_pulse + self.calibrator.servo.max_pulse) // 2
+        current_pulse = (self.servo_controller.servo.min_pulse + self.servo_controller.servo.max_pulse) // 2
 
         try:
             while True:
@@ -235,14 +235,14 @@ class CalibrationWizard:
                 self.refresh_popup_shadow()
 
                 # Move servo to current pulse
-                self.calibrator.set_servo_pulse(current_pulse)
+                self.servo_controller.set_servo_pulse(current_pulse)
 
                 key = popup_win.getch()
 
                 if key == curses.KEY_UP:
-                    current_pulse = self.calibrator.clamp_pulse(current_pulse + self.STEP_SIZE)
+                    current_pulse = self.servo_controller.clamp_pulse(current_pulse + self.STEP_SIZE)
                 elif key == curses.KEY_DOWN:
-                    current_pulse = self.calibrator.clamp_pulse(current_pulse - self.STEP_SIZE)
+                    current_pulse = self.servo_controller.clamp_pulse(current_pulse - self.STEP_SIZE)
                 elif key in (curses.KEY_ENTER, 10, 13):
                     # Capture this point
                     point.pulse_width = current_pulse
@@ -404,15 +404,15 @@ class CalibrationWizard:
             rest_angle_local = int(self.spec.rest_angle)
 
         # Save to configuration
-        self.calibrator.config_provider.set_servo_min_pulse(self.calibrator.servo_name, min_pulse)
-        self.calibrator.config_provider.set_servo_max_pulse(self.calibrator.servo_name, max_pulse)
-        self.calibrator.config_provider.set_servo_range(self.calibrator.servo_name, calculated_range)
-        self.calibrator.config_provider.set_servo_rest_angle(self.calibrator.servo_name, rest_angle_local)
-        self.calibrator.config_provider.save_config()
+        self.servo_controller.config_provider.set_servo_min_pulse(self.servo_controller.servo_name, min_pulse)
+        self.servo_controller.config_provider.set_servo_max_pulse(self.servo_controller.servo_name, max_pulse)
+        self.servo_controller.config_provider.set_servo_range(self.servo_controller.servo_name, calculated_range)
+        self.servo_controller.config_provider.set_servo_rest_angle(self.servo_controller.servo_name, rest_angle_local)
+        self.servo_controller.config_provider.save_config()
 
         # Recreate servo with new calibrated values (range is immutable)
-        servo_config = self.calibrator.config_provider.get_servo(self.calibrator.servo_name)
-        pca9685 = self.calibrator._pca9685 if hasattr(self.calibrator, '_pca9685') else None
+        servo_config = self.servo_controller.config_provider.get_servo(self.servo_controller.servo_name)
+        pca9685 = self.servo_controller._pca9685 if hasattr(self.servo_controller, '_pca9685') else None
         if pca9685 is None:
             from spotmicroai.drivers import PCA9685
 
@@ -421,7 +421,7 @@ class CalibrationWizard:
         channel = pca9685.get_channel(servo_config.channel)
 
         # Recreate servo with new parameters
-        self.calibrator.servo = Servo(
+        self.servo_controller.servo = Servo(
             channel,
             min_pulse=servo_config.min_pulse,
             max_pulse=servo_config.max_pulse,
@@ -432,9 +432,9 @@ class CalibrationWizard:
         # Move servo to home/rest position after calibration is saved
         # For shoulders, use Point 1's pulse directly
         if self.spec.joint_type == JointType.SHOULDER:
-            self.calibrator.set_servo_pulse(cast(int, point1.pulse_width))
+            self.servo_controller.set_servo_pulse(cast(int, point1.pulse_width))
         else:
-            self.calibrator.set_servo_angle(int(rest_angle_local))
+            self.servo_controller.set_servo_angle(int(rest_angle_local))
 
     def run(self) -> bool:
         """Run the complete calibration wizard."""
@@ -517,8 +517,8 @@ def _calibrate_single_servo(servo_id: str) -> None:
     joint_type = get_joint_type_from_servo_name(servo_enum)
     spec = get_calibration_spec(joint_type)
 
-    # Initialize calibrator
-    calibrator = ServoCalibrator(servo_enum)
+    # Initialize servo controller
+    servo_controller = ServoController(servo_enum)
 
     # Run wizard
     def wizard_wrapper(stdscr):
@@ -529,7 +529,7 @@ def _calibrate_single_servo(servo_id: str) -> None:
         stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
         stdscr.refresh()
 
-        wizard = CalibrationWizard(stdscr, calibrator, spec)
+        wizard = CalibrationWizard(stdscr, servo_controller, spec)
         return wizard.run()
 
     result = curses.wrapper(wizard_wrapper)

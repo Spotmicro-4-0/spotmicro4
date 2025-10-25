@@ -8,11 +8,11 @@ from spotmicroai.configuration import ConfigProvider, ServoName
 from spotmicroai.drivers import PCA9685, Servo
 
 
-class ServoCalibrator:
+class ServoController:
     """Manages servo hardware control during calibration."""
 
     def __init__(self, servo_name: ServoName):
-        """Initialize the servo calibrator.
+        """Initialize the servo controller.
 
         Args:
             servo_name: The ServoName enum value for the servo to calibrate.
