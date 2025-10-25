@@ -11,8 +11,6 @@ Usage: calibration_wizard.py <SERVO_ID>
 
 import curses
 import sys
-from dataclasses import dataclass
-from enum import Enum
 from typing import cast, Tuple
 
 from spotmicroai.configuration import ServoName
@@ -20,35 +18,8 @@ from spotmicroai.constants import CALIBRATION_SPECS
 from spotmicroai.drivers import Servo
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
-from spotmicroai.setup_app.scripts.servo_controller import ServoController
-
-
-class JointType(Enum):
-    """Different types of joints in the robot."""
-
-    FOOT = "foot"
-    LEG = "leg"
-    SHOULDER = "shoulder"
-
-
-@dataclass
-class CalibrationPoint:
-    """Represents a calibration point with angle and pulse width."""
-
-    description: str
-    physical_angle: float  # The actual angle in degrees IRL
-    pulse_width: int | None = None  # Captured pulse width in microseconds
-
-
-@dataclass
-class JointCalibrationSpec:
-    """Specification for calibrating a specific joint type."""
-
-    joint_type: JointType
-    points: list[CalibrationPoint]
-    target_min_angle: float
-    target_max_angle: float
-    rest_angle: float
+from spotmicroai.calibration.servo_controller import ServoController
+from . import CalibrationPoint, JointCalibrationSpec, JointType
 
 
 def get_joint_type_from_servo_name(servo_name: ServoName) -> JointType:
@@ -457,6 +428,27 @@ class CalibrationWizard:
             return False
 
 
+def _calibrate_all_servos() -> None:
+    """Calibrate all servos sequentially."""
+    servo_ids = [s.value for s in ServoName]
+    successful = []
+    failed = []
+
+    for sid in servo_ids:
+        try:
+            _calibrate_single_servo(sid)
+            successful.append(sid)
+        except Exception as e:
+            print(LABELS.WIZARD_ERROR_CALIBRATING.format(sid, e))
+            failed.append(sid)
+
+    print(LABELS.WIZARD_SEPARATOR)
+    print(LABELS.WIZARD_SUCCESS_COUNT.format(len(successful)))
+    print(LABELS.WIZARD_FAILED_COUNT.format(len(failed)))
+    if failed:
+        print(LABELS.WIZARD_FAILED_SERVOS.format(', '.join(failed)))
+
+
 def main(servo_id: str) -> None:
     """Main entry point for calibration wizard.
 
@@ -466,23 +458,7 @@ def main(servo_id: str) -> None:
     try:
         # Handle "all" case
         if servo_id.lower() == "all":
-            servo_ids = [s.value for s in ServoName]
-            successful = []
-            failed = []
-
-            for sid in servo_ids:
-                try:
-                    _calibrate_single_servo(sid)
-                    successful.append(sid)
-                except Exception as e:
-                    print(LABELS.WIZARD_ERROR_CALIBRATING.format(sid, e))
-                    failed.append(sid)
-
-            print(LABELS.WIZARD_SEPARATOR)
-            print(LABELS.WIZARD_SUCCESS_COUNT.format(len(successful)))
-            print(LABELS.WIZARD_FAILED_COUNT.format(len(failed)))
-            if failed:
-                print(LABELS.WIZARD_FAILED_SERVOS.format(', '.join(failed)))
+            _calibrate_all_servos()
             return
 
         # Single servo calibration

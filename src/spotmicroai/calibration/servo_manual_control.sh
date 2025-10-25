@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-# calibration_wizard.sh
-# Interactive servo calibration wizard
-# Usage: calibration_wizard.sh <SERVO_ID>
+# servo_manual_control.sh
+# Manual servo control for testing and motion verification
+# Usage: servo_manual_control.sh <SERVO_ID>
 
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <SERVO_ID>"
@@ -15,8 +15,8 @@ SERVO_ID="$1"
 # Get the absolute path to this script's directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Go up 3 levels: setup_app/scripts/ -> setup_app/ -> spotmicroai/ -> src/
-SRC_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
+# Go up 2 levels: calibration/ -> spotmicroai/ -> src/
+SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # The venv is in the src directory
 VENV_PATH="$SRC_DIR/.venv"
@@ -26,11 +26,11 @@ if [ ! -d "$VENV_PATH/bin" ]; then
     exit 1
 fi
 
-# Activate venv and run the calibration wizard
+# Activate venv and run the manual control
 source "$VENV_PATH/bin/activate"
 
 # Set PYTHONPATH to include the src directory
 export PYTHONPATH="$SRC_DIR:${PYTHONPATH:-}"
 
 # Run the Python script
-python3 "$SCRIPT_DIR/calibration_wizard.py" "$SERVO_ID"
+python3 "$SCRIPT_DIR/servo_manual_control.py" "$SERVO_ID"

@@ -18,8 +18,8 @@ MODE="$2"
 # Get the absolute path to this script's directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Go up 3 levels: setup_app/scripts/ -> setup_app/ -> spotmicroai/ -> src/
-SRC_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
+# Go up 2 levels: calibration/ -> spotmicroai/ -> src/
+SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # The venv is in the src directory
 VENV_PATH="$SRC_DIR/.venv"

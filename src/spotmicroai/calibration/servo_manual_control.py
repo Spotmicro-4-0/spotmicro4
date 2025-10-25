@@ -14,7 +14,7 @@ import sys
 from spotmicroai.configuration import ServoName
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
-from spotmicroai.setup_app.scripts.servo_controller import ServoController
+from spotmicroai.calibration.servo_controller import ServoController
 
 
 class ServoManualControl:

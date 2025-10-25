@@ -5,62 +5,62 @@
       {
         "label": "Front Shoulder Left",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh front_shoulder_left"
+        "command": "bash calibration/servo_manual_control.sh front_shoulder_left"
       },
       {
         "label": "Front Leg Left",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh front_leg_left"
+        "command": "bash calibration/servo_manual_control.sh front_leg_left"
       },
       {
         "label": "Front Foot Left",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh front_foot_left"
+        "command": "bash calibration/servo_manual_control.sh front_foot_left"
       },
       {
         "label": "Front Shoulder Right",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh front_shoulder_right"
+        "command": "bash calibration/servo_manual_control.sh front_shoulder_right"
       },
       {
         "label": "Front Leg Right",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh front_leg_right"
+        "command": "bash calibration/servo_manual_control.sh front_leg_right"
       },
       {
         "label": "Front Foot Right",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh front_foot_right"
+        "command": "bash calibration/servo_manual_control.sh front_foot_right"
       },
       {
         "label": "Rear Shoulder Left",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh rear_shoulder_left"
+        "command": "bash calibration/servo_manual_control.sh rear_shoulder_left"
       },
       {
         "label": "Rear Leg Left",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh rear_leg_left"
+        "command": "bash calibration/servo_manual_control.sh rear_leg_left"
       },
       {
         "label": "Rear Foot Left",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh rear_foot_left"
+        "command": "bash calibration/servo_manual_control.sh rear_foot_left"
       },
       {
         "label": "Rear Shoulder Right",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh rear_shoulder_right"
+        "command": "bash calibration/servo_manual_control.sh rear_shoulder_right"
       },
       {
         "label": "Rear Leg Right",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh rear_leg_right"
+        "command": "bash calibration/servo_manual_control.sh rear_leg_right"
       },
       {
         "label": "Rear Foot Right",
         "action": "run",
-        "command": "bash setup_app/scripts/servo_manual_control.sh rear_foot_right"
+        "command": "bash calibration/servo_manual_control.sh rear_foot_right"
       },
       {
         "label": "Back",

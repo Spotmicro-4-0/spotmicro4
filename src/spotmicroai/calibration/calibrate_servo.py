@@ -15,7 +15,7 @@ from enum import Enum
 
 from spotmicroai.configuration import ServoName
 from spotmicroai.setup_app import theme as THEME, ui_utils
-from spotmicroai.setup_app.scripts.servo_controller import ServoController
+from spotmicroai.calibration.servo_controller import ServoController
 
 
 class CalibrationMode(Enum):

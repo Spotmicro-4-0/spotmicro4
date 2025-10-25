@@ -5,12 +5,12 @@
       {
         "label": "Enable Spotmicro Runtime upon boot",
         "action": "run",
-        "command": "bash setup_app/scripts/config_boot.sh on"
+        "command": "bash calibration/config_boot.sh on"
       },
       {
         "label": "Disable Spotmicro Runtime upon boot",
         "action": "run",
-        "command": "bash setup_app/scripts/config_boot.sh off"
+        "command": "bash calibration/config_boot.sh off"
       },
       {
         "label": "Back",

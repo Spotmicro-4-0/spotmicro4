@@ -5,22 +5,22 @@
       {
         "label": "Calibrate Minimum Pulse",
         "action": "run",
-        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} min"
+        "command": "bash calibration/calibrate_servo.sh {SERVO_ID} min"
       },
       {
         "label": "Calibrate Maximum Pulse",
         "action": "run",
-        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} max"
+        "command": "bash calibration/calibrate_servo.sh {SERVO_ID} max"
       },
       {
         "label": "Calibrate Rest Angle",
         "action": "run",
-        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} rest"
+        "command": "bash calibration/calibrate_servo.sh {SERVO_ID} rest"
       },
       {
         "label": "Calibrate Range",
         "action": "run",
-        "command": "bash setup_app/scripts/calibrate_servo.sh {SERVO_ID} range"
+        "command": "bash calibration/calibrate_servo.sh {SERVO_ID} range"
       },
       {
         "label": "Back",
