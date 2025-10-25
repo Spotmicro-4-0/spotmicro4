@@ -46,14 +46,12 @@ class PCA9685(metaclass=Singleton):
         """Activate the PCA9685 board."""
         self._pca9685 = _PCA9685(self._i2c, address=self._address, reference_clock_speed=self._reference_clock_speed)
         self._pca9685.frequency = self._frequency
-        log.info('PCA9685 board activated')
 
     def deactivate_board(self):
         """Deactivate the PCA9685 board."""
         if self._pca9685:
             self._pca9685.deinit()
             self._pca9685 = None
-        log.info('PCA9685 board deactivated')
 
     def get_channel(self, channel_index):
         """Get a PWM channel by index.

@@ -489,7 +489,6 @@ class MenuApp:
             curses.def_prog_mode()  # Save current curses mode
             curses.endwin()
 
-        print(f"\n{LABELS.MSG_RUNNING_COMMAND.format(command)}\n")
         error_occurred = False
         error_message = None
 

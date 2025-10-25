@@ -18,7 +18,19 @@
         "label": "Servo Calibration",
         "description": "Launches the servo calibration menu",
         "action": "submenu",
-        "target": "calibrate_servo_select_mode"
+        "target": "calibrate_servo_wizard_select"
+      },
+      {
+        "label": "Servo Motion Test",
+        "description": "Test each servo's motion individually",
+        "action": "submenu",
+        "target": "calibrate_servo_manual_select"
+      },
+      {
+        "label": "Export Configurations",
+        "description": "Save the current configuration and servo calibration information",
+        "action": "submenu",
+        "target": "export_config"
       },
       {
         "label": "Start/Stop Runtime on Boot",
