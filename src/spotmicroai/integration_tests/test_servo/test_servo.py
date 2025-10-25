@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+from typing import cast
 
 import RPi.GPIO as GPIO  # type: ignore
 from adafruit_motor import servo  # type: ignore
@@ -11,7 +12,7 @@ from board import SCL, SDA  # type: ignore
 import busio  # type: ignore
 from pick import pick  # type: ignore
 
-from spotmicroai.configuration.config_provider import Config
+from spotmicroai.configuration import ConfigProvider, ServoName
 from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Servo Range Test')
@@ -19,35 +20,22 @@ log = Logger().setup_logger('Servo Range Test')
 log.info('Testing Servo...')
 
 pca = None
-config = Config()
-gpio_port = config.abort_controller.gpio_port
+config_provider = ConfigProvider()
+gpio_port = config_provider.abort_controller.gpio_port
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpio_port, GPIO.OUT)
 GPIO.output(gpio_port, False)
 
 i2c = busio.I2C(SCL, SDA)
 
-servo_names = [
-    'front_shoulder_left',
-    'front_leg_left',
-    'front_foot_left',
-    'front_shoulder_right',
-    'front_leg_right',
-    'front_foot_right',
-    'rear_shoulder_left',
-    'rear_leg_left',
-    'rear_foot_left',
-    'rear_shoulder_right',
-    'rear_leg_right',
-    'rear_foot_right',
-]
-
-pca_addr = config.motion_controller.pca9685.address
+pca_addr = config_provider.motion_controller.pca9685.address
 
 while True:
+    servo_name_enums = list(ServoName)
     options = {}
-    for i, name in enumerate(servo_names):
-        servo = config.get_servo(name)
+    for i, servo_enum in enumerate(servo_name_enums):
+        name = servo_enum.value
+        servo = config_provider.get_servo(name)
         options[i] = f'{name} - PCA[{pca_addr}] CHANNEL[{servo.channel}] - ANGLE[{servo.rest_angle}]'
 
     title = 'Select the Servo you want to test the range for'
@@ -56,9 +44,10 @@ while True:
 
     selected_option, selected_index = pick(screen_options, title)
 
-    servo_name = servo_names[selected_index]
-    servo = config.get_servo(servo_name)
-    pca = config.motion_controller.pca9685
+    servo_enum = servo_name_enums[cast(int, selected_index)]
+    servo_name = servo_enum.value
+    servo = config_provider.get_servo(servo_name)
+    pca = config_provider.motion_controller.pca9685
 
     PCA9685_ADDRESS = pca.address
     PCA9685_REFERENCE_CLOCK_SPEED = pca.reference_clock_speed
@@ -95,7 +84,7 @@ while True:
                 min = prev_min
                 max = prev_max
             else:
-                raise Exception('Invalid Input')
+                raise ValueError('Invalid Input')
 
             pca = PCA9685(i2c, address=int(PCA9685_ADDRESS, 0), reference_clock_speed=PCA9685_REFERENCE_CLOCK_SPEED)
             pca.frequency = PCA9685_FREQUENCY

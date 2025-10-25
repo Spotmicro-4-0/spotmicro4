@@ -11,7 +11,7 @@ import struct
 import sys
 import time
 
-from spotmicroai.configuration.config_provider import Config
+from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Testing remote controller')
@@ -102,8 +102,8 @@ button_map = []
 
 # Open the joystick device.
 
-config = Config()
-connected_device = config.remote_controller.device
+config_provider = ConfigProvider()
+connected_device = config_provider.remote_controller.device
 FN = '/dev/input/' + str(connected_device)
 log.info(f'Opening {FN}...')
 

@@ -4,7 +4,7 @@ import signal
 import sys
 import time
 
-from spotmicroai.configuration import ConfigProvider
+from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.drivers import Lcd16x2
 from spotmicroai.logger import Logger
 import spotmicroai.runtime.queues as queues

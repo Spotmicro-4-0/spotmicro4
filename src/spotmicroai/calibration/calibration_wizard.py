@@ -13,12 +13,13 @@ import curses
 import sys
 from typing import cast, Tuple
 
-from spotmicroai.configuration import ServoName
 from spotmicroai.calibration.calibration_specs import CALIBRATION_SPECS
-from spotmicroai.drivers import Servo
+from spotmicroai.configuration._config_provider import ServoName, ConfigProvider
+from spotmicroai.servo._servo import Servo
+from spotmicroai.servo._servo_factory import ServoFactory
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
-from spotmicroai.calibration.servo_controller import ServoController
+
 from . import CalibrationPoint, JointCalibrationSpec, JointType
 
 
@@ -62,12 +63,13 @@ class CalibrationWizard:
     POPUP_WIDTH = 75
     STEP_SIZE = 10  # microseconds or degrees
 
-    def __init__(self, stdscr, servo_controller: ServoController, spec: JointCalibrationSpec):
-        """Initialize wizard with servo_controller and spec."""
+    def __init__(self, stdscr, servo: Servo, spec: JointCalibrationSpec, config_provider: ConfigProvider):
+        """Initialize wizard with the servo and spec."""
         self.stdscr = stdscr
-        self.servo_controller = servo_controller
+        self.servo = servo
         self.spec = spec
-        self.current_pulse = servo_controller.servo.min_pulse
+        self.config_provider = config_provider
+        self.current_pulse = servo.min_pulse
         self.captured_points: list[CalibrationPoint] = []
         self.popup_start_y = 0
         self.popup_start_x = 0
@@ -112,7 +114,7 @@ class CalibrationWizard:
                 popup_win.box()
 
                 # Title
-                title = LABELS.WIZARD_TITLE.format(self.servo_controller.format_servo_name())
+                title = LABELS.WIZARD_TITLE.format(self.servo.get_formatted_servo_name())
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -154,7 +156,7 @@ class CalibrationWizard:
         """Guide user to capture a single calibration point."""
         popup_win = self.create_popup_window()
         # Start at the midpoint between min and max pulse
-        current_pulse = (self.servo_controller.servo.min_pulse + self.servo_controller.servo.max_pulse) // 2
+        current_pulse = (self.servo.min_pulse + self.servo.max_pulse) // 2
 
         try:
             while True:
@@ -202,14 +204,14 @@ class CalibrationWizard:
                 self.refresh_popup_shadow()
 
                 # Move servo to current pulse
-                self.servo_controller.set_servo_pulse(current_pulse)
+                self.servo.set_servo_pulse(current_pulse)
 
                 key = popup_win.getch()
 
                 if key == curses.KEY_UP:
-                    current_pulse = self.servo_controller.clamp_pulse(current_pulse + self.STEP_SIZE)
+                    current_pulse = self.servo.clamp_pulse(current_pulse + self.STEP_SIZE)
                 elif key == curses.KEY_DOWN:
-                    current_pulse = self.servo_controller.clamp_pulse(current_pulse - self.STEP_SIZE)
+                    current_pulse = self.servo.clamp_pulse(current_pulse - self.STEP_SIZE)
                 elif key in (curses.KEY_ENTER, 10, 13):
                     # Capture this point
                     point.pulse_width = current_pulse
@@ -316,111 +318,44 @@ class CalibrationWizard:
         assert point1.pulse_width is not None, LABELS.WIZARD_PULSE_NOT_CAPTURED_1
         assert point2.pulse_width is not None, LABELS.WIZARD_PULSE_NOT_CAPTURED_2
 
-        # For shoulder and leg servos, use captured points to infer full range
-        if self.spec.joint_type in (JointType.SHOULDER, JointType.LEG):
-            # Map the captured angles to their pulse widths
-            angle1 = point1.physical_angle
-            angle2 = point2.physical_angle
-            pulse1 = cast(int, point1.pulse_width)
-            pulse2 = cast(int, point2.pulse_width)
+        angle1 = point1.physical_angle
+        angle2 = point2.physical_angle
+        pulse1 = point1.pulse_width
+        pulse2 = point2.pulse_width
 
-            # Calculate pulse per degree
-            angle_diff = angle2 - angle1
-            pulse_diff = pulse2 - pulse1
-            pulse_per_degree = pulse_diff / angle_diff if angle_diff != 0 else 0
+        # Calculate pulse per degree
+        angle_diff = angle2 - angle1
+        pulse_diff = pulse2 - pulse1
+        pulse_per_degree = pulse_diff // angle_diff if angle_diff != 0 else 0
 
-            # Infer min and max pulses using linear extrapolation to target angles
-            min_pulse = int(pulse1 + (self.spec.target_min_angle - angle1) * pulse_per_degree)
-            max_pulse = int(pulse1 + (self.spec.target_max_angle - angle1) * pulse_per_degree)
+        # Infer min and max pulses using linear extrapolation to target angles
+        min_pulse = pulse1 + (self.spec.target_min_angle - angle1) * pulse_per_degree
+        max_pulse = pulse1 + (self.spec.target_max_angle - angle1) * pulse_per_degree
 
-            # Ensure min and max are in correct order
-            if min_pulse > max_pulse:
-                min_pulse, max_pulse = max_pulse, min_pulse
+        # Ensure min and max are in correct order
+        if min_pulse > max_pulse:
+            min_pulse, max_pulse = max_pulse, min_pulse
 
-            # Calculate the target range
-            target_range = self.spec.target_max_angle - self.spec.target_min_angle
-            calculated_range = int(target_range)
+        # Calculate the target range
+        target_range = self.spec.target_max_angle - self.spec.target_min_angle
 
-            # Convert rest_angle from physical coordinates to servo local coordinates [0, range]
-            # rest_angle is in physical degrees, we need to map it to the servo's local range
-            rest_pulse = pulse1 + (self.spec.rest_angle - angle1) * pulse_per_degree
-            # Map the rest pulse to servo angle in local coordinates
-            rest_angle_local = (
-                (rest_pulse - min_pulse) / (max_pulse - min_pulse) * calculated_range
-                if (max_pulse - min_pulse) > 0
-                else 0
+        # Convert rest_angle from physical coordinates to servo local coordinates [0, range]
+        rest_angle_local = self.spec.rest_angle - self.spec.target_min_angle
+
+        # Validate rest angle is within range
+        if rest_angle_local < 0 or rest_angle_local > target_range:
+            raise ValueError(
+                f"Rest angle {self.spec.rest_angle}° is outside the target range "
+                f"[{self.spec.target_min_angle}°, {self.spec.target_max_angle}°]. "
+                f"Please adjust the rest_angle in calibration specs."
             )
-            rest_angle_local = int(max(0, min(calculated_range, rest_angle_local)))
-
-            # For shoulders, set rest to Point 1 pulse directly
-            if self.spec.joint_type == JointType.SHOULDER:
-                rest_angle_local = int((pulse1 - min_pulse) / (max_pulse - min_pulse) * calculated_range)
-        else:
-            # For foot servos, use the same linear extrapolation as legs
-            # The rest_angle is in physical coordinates and needs to be mapped to local coordinates
-            if point1.pulse_width > point2.pulse_width:
-                point1, point2 = point2, point1
-
-            angle1 = point1.physical_angle
-            angle2 = point2.physical_angle
-            pulse1 = cast(int, point1.pulse_width)
-            pulse2 = cast(int, point2.pulse_width)
-
-            min_pulse: int = pulse1
-            max_pulse: int = pulse2
-
-            # Calculate the target range
-            target_range = self.spec.target_max_angle - self.spec.target_min_angle
-            calculated_range = int(target_range)
-
-            # Convert rest_angle from physical coordinates to servo local coordinates [0, range]
-            # Calculate pulse per degree
-            angle_diff = angle2 - angle1
-            pulse_diff = pulse2 - pulse1
-            pulse_per_degree = pulse_diff / angle_diff if angle_diff != 0 else 0
-
-            # Calculate rest pulse using linear extrapolation
-            rest_pulse = pulse1 + (self.spec.rest_angle - angle1) * pulse_per_degree
-            # Map the rest pulse to servo angle in local coordinates
-            rest_angle_local = (
-                (rest_pulse - min_pulse) / (max_pulse - min_pulse) * calculated_range
-                if (max_pulse - min_pulse) > 0
-                else 0
-            )
-            rest_angle_local = int(max(0, min(calculated_range, rest_angle_local)))
 
         # Save to configuration
-        self.servo_controller.config_provider.set_servo_min_pulse(self.servo_controller.servo_name, min_pulse)
-        self.servo_controller.config_provider.set_servo_max_pulse(self.servo_controller.servo_name, max_pulse)
-        self.servo_controller.config_provider.set_servo_range(self.servo_controller.servo_name, calculated_range)
-        self.servo_controller.config_provider.set_servo_rest_angle(self.servo_controller.servo_name, rest_angle_local)
-        self.servo_controller.config_provider.save_config()
-
-        # Recreate servo with new calibrated values (range is immutable)
-        servo_config = self.servo_controller.config_provider.get_servo(self.servo_controller.servo_name)
-        pca9685 = self.servo_controller._pca9685 if hasattr(self.servo_controller, '_pca9685') else None
-        if pca9685 is None:
-            from spotmicroai.drivers import PCA9685
-
-            pca9685 = PCA9685()
-            pca9685.activate_board()
-        channel = pca9685.get_channel(servo_config.channel)
-
-        # Recreate servo with new parameters
-        self.servo_controller.servo = Servo(
-            channel,
-            min_pulse=servo_config.min_pulse,
-            max_pulse=servo_config.max_pulse,
-            actuation_range=servo_config.range,
-            rest_angle=servo_config.rest_angle,
-        )
-
-        # Move servo to home/rest position after calibration is saved
-        # For shoulders, use Point 1's pulse directly
-        if self.spec.joint_type == JointType.SHOULDER:
-            self.servo_controller.set_servo_pulse(cast(int, point1.pulse_width))
-        else:
-            self.servo_controller.set_servo_angle(int(rest_angle_local))
+        self.config_provider.set_servo_min_pulse(self.servo.servo_name, min_pulse)
+        self.config_provider.set_servo_max_pulse(self.servo.servo_name, max_pulse)
+        self.config_provider.set_servo_range(self.servo.servo_name, target_range)
+        self.config_provider.set_servo_rest_angle(self.servo.servo_name, rest_angle_local)
+        self.config_provider.save_config()
 
     def run(self) -> bool:
         """Run the complete calibration wizard."""
@@ -508,8 +443,9 @@ def _calibrate_single_servo(servo_id: str) -> None:
     joint_type = get_joint_type_from_servo_name(servo_enum)
     spec = get_calibration_spec(joint_type)
 
-    # Initialize servo controller
-    servo_controller = ServoController(servo_enum)
+    # Create the servo object and config provider
+    servo = ServoFactory.create(servo_enum)
+    config_provider = ConfigProvider()
 
     # Run wizard
     def wizard_wrapper(stdscr):
@@ -520,7 +456,7 @@ def _calibrate_single_servo(servo_id: str) -> None:
         stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
         stdscr.refresh()
 
-        wizard = CalibrationWizard(stdscr, servo_controller, spec)
+        wizard = CalibrationWizard(stdscr, servo, spec, config_provider)
         return wizard.run()
 
     result = curses.wrapper(wizard_wrapper)

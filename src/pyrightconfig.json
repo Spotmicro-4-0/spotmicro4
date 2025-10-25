@@ -2,5 +2,6 @@
   "include": ["."],
   "pythonVersion": "3.11",
   "useLibraryCodeForTypes": true,
-  "exclude": ["**/venv", "**/__pycache__", "build", "dist", "tests/helpers"]
+  "exclude": ["**/venv", "**/__pycache__", "build", "dist", "tests/helpers"],
+  "reportPrivateUsage": "error"
 }

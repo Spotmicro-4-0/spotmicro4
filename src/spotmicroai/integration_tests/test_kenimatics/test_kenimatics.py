@@ -11,7 +11,7 @@ from board import SCL, SDA
 import busio
 from pick import pick
 
-from spotmicroai.configuration import ConfigProvider
+from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.logger import Logger
 
 LEG_SERVO_OFFSET = 120
@@ -35,7 +35,7 @@ class ServoConfig:
         log.info(f'Initializing ServoConfig with name: {servo_name}')
 
         config_provider = ConfigProvider()
-        servo = config_provider.get_servo(servo_name)
+        servo = config_provider.get_servo_config(servo_name)
         pca = config_provider.motion_controller.pca9685
         i2c = busio.I2C(SCL, SDA)
 

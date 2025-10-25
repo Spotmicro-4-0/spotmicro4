@@ -11,10 +11,11 @@ Usage: servo_manual_control.py <SERVO_ID>
 import curses
 import sys
 
-from spotmicroai.configuration import ServoName
+from spotmicroai.configuration._config_provider import ServoName
+from spotmicroai.servo._servo import Servo
+from spotmicroai.servo._servo_factory import ServoFactory
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
-from spotmicroai.calibration.servo_controller import ServoController
 
 
 class ServoManualControl:
@@ -24,19 +25,19 @@ class ServoManualControl:
     POPUP_WIDTH = 75
     ANGLE_STEP_SIZE = 1  # degrees per adjustment
 
-    def __init__(self, stdscr, servo_controller: ServoController):
+    def __init__(self, stdscr, servo: Servo):
         """Initialize manual control interface.
 
         Args:
             stdscr: curses window object
-            servo_controller: ServoController instance for servo control
+            servo: Servo instance
         """
         self.stdscr = stdscr
-        self.servo_controller = servo_controller
+        self.servo = servo
         # Start at the midpoint between min and max pulse
-        self.current_pulse = (servo_controller.servo.min_pulse + servo_controller.servo.max_pulse) // 2
+        self.current_pulse = (servo.servo.min_pulse + servo.servo.max_pulse) // 2
         # Determine if servo is inverted
-        servo_name = servo_controller.servo_name.value.lower()
+        servo_name = servo.servo_name.value.lower()
         self.is_inverted = "shoulder" in servo_name
 
     def get_popup_position(self):
@@ -48,9 +49,9 @@ class ServoManualControl:
 
     def get_servo_target_min_angle(self) -> float:
         """Get the target minimum angle for the current servo type."""
-        if "shoulder" in self.servo_controller.servo_name.value.lower():
+        if "shoulder" in self.servo.servo_name.value.lower():
             return 60.0
-        elif "leg" in self.servo_controller.servo_name.value.lower():
+        elif "leg" in self.servo.servo_name.value.lower():
             return -20.0
         else:
             return 0.0
@@ -64,7 +65,7 @@ class ServoManualControl:
         Returns:
             Calculated angle in degrees based on current calibration
         """
-        servo = self.servo_controller.servo
+        servo = self.servo.servo
         pulse_range = servo.max_pulse - servo.min_pulse
 
         if pulse_range == 0:
@@ -94,7 +95,7 @@ class ServoManualControl:
         Args:
             angle_delta: Change in angle (positive = increase angle, negative = decrease angle)
         """
-        servo = self.servo_controller.servo
+        servo = self.servo.servo
         pulse_range = servo.max_pulse - servo.min_pulse
 
         if pulse_range == 0:
@@ -107,7 +108,7 @@ class ServoManualControl:
             # For inverted servos, angle increase requires pulse decrease
             pulse_delta = -pulse_delta
 
-        self.current_pulse = self.servo_controller.clamp_pulse(self.current_pulse + pulse_delta)
+        self.current_pulse = self.servo.clamp_pulse(self.current_pulse + pulse_delta)
 
     def create_popup_window(self):
         """Create and configure a popup window."""
@@ -131,7 +132,7 @@ class ServoManualControl:
                 popup_win.box()
 
                 # Title
-                title = LABELS.MANUAL_TITLE.format(self.servo_controller.format_servo_name())
+                title = LABELS.MANUAL_TITLE.format(self.servo.format_servo_name())
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -147,12 +148,12 @@ class ServoManualControl:
                 popup_win.addstr(
                     8,
                     3,
-                    f"  Min: {self.servo_controller.servo.min_pulse} µs | Max: {self.servo_controller.servo.max_pulse} µs",
+                    f"  Min: {self.servo.servo.min_pulse} µs | Max: {self.servo.servo.max_pulse} µs",
                 )
 
                 popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
                 # Display rest angle - for all servo types, it's stored in the servo config
-                rest_angle_display = self.servo_controller.servo.rest_angle
+                rest_angle_display = self.servo.servo.rest_angle
                 popup_win.addstr(11, 3, f"  {int(rest_angle_display)}°")
 
                 # Instructions
@@ -162,7 +163,7 @@ class ServoManualControl:
                 popup_win.refresh()
 
                 # Move servo to current pulse
-                self.servo_controller.set_servo_pulse(self.current_pulse)
+                self.servo.set_servo_pulse(self.current_pulse)
 
                 key = popup_win.getch()
 
@@ -192,8 +193,8 @@ def main(servo_id: str) -> None:
             print(LABELS.MANUAL_VALID_SERVO_IDS.format(', '.join([s.value for s in ServoName])))
             sys.exit(1)
 
-        # Initialize servo_controller
-        servo_controller = ServoController(servo_enum)
+        # Initialize the servo
+        servo = ServoFactory.create(servo_enum)
 
         # Run manual control
         def control_wrapper(stdscr):
@@ -203,7 +204,7 @@ def main(servo_id: str) -> None:
             ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
             # stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
 
-            control = ServoManualControl(stdscr, servo_controller)
+            control = ServoManualControl(stdscr, servo)
             return control.run()
 
         result = curses.wrapper(control_wrapper)

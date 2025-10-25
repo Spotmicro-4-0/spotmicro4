@@ -7,7 +7,7 @@ import time
 from RPi import GPIO
 
 from spotmicroai import Singleton
-from spotmicroai.configuration import ConfigProvider
+from spotmicroai.configuration._config_provider import ConfigProvider
 import spotmicroai.constants as constants
 
 

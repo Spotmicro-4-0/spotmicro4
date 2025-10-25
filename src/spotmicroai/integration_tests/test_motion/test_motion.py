@@ -80,4 +80,4 @@ try:
 
 finally:
     GPIO.output(gpio_port, True)
-    pca.deinit()
+    pca.deinit()  # type: ignore

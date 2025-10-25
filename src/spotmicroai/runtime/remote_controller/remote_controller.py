@@ -6,7 +6,7 @@ import struct
 import sys
 import time
 
-from spotmicroai.configuration import ConfigProvider
+from spotmicroai.configuration._config_provider import ConfigProvider
 import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
 import spotmicroai.runtime.queues as queues
