@@ -155,14 +155,8 @@ class ServoManualControl:
                 )
 
                 popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
-                # For shoulders, rest is always 90° (Point 1). For other servos, calculate from local angle
-                if "shoulder" in self.servo_controller.servo_name.value.lower():
-                    rest_angle_display = 90
-                else:
-                    rest_physical = self.servo_controller.servo.min_pulse + (
-                        self.servo_controller.servo.rest_angle / self.servo_controller.servo.range
-                    ) * (self.servo_controller.servo.max_pulse - self.servo_controller.servo.min_pulse)
-                    rest_angle_display = self.calculate_angle_from_pulse(int(rest_physical))
+                # Display rest angle - for all servo types, it's stored in the servo config
+                rest_angle_display = self.servo_controller.servo.rest_angle
                 popup_win.addstr(11, 3, f"  {int(rest_angle_display)}°")
 
                 # Instructions

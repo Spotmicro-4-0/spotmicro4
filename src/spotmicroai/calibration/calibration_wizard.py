@@ -14,7 +14,7 @@ import sys
 from typing import cast, Tuple
 
 from spotmicroai.configuration import ServoName
-from spotmicroai.constants import CALIBRATION_SPECS
+from spotmicroai.calibration.calibration_specs import CALIBRATION_SPECS
 from spotmicroai.drivers import Servo
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
