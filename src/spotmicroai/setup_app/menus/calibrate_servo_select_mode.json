@@ -15,12 +15,6 @@
         "target": "calibrate_servo_manual_select"
       },
       {
-        "label": "Advanced Value Edit (DANGER!)",
-        "description": "Manually edit servo calibration values",
-        "action": "submenu",
-        "target": "calibrate_servo_advanced_select"
-      },
-      {
         "label": "Back",
         "action": "back"
       }
