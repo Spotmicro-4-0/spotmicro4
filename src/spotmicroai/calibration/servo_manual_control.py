@@ -12,8 +12,7 @@ import curses
 import sys
 
 from spotmicroai.configuration._config_provider import ServoName
-from spotmicroai.servo._servo import Servo
-from spotmicroai.servo._servo_factory import ServoFactory
+from spotmicroai.servo import Servo, ServoFactory
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
 
@@ -35,7 +34,7 @@ class ServoManualControl:
         self.stdscr = stdscr
         self.servo = servo
         # Start at the midpoint between min and max pulse
-        self.current_pulse = (servo.servo.min_pulse + servo.servo.max_pulse) // 2
+        self.current_pulse = (servo.min_pulse + servo.max_pulse) // 2
         # Determine if servo is inverted
         servo_name = servo.servo_name.value.lower()
         self.is_inverted = "shoulder" in servo_name
@@ -65,7 +64,7 @@ class ServoManualControl:
         Returns:
             Calculated angle in degrees based on current calibration
         """
-        servo = self.servo.servo
+        servo = self.servo
         pulse_range = servo.max_pulse - servo.min_pulse
 
         if pulse_range == 0:
@@ -95,7 +94,7 @@ class ServoManualControl:
         Args:
             angle_delta: Change in angle (positive = increase angle, negative = decrease angle)
         """
-        servo = self.servo.servo
+        servo = self.servo
         pulse_range = servo.max_pulse - servo.min_pulse
 
         if pulse_range == 0:
@@ -132,7 +131,7 @@ class ServoManualControl:
                 popup_win.box()
 
                 # Title
-                title = LABELS.MANUAL_TITLE.format(self.servo.format_servo_name())
+                title = LABELS.MANUAL_TITLE.format(self.servo.get_formatted_servo_name())
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -148,12 +147,12 @@ class ServoManualControl:
                 popup_win.addstr(
                     8,
                     3,
-                    f"  Min: {self.servo.servo.min_pulse} µs | Max: {self.servo.servo.max_pulse} µs",
+                    f"  Min: {self.servo.min_pulse} µs | Max: {self.servo.max_pulse} µs",
                 )
 
                 popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
                 # Display rest angle - for all servo types, it's stored in the servo config
-                rest_angle_display = self.servo.servo.rest_angle
+                rest_angle_display = self.servo.rest_angle
                 popup_win.addstr(11, 3, f"  {int(rest_angle_display)}°")
 
                 # Instructions

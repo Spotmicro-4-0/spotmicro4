@@ -144,3 +144,36 @@ class Servo:
     def channel(self):
         """Get the underlying PWM channel for direct pulse control."""
         return self._pwm_channel
+
+    def clamp_pulse(self, pulse: int | float) -> int:
+        """Clamp a pulse width value to the valid range [min_pulse, max_pulse].
+
+        Args:
+            pulse: The pulse width in microseconds to clamp
+
+        Returns:
+            The clamped pulse width as an integer
+        """
+        return int(max(self._min_pulse, min(self._max_pulse, pulse)))
+
+    def set_servo_pulse(self, pulse: int | float) -> None:
+        """Set the servo to a specific pulse width.
+
+        Args:
+            pulse: The pulse width in microseconds to set
+        """
+        clamped_pulse = self.clamp_pulse(pulse)
+        self._pwm_channel.duty_cycle = self._pulse_to_duty_cycle(clamped_pulse)
+
+    def _pulse_to_duty_cycle(self, pulse: int) -> int:
+        """Convert pulse width to PWM duty cycle.
+
+        Args:
+            pulse: Pulse width in microseconds
+
+        Returns:
+            Duty cycle value (0-65535 for 16-bit PWM)
+        """
+        # Standard servo frequency is 50Hz (20ms period)
+        # Duty cycle = (pulse / 20000) * 65535
+        return int((pulse / 20000.0) * 65535)
