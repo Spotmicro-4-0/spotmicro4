@@ -101,3 +101,15 @@ class ServoController:
         """
         # Pulse width = (duty_cycle / 65535) * 20000
         return int((self.servo.channel.duty_cycle / 65535) * 20000)
+
+    def format_servo_name(self) -> str:
+        """Format servo name for display.
+
+        Converts servo name from snake_case (e.g., 'front_left_leg') to Title Case
+        (e.g., 'Front Left Leg').
+
+        Returns:
+            Formatted servo name suitable for display.
+        """
+        words = self.servo_name.value.split('_')
+        return ' '.join(word.capitalize() for word in words)

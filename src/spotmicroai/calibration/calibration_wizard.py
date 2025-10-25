@@ -79,10 +79,6 @@ class CalibrationWizard:
         start_x = max(1, (w - self.POPUP_WIDTH) // 2)
         return start_y, start_x
 
-    def _format_servo_name(self) -> str:
-        """Format servo name using shared UI utility."""
-        return ui_utils.CursesUIHelper.format_servo_name(self.servo_controller.servo_name.value)
-
     def create_popup_window(self) -> curses.window:
         """Create and configure a popup window."""
         self.popup_start_y, self.popup_start_x = self.get_popup_position()
@@ -116,7 +112,7 @@ class CalibrationWizard:
                 popup_win.box()
 
                 # Title
-                title = LABELS.WIZARD_TITLE.format(self._format_servo_name())
+                title = LABELS.WIZARD_TITLE.format(self.servo_controller.format_servo_name())
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
@@ -360,19 +356,38 @@ class CalibrationWizard:
             if self.spec.joint_type == JointType.SHOULDER:
                 rest_angle_local = int((pulse1 - min_pulse) / (max_pulse - min_pulse) * calculated_range)
         else:
-            # For foot servos, use the original logic
+            # For foot servos, use the same linear extrapolation as legs
+            # The rest_angle is in physical coordinates and needs to be mapped to local coordinates
             if point1.pulse_width > point2.pulse_width:
                 point1, point2 = point2, point1
 
-            min_pulse: int = cast(int, point1.pulse_width)
-            max_pulse: int = cast(int, point2.pulse_width)
+            angle1 = point1.physical_angle
+            angle2 = point2.physical_angle
+            pulse1 = cast(int, point1.pulse_width)
+            pulse2 = cast(int, point2.pulse_width)
+
+            min_pulse: int = pulse1
+            max_pulse: int = pulse2
 
             # Calculate the target range
             target_range = self.spec.target_max_angle - self.spec.target_min_angle
             calculated_range = int(target_range)
 
-            # For foot servos, rest_angle is already in the correct range
-            rest_angle_local = int(self.spec.rest_angle)
+            # Convert rest_angle from physical coordinates to servo local coordinates [0, range]
+            # Calculate pulse per degree
+            angle_diff = angle2 - angle1
+            pulse_diff = pulse2 - pulse1
+            pulse_per_degree = pulse_diff / angle_diff if angle_diff != 0 else 0
+
+            # Calculate rest pulse using linear extrapolation
+            rest_pulse = pulse1 + (self.spec.rest_angle - angle1) * pulse_per_degree
+            # Map the rest pulse to servo angle in local coordinates
+            rest_angle_local = (
+                (rest_pulse - min_pulse) / (max_pulse - min_pulse) * calculated_range
+                if (max_pulse - min_pulse) > 0
+                else 0
+            )
+            rest_angle_local = int(max(0, min(calculated_range, rest_angle_local)))
 
         # Save to configuration
         self.servo_controller.config_provider.set_servo_min_pulse(self.servo_controller.servo_name, min_pulse)

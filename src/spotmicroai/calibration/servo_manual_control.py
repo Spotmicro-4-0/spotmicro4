@@ -39,10 +39,6 @@ class ServoManualControl:
         servo_name = servo_controller.servo_name.value.lower()
         self.is_inverted = "shoulder" in servo_name
 
-    def _format_servo_name(self) -> str:
-        """Format servo name using shared UI utility."""
-        return ui_utils.CursesUIHelper.format_servo_name(self.servo_controller.servo_name.value)
-
     def get_popup_position(self):
         """Calculate centered popup position."""
         h, w = self.stdscr.getmaxyx()
@@ -135,7 +131,7 @@ class ServoManualControl:
                 popup_win.box()
 
                 # Title
-                title = LABELS.MANUAL_TITLE.format(self._format_servo_name())
+                title = LABELS.MANUAL_TITLE.format(self.servo_controller.format_servo_name())
                 title_x = (self.POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
