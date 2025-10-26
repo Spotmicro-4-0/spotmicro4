@@ -6,16 +6,16 @@ FOOT_CALIBRATION = {
     "points": [
         {
             "description": "Minimum position (foot inline with leg)",
-            "physical_angle": 17.0,
+            "physical_angle": 17,
         },
         {
             "description": "Maximum position (foot perpendicular to leg)",
-            "physical_angle": 131.0,
+            "physical_angle": 131,
         },
     ],
-    "target_min_angle": 17.0,
-    "target_max_angle": 131.0,
-    "rest_angle": 17.0,
+    "target_min_angle": 17,
+    "target_max_angle": 131,
+    "rest_angle": 17,
 }
 
 # Leg calibration: Maps physical angles to servo pulse widths
@@ -26,16 +26,16 @@ LEG_CALIBRATION = {
     "points": [
         {
             "description": "Reference position 1 (leg vertical, 0°)",
-            "physical_angle": 0.0,
+            "physical_angle": 0,
         },
         {
             "description": "Reference position 2 (leg horizontal, 90°)",
-            "physical_angle": 90.0,
+            "physical_angle": 90,
         },
     ],
-    "target_min_angle": -20.0,
-    "target_max_angle": 110.0,
-    "rest_angle": 90.0,
+    "target_min_angle": -20,
+    "target_max_angle": 110,
+    "rest_angle": 90,
 }
 
 # Shoulder calibration: Maps physical angles to servo pulse widths
@@ -47,16 +47,16 @@ SHOULDER_CALIBRATION = {
     "points": [
         {
             "description": "Reference position 1 (shoulder at 90°, also the rest position)",
-            "physical_angle": 90.0,
+            "physical_angle": 90,
         },
         {
             "description": "Reference position 2 (shoulder at 180°)",
-            "physical_angle": 180.0,
+            "physical_angle": 180,
         },
     ],
-    "target_min_angle": 60.0,
-    "target_max_angle": 120.0,
-    "rest_angle": 90.0,
+    "target_min_angle": 60,
+    "target_max_angle": 120,
+    "rest_angle": 90,
 }
 
 # Mapping of joint types to their calibration specifications
