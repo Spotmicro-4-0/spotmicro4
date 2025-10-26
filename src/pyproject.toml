@@ -40,6 +40,7 @@ disable = [
     "W0718",  # broad-exception-caught
     "R0402",  # consider-using-from-import
     "R0904",  # too-many-public-methods
+    "R0902",  # too-many-instance-attributes
 ]
 # Explicitly enable rule to disallow relative imports
 enable = [
