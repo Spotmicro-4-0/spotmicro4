@@ -46,6 +46,7 @@ RSYNC_EXCLUDES = [
     "logs/",
     ".pytest_cache/",
     ".mypy_cache/",
+    "spotmicroai.json",
 ]
 TOTAL_STEPS = 9
 VERSION = "SpotmicroAI Setup Tool"
