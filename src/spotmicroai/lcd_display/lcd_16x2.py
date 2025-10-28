@@ -13,7 +13,7 @@ Made available under GNU GENERAL PUBLIC LICENSE
 """
 from time import sleep
 
-from spotmicroai.drivers.i2c_device import I2cDevice
+from spotmicroai.lcd_display.i2c_device import I2cDevice
 
 # LCD Address
 ADDRESS = 0x27
