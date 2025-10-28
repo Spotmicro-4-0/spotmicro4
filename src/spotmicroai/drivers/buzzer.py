@@ -4,7 +4,7 @@ Buzzer handler for controlling audio feedback on GPIO.
 
 import time
 
-from RPi import GPIO
+from RPi.GPIO import GPIO
 
 from spotmicroai import Singleton
 from spotmicroai.configuration._config_provider import ConfigProvider

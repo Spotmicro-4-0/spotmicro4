@@ -1,0 +1,11 @@
+[Unit]
+Description=Startup Buzzer Beep
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/spotmicroai/buzzer/startup_beep.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
