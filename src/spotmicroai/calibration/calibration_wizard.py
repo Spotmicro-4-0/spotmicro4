@@ -189,9 +189,9 @@ class CalibrationWizard:
                 key = popup_win.getch()
 
                 if key == curses.KEY_UP:
-                    self.servo.pulse += CALIBRATION_STEP_SIZE
+                    self.servo.set_pulse_unsafe(self.servo.pulse + CALIBRATION_STEP_SIZE)
                 elif key == curses.KEY_DOWN:
-                    self.servo.pulse -= CALIBRATION_STEP_SIZE
+                    self.servo.set_pulse_unsafe(self.servo.pulse - CALIBRATION_STEP_SIZE)
                 elif key in (curses.KEY_ENTER, 10, 13):
                     # Capture this point
                     point.pulse_width = self.servo.pulse

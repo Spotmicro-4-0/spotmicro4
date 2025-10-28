@@ -113,9 +113,15 @@ class Servo:
         min_pulse_abs = min(self._min_pulse, self._max_pulse)
         max_pulse_abs = max(self._min_pulse, self._max_pulse)
         clamped_pulse = max(min_pulse_abs, min(max_pulse_abs, value))
+        self._write_pulse(clamped_pulse)
 
-        # Set the pulse via duty cycle
-        self._pwm_channel.duty_cycle = int((clamped_pulse / 20000.0) * 65535)
+    def set_pulse_unsafe(self, value: int) -> None:
+        """Set the servo pulse width directly, bypassing safety clamps (for calibration)."""
+        self._write_pulse(value)
+
+    def _write_pulse(self, pulse_us: int) -> None:
+        """Low-level helper to send a pulse width to the PWM channel."""
+        self._pwm_channel.duty_cycle = int((pulse_us / 20000.0) * 65535)
 
     @property
     def min_pulse(self) -> int:
