@@ -17,6 +17,7 @@ import time
 import traceback
 
 import labels as LABELS
+import connect_tool_labels as TOOL_LABELS
 
 # ------------------------------------------------------------------
 # Constants (single source of truth)
@@ -126,7 +127,7 @@ class SetupTool:
             self.log_handle.write(msg + "\n")
             self.log_handle.flush()
         except Exception as e:
-            print(f"Warning: Could not write to log: {e}", file=sys.stderr)
+            print(f"{TOOL_LABELS.MSG_LOG_WRITE_FAILED.format(e=e)}", file=sys.stderr)
 
     def _rotate_log_if_needed(self):
         """Rotate log file if it exceeds MAX_LOG_SIZE."""
@@ -155,7 +156,7 @@ class SetupTool:
                     backup.unlink()
                 self.log_file.rename(backup)
         except Exception as e:
-            print(f"Warning: Could not rotate log: {e}", file=sys.stderr)
+            print(f"{TOOL_LABELS.MSG_LOG_ROTATE_FAILED.format(e=e)}", file=sys.stderr)
 
     def _close_log(self):
         """Close the log file."""
@@ -573,7 +574,7 @@ def main():
     setup = SetupTool(args)
     ok = setup.run()
     if not ok:
-        print("See src/connect_tool/setup.log for more details")
+        print(TOOL_LABELS.MSG_LOG_PATH)
     sys.exit(0 if ok else 1)
 
 
