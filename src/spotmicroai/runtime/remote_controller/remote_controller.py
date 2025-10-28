@@ -1,22 +1,22 @@
-import array
-from fcntl import ioctl
-import os
 import signal
-import struct
 import sys
 import time
 
 from spotmicroai.configuration._config_provider import ConfigProvider
-import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
 import spotmicroai.runtime.queues as queues
+from .remote_control_service import RemoteControlService
+from .remote_controller_constants import (
+    PUBLISH_RATE_HZ,
+    READ_LOOP_SLEEP,
+    DEVICE_SEARCH_INTERVAL,
+)
 
 log = Logger().setup_logger('Remote controller')
 
 
 class RemoteControllerController:
     _config_provider = ConfigProvider()
-    _connected_device = False
 
     def __init__(self, communication_queues):
         try:
@@ -25,13 +25,11 @@ class RemoteControllerController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            # We'll store the states here.
-            self._connected_device = False
-            self.axis_states = {}
-            self.button_states = {}
-            self.button_map = []
-            self.axis_map = []
-            self.jsdev = None
+            # Get device name from config
+            device_name = self._config_provider.get_remote_controller_device()
+
+            # Initialize the remote control service
+            self._remote_control_service = RemoteControlService(device_name)
 
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
             self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
@@ -46,25 +44,33 @@ class RemoteControllerController:
         log.info('Terminated')
         sys.exit(0)
 
+    def _notify_remote_controller_connected(self) -> None:
+        """Notify LCD screen that remote controller has been connected."""
+        self._lcd_screen_queue.put(queues.LCD_SCREEN_CONTROLLER_ACTION_ON)
+        self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_OK)
+
+    def _notify_searching_for_device(self) -> None:
+        """Notify about device search and abort current motion."""
+        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
+        self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_SEARCHING)
+        self._remote_control_service.check_for_connected_devices()
+
     def do_process_events_from_queues(self):
         """
-        Main event loop. Reads joystick deltas but keeps publishing
-        the last known state at a steady rate so that movement persists
+        Main event loop. Uses the RemoteControlService to read joystick events
+        and publishes the state at a steady rate so that movement persists
         while the stick is held in position.
         """
         remote_controller_connected_already = False
 
         while True:
-            if self._connected_device and not remote_controller_connected_already:
-                self._lcd_screen_queue.put(queues.LCD_SCREEN_CONTROLLER_ACTION_ON)
-                self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_OK)
+            if self._remote_control_service.is_connected and not remote_controller_connected_already:
+                self._notify_remote_controller_connected()
                 remote_controller_connected_already = True
             else:
-                time.sleep(constants.DEVICE_SEARCH_INTERVAL)
-                self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
-                self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_SEARCHING)
+                self._notify_searching_for_device()
+                time.sleep(DEVICE_SEARCH_INTERVAL)
                 remote_controller_connected_already = False
-                self.check_for_connected_devices()
                 continue
 
             last_publish_time = 0
@@ -72,179 +78,21 @@ class RemoteControllerController:
             # Main event loop
             while True:
                 try:
-                    evbuf = self.jsdev.read(8)  # type: ignore
-
-                    if evbuf:
-                        _, value, event_type, number = struct.unpack('IhBB', evbuf)
-
-                        # Skip initialization events
-                        if event_type & 0x80:
-                            continue
-
-                        # Button event
-                        if event_type & 0x01:
-                            button = self.button_map[number]
-                            if button:
-                                self.button_states[button] = value
-
-                        # Axis event
-                        elif event_type & 0x02:
-                            axis = self.axis_map[number]
-                            if axis:
-                                fvalue = round(value / 32767.0, 3)
-
-                                # Apply deadzone filter
-                                if abs(fvalue) < constants.DEADZONE:
-                                    fvalue = 0.0
-
-                                # Only update if significantly changed
-                                if abs(fvalue - self.axis_states.get(axis, 0.0)) >= constants.AXIS_UPDATE_THRESHOLD:
-                                    self.axis_states[axis] = fvalue
+                    # Try to read and parse events from the device
+                    self._remote_control_service.read_and_parse_events()
 
                     now = time.time()
-                    if now - last_publish_time >= 1.0 / constants.PUBLISH_RATE_HZ:
-                        combined = {**self.button_states, **self.axis_states}
-                        self._motion_queue.put(combined)
+                    if now - last_publish_time >= 1.0 / PUBLISH_RATE_HZ:
+                        # Get current state and publish
+                        current_state = self._remote_control_service.get_current_state()
+                        self._motion_queue.put(current_state)
                         last_publish_time = now
 
-                    time.sleep(constants.READ_LOOP_SLEEP)
+                    time.sleep(READ_LOOP_SLEEP)
 
                 except Exception as e:
                     log.error('Unknown problem while processing the queue of the remote controller: %s', e)
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                     remote_controller_connected_already = False
-                    self.check_for_connected_devices()
+                    self._remote_control_service.disconnect()
                     break
-
-    def check_for_connected_devices(self):
-        """
-        Scans /dev/input for the configured joystick device and opens it.
-        """
-        connected_device = self._config_provider.get_remote_controller_device()
-
-        log.info('The remote controller is not detected, looking for connected devices')
-        self._connected_device = False
-        for fn in os.listdir('/dev/input'):
-            if fn.startswith(str(connected_device)):
-                self._connected_device = True
-
-                # These constants were borrowed from linux/input.h
-                axis_names = {
-                    0x00: 'lx',
-                    0x01: 'ly',
-                    0x02: 'lz',
-                    0x03: 'rx',
-                    0x04: 'ry',
-                    0x05: 'rz',
-                    0x06: 'trottle',
-                    0x07: 'rudder',
-                    0x08: 'wheel',
-                    0x09: 'gas',
-                    0x0A: 'brake',
-                    0x10: 'hat0x',
-                    0x11: 'hat0y',
-                    0x12: 'hat1x',
-                    0x13: 'hat1y',
-                    0x14: 'hat2x',
-                    0x15: 'hat2y',
-                    0x16: 'hat3x',
-                    0x17: 'hat3y',
-                    0x18: 'pressure',
-                    0x19: 'distance',
-                    0x1A: 'tilt_x',
-                    0x1B: 'tilt_y',
-                    0x1C: 'tool_width',
-                    0x20: 'volume',
-                    0x28: 'misc',
-                }
-
-                button_names = {
-                    0x120: 'trigger',
-                    0x121: 'thumb',
-                    0x122: 'thumb2',
-                    0x123: 'top',
-                    0x124: 'top2',
-                    0x125: 'pinkie',
-                    0x126: 'base',
-                    0x127: 'base2',
-                    0x128: 'base3',
-                    0x129: 'base4',
-                    0x12A: 'base5',
-                    0x12B: 'base6',
-                    0x12F: 'dead',
-                    0x130: 'a',
-                    0x131: 'b',
-                    0x132: 'c',
-                    0x133: 'x',
-                    0x134: 'y',
-                    0x135: 'z',
-                    0x136: 'tl',
-                    0x137: 'tr',
-                    0x138: 'tl2',
-                    0x139: 'tr2',
-                    0x13A: 'select',
-                    0x13B: 'start',
-                    0x13C: 'mode',
-                    0x13D: 'thumbl',
-                    0x13E: 'thumbr',
-                    0x220: 'dpad_up',
-                    0x221: 'dpad_down',
-                    0x222: 'dpad_left',
-                    0x223: 'dpad_right',
-                    # Xbox 360 controller specific
-                    0x2C0: 'dpad_left',
-                    0x2C1: 'dpad_right',
-                    0x2C2: 'dpad_up',
-                    0x2C3: 'dpad_down',
-                }
-
-                # Open the joystick device
-                fn = '/dev/input/' + str(connected_device)
-
-                while True:
-                    try:
-                        log.debug('Attempting to open %s...', fn)
-                        self.jsdev = open(fn, 'rb')
-                        os.set_blocking(self.jsdev.fileno(), False)
-                        log.info('%s opened successfully.', fn)
-                        break
-                    except Exception:
-                        log.warning(
-                            'Unable to access %s yet. Will retry in %s seconds...', fn, constants.RECONNECT_RETRY_DELAY
-                        )
-                        time.sleep(constants.RECONNECT_RETRY_DELAY)
-
-                # Get the device name
-                buf = array.array('B', [0] * 64)
-                ioctl(self.jsdev, 0x80006A13 + (0x10000 * len(buf)), buf)
-                js_name = buf.tobytes().rstrip(b'\x00').decode('utf-8')
-                log.info('Connected to device: %s', js_name)
-                # Get number of axes and buttons
-                buf = array.array('B', [0])
-                ioctl(self.jsdev, 0x80016A11, buf)
-                num_axes = buf[0]
-
-                buf = array.array('B', [0])
-                ioctl(self.jsdev, 0x80016A12, buf)
-                num_buttons = buf[0]
-
-                # Get the axis map
-                buf = array.array('B', [0] * 0x40)
-                ioctl(self.jsdev, 0x80406A32, buf)
-                for axis in buf[:num_axes]:
-                    axis_name = axis_names.get(axis, f'unknown(0x{axis:02x})')
-                    self.axis_map.append(axis_name)
-                    self.axis_states[axis_name] = 0.0
-
-                # Get the button map
-                buf = array.array('H', [0] * 200)
-                ioctl(self.jsdev, 0x80406A34, buf)
-                for btn in buf[:num_buttons]:
-                    btn_name = button_names.get(btn, f'unknown(0x{btn:03x})')
-                    self.button_map.append(btn_name)
-                    self.button_states[btn_name] = 0
-
-                log.info('%d axes found: %s', num_axes, ", ".join(self.axis_map))
-                log.info('%d buttons found: %s', num_buttons, ", ".join(self.button_map))
-
-                break
