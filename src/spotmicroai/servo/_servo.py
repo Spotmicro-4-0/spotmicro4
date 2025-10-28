@@ -205,12 +205,19 @@ class Servo:
         Returns:
             Physical angle in degrees
         """
-        # Normalize pulse to [0, 1] range
-        normalized = (pulse - self._min_pulse) / (self._max_pulse - self._min_pulse)
-
-        # Handle inverted servo
+        # Handle inversion explicitly to keep math direction correct
         if self._inverted:
-            normalized = 1.0 - normalized
+            normalized = (self._min_pulse - pulse) / (self._min_pulse - self._max_pulse)
+        else:
+            normalized = (pulse - self._min_pulse) / (self._max_pulse - self._min_pulse)
 
-        # Map to angle range
-        return int(round(self._min_angle + (normalized * self._angle_range)))
+        # Compute angle using integer math for consistency
+        angle = self._min_angle + int(round(normalized * self._angle_range))
+
+        # Clamp just in case of rounding edge cases
+        if angle < self._min_angle:
+            angle = self._min_angle
+        elif angle > self._max_angle:
+            angle = self._max_angle
+
+        return angle

@@ -2,18 +2,16 @@
 """
 Manual servo control for testing and motion verification.
 
-Allows real-time servo movement using arrow keys to adjust pulse width.
-Useful for verifying servo range and motion before full calibration.
-
-Usage: servo_manual_control.py <SERVO_ID>
+Uses arrow keys to adjust the servo pulse in real time.
+All safety limits (clamping, inversion) are enforced by the Servo class.
 """
 
 import curses
 import sys
 
 from spotmicroai.configuration._config_provider import ServoName
-from spotmicroai.constants import ANGLE_STEP_SIZE, POPUP_HEIGHT, POPUP_WIDTH
-from spotmicroai.servo import Servo, ServoFactory
+from spotmicroai.constants import CALIBRATION_STEP_SIZE, POPUP_HEIGHT, POPUP_WIDTH
+from spotmicroai.servo import ServoFactory
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
 
@@ -21,142 +19,75 @@ import spotmicroai.setup_app.labels as LABELS
 class ServoManualControl:
     """Interactive manual servo control interface."""
 
-    def __init__(self, stdscr, servo: Servo, servo_enum: ServoName):
-        """Initialize manual control interface.
-
-        Args:
-            stdscr: curses window object
-            servo: Servo instance
-        """
+    def __init__(self, stdscr, servo, servo_enum: ServoName):
         self.stdscr = stdscr
         self.servo = servo
-        # Start at the midpoint between min and max pulse
-        self.current_pulse = (servo.min_pulse + servo.max_pulse) // 2
-        self.formatted_servo_name = servo_enum.value.replace('_', ' ').title()
-
-        # Determine if servo is inverted based on pulse width relationship
-        self.is_inverted = servo.min_pulse > servo.max_pulse
+        self.servo_enum = servo_enum
+        self.formatted_servo_name = servo_enum.value.replace("_", " ").title()
 
     def get_popup_position(self):
-        """Calculate centered popup position."""
+        """Center the popup on screen."""
         h, w = self.stdscr.getmaxyx()
         start_y = max(1, (h - POPUP_HEIGHT) // 2)
         start_x = max(1, (w - POPUP_WIDTH) // 2)
         return start_y, start_x
 
-    def calculate_angle_from_pulse(self, pulse: int) -> int:
-        """Calculate servo angle based on current pulse width and calibration.
-
-        Args:
-            pulse: Pulse width in microseconds
-
-        Returns:
-            Calculated angle in degrees based on current calibration
-        """
-        servo = self.servo
-        pulse_range = servo.max_pulse - servo.min_pulse
-
-        if pulse_range == 0:
-            return servo.rest_angle
-
-        # Calculate angle proportionally across the range
-        pulse_offset = pulse - servo.min_pulse
-
-        if self.is_inverted:
-            # For inverted servos (shoulder), the relationship is backwards
-            # So we invert the pulse offset calculation
-            angle_offset = ((servo.max_pulse - pulse) / pulse_range) * servo.range
-        else:
-            # For normal servos (leg), higher pulse = higher angle
-            angle_offset = (pulse_offset / pulse_range) * servo.range
-
-        # Add the minimum angle offset to get the actual angle
-        angle = servo.min_angle + angle_offset
-
-        return angle
-
-    def adjust_pulse_for_angle_change(self, angle_delta: float) -> None:
-        """Adjust pulse width to achieve desired angle change.
-
-        Args:
-            angle_delta: Change in angle (positive = increase angle, negative = decrease angle)
-        """
-        servo = self.servo
-        pulse_range = servo.max_pulse - servo.min_pulse
-
-        if pulse_range == 0:
-            return
-
-        # Calculate pulse change needed for the angle change
-        pulse_delta = int((angle_delta / servo.range) * pulse_range)
-
-        if self.is_inverted:
-            # For inverted servos, angle increase requires pulse decrease
-            pulse_delta = -pulse_delta
-
-        self.current_pulse = self.servo.pulse = self.current_pulse + pulse_delta
-
     def create_popup_window(self):
-        """Create and configure a popup window."""
+        """Create a styled popup window."""
         start_y, start_x = self.get_popup_position()
-        popup_win = curses.newwin(POPUP_HEIGHT, POPUP_WIDTH, start_y, start_x)
-        popup_win.keypad(True)
-        popup_win.bkgd(" ", curses.color_pair(THEME.REGULAR_ROW))
-        return popup_win
+        win = curses.newwin(POPUP_HEIGHT, POPUP_WIDTH, start_y, start_x)
+        win.keypad(True)
+        win.bkgd(" ", curses.color_pair(THEME.REGULAR_ROW))
+        return win
 
     def run(self) -> bool:
-        """Run the manual control loop.
-
-        Returns:
-            True if completed successfully, False if cancelled.
-        """
-        popup_win = self.create_popup_window()
-
+        """Run manual control UI loop."""
+        popup = self.create_popup_window()
         try:
             while True:
-                popup_win.erase()
-                popup_win.box()
+                popup.erase()
+                popup.box()
 
                 # Title
                 title = LABELS.MANUAL_TITLE.format(self.formatted_servo_name)
-                title_x = (POPUP_WIDTH - len(title)) // 2
-                popup_win.addstr(1, title_x, title, curses.A_BOLD)
+                popup.addstr(1, (POPUP_WIDTH - len(title)) // 2, title, curses.A_BOLD)
+                popup.hline(2, 1, curses.ACS_HLINE, POPUP_WIDTH - 2)
 
-                # Separator
-                popup_win.hline(2, 1, curses.ACS_HLINE, POPUP_WIDTH - 2)
+                # Calculate angles for display
+                current_angle = round(self.servo.angle, 1)
+                min_angle = round(self.servo.min_angle, 1)
+                max_angle = round(self.servo.max_angle, 1)
 
-                # Current status
-                popup_win.addstr(4, 3, LABELS.MANUAL_CURRENT_PULSE_WIDTH, curses.A_BOLD)
-                calculated_angle = self.calculate_angle_from_pulse(self.current_pulse)
-                popup_win.addstr(5, 3, f"  {int(self.current_pulse)} µs ({int(calculated_angle)}°)")
+                # Info
+                popup.addstr(4, 3, LABELS.MANUAL_CURRENT_PULSE_WIDTH, curses.A_BOLD)
+                popup.addstr(5, 3, f"  {self.servo.pulse} µs  ({current_angle}°)")
 
-                popup_win.addstr(7, 3, LABELS.MANUAL_SERVO_RANGE)
-                popup_win.addstr(
+                popup.addstr(7, 3, LABELS.MANUAL_SERVO_RANGE)
+                popup.addstr(
                     8,
                     3,
-                    f"  Min: {self.servo.min_pulse} µs | Max: {self.servo.max_pulse} µs",
+                    f"  Min: {self.servo.min_pulse} µs ({min_angle}°) | "
+                    f"Max: {self.servo.max_pulse} µs ({max_angle}°)",
                 )
 
-                popup_win.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
-                # Display rest angle - for all servo types, it's stored in the servo config
-                rest_angle_display = self.servo.rest_angle
-                popup_win.addstr(11, 3, f"  {int(rest_angle_display)}°")
+                popup.addstr(10, 3, LABELS.MANUAL_REST_ANGLE)
+                popup.addstr(11, 3, f"  {int(self.servo.rest_angle)}°")
 
-                # Instructions
-                popup_win.addstr(13, 3, LABELS.MANUAL_ADJUST_INSTRUCTION.format(ANGLE_STEP_SIZE), curses.A_DIM)
-                popup_win.addstr(14, 3, LABELS.MANUAL_EXIT_INSTRUCTION, curses.A_DIM)
+                popup.addstr(
+                    13,
+                    3,
+                    LABELS.MANUAL_ADJUST_INSTRUCTION.format(CALIBRATION_STEP_SIZE),
+                    curses.A_DIM,
+                )
+                popup.addstr(14, 3, LABELS.MANUAL_EXIT_INSTRUCTION, curses.A_DIM)
+                popup.refresh()
 
-                popup_win.refresh()
-
-                # Move servo to current pulse
-                self.servo.set_servo_pulse(self.current_pulse)
-
-                key = popup_win.getch()
-
+                # Key input
+                key = popup.getch()
                 if key == curses.KEY_UP:
-                    self.adjust_pulse_for_angle_change(ANGLE_STEP_SIZE)
+                    self.servo.pulse = self.servo.pulse + CALIBRATION_STEP_SIZE
                 elif key == curses.KEY_DOWN:
-                    self.adjust_pulse_for_angle_change(-ANGLE_STEP_SIZE)
+                    self.servo.pulse = self.servo.pulse - CALIBRATION_STEP_SIZE
                 elif key == 27:  # ESC
                     return True
 
@@ -165,33 +96,27 @@ class ServoManualControl:
 
 
 def main(servo_id: str) -> None:
-    """Main entry point for servo manual control.
-
-    Args:
-        servo_id: The servo ID to control (e.g., 'front_foot_left')
-    """
+    """CLI entry point for manual servo control."""
     try:
-        # Validate servo ID
         try:
             servo_enum = ServoName(servo_id)
         except ValueError:
             print(LABELS.MANUAL_INVALID_SERVO_ID.format(servo_id))
-            print(LABELS.MANUAL_VALID_SERVO_IDS.format(', '.join([s.value for s in ServoName])))
+            print(LABELS.MANUAL_VALID_SERVO_IDS.format(", ".join([s.value for s in ServoName])))
             sys.exit(1)
 
-        # Initialize the servo
         servo = ServoFactory.create(servo_enum)
 
-        # Run manual control
         def control_wrapper(stdscr):
             curses.curs_set(0)
             curses.start_color()
             curses.use_default_colors()
             ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
-            # stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
-
-            control = ServoManualControl(stdscr, servo, servo_enum)
-            return control.run()
+            # Make the entire background blue
+            stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
+            stdscr.clear()
+            stdscr.refresh()
+            return ServoManualControl(stdscr, servo, servo_enum).run()
 
         result = curses.wrapper(control_wrapper)
 
@@ -213,5 +138,4 @@ if __name__ == "__main__":
         print(LABELS.MANUAL_USAGE)
         sys.exit(1)
 
-    servo_id_arg = sys.argv[1]
-    main(servo_id_arg)
+    main(sys.argv[1])
