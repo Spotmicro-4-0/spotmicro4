@@ -54,7 +54,7 @@ class Servo:
         self._rest_angle = rest_angle
 
         # Determine if servo is inverted
-        self._inverted = min_pulse > max_pulse
+        self._is_inverted = min_pulse > max_pulse
 
         # Calculate range for Adafruit servo (always positive)
         self._pulse_range = abs(max_pulse - min_pulse)
@@ -168,7 +168,7 @@ class Servo:
         """
         self._min_pulse = min_pulse
         self._max_pulse = max_pulse
-        self._inverted = min_pulse > max_pulse
+        self._is_inverted = min_pulse > max_pulse
         self._pulse_range = abs(max_pulse - min_pulse)
 
         # Update Adafruit servo with new calibration
@@ -180,21 +180,20 @@ class Servo:
     def _angle_to_pulse(self, angle: int) -> int:
         """Convert a physical angle to its corresponding pulse width.
 
-        Args:
-            angle: Physical angle in degrees
-
-        Returns:
-            Pulse width in microseconds
+        Handles inverted servos correctly.
         """
-        # Normalize angle to [0, 1] range
-        normalized = (angle - self._min_angle) / self._angle_range
+        # Clamp angle
+        clamped = max(self._min_angle, min(self._max_angle, angle))
 
-        # Handle inverted servo
-        if self._inverted:
-            normalized = 1.0 - normalized
+        # Normalize between 0–1
+        normalized = (clamped - self._min_angle) / self._angle_range
 
-        # Map to pulse range
-        return int(self._min_pulse + (normalized * (self._max_pulse - self._min_pulse)))
+        if self._is_inverted:
+            # For inverted servos, reverse direction and base off _max_pulse
+            return int(self._max_pulse + (1.0 - normalized) * (self._min_pulse - self._max_pulse))
+        else:
+            # Normal mapping
+            return int(self._min_pulse + normalized * (self._max_pulse - self._min_pulse))
 
     def _pulse_to_angle(self, pulse: int) -> int:
         """Convert a pulse width to its corresponding physical angle.
@@ -206,7 +205,7 @@ class Servo:
             Physical angle in degrees
         """
         # Handle inversion explicitly to keep math direction correct
-        if self._inverted:
+        if self._is_inverted:
             normalized = (self._min_pulse - pulse) / (self._min_pulse - self._max_pulse)
         else:
             normalized = (pulse - self._min_pulse) / (self._max_pulse - self._min_pulse)
@@ -221,3 +220,8 @@ class Servo:
             angle = self._max_angle
 
         return angle
+
+    @property
+    def is_inverted(self) -> bool:
+        """Get whether the servo is inverted or not."""
+        return self._is_inverted

@@ -23,6 +23,8 @@ from spotmicroai.constants import (
     CALIBRATION_POINT_LABEL_PREFIX,
     UNDERSCORE_CHAR,
     SPACE_CHAR,
+    SERVO_PULSE_WIDTH_MIN,
+    SERVO_PULSE_WIDTH_MAX,
 )
 from spotmicroai.servo import JointType
 from spotmicroai.servo._servo import Servo
@@ -189,9 +191,15 @@ class CalibrationWizard:
                 key = popup_win.getch()
 
                 if key == curses.KEY_UP:
-                    self.servo.set_pulse_unsafe(self.servo.pulse + CALIBRATION_STEP_SIZE)
+                    new_pulse = max(
+                        SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, self.servo.pulse + CALIBRATION_STEP_SIZE)
+                    )
+                    self.servo.set_pulse_unsafe(new_pulse)
                 elif key == curses.KEY_DOWN:
-                    self.servo.set_pulse_unsafe(self.servo.pulse - CALIBRATION_STEP_SIZE)
+                    new_pulse = max(
+                        SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, self.servo.pulse - CALIBRATION_STEP_SIZE)
+                    )
+                    self.servo.set_pulse_unsafe(new_pulse)
                 elif key in (curses.KEY_ENTER, 10, 13):
                     # Capture this point
                     point.pulse_width = self.servo.pulse
@@ -312,7 +320,11 @@ class CalibrationWizard:
         min_pulse = pulse1 + (self.servo.min_angle - angle1) * pulse_per_degree
         max_pulse = pulse1 + (self.servo.max_angle - angle1) * pulse_per_degree
 
-        # Calculate target range (physical angle span)
+        # Clamp min and max pulses to valid servo range
+        min_pulse = max(SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, int(min_pulse)))
+        max_pulse = max(
+            SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, int(max_pulse))
+        )  # Calculate target range (physical angle span)
         target_range = self.servo.max_angle - self.servo.min_angle
 
         # 🔧 Recalibrate the servo instance in memory

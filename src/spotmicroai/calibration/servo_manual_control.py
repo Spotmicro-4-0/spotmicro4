@@ -85,9 +85,11 @@ class ServoManualControl:
                 # Key input
                 key = popup.getch()
                 if key == curses.KEY_UP:
-                    self.servo.pulse = self.servo.pulse + CALIBRATION_STEP_SIZE
+                    step = CALIBRATION_STEP_SIZE if not self.servo.is_inverted else -CALIBRATION_STEP_SIZE
+                    self.servo.pulse = self.servo.pulse + step
                 elif key == curses.KEY_DOWN:
-                    self.servo.pulse = self.servo.pulse - CALIBRATION_STEP_SIZE
+                    step = -CALIBRATION_STEP_SIZE if not self.servo.is_inverted else CALIBRATION_STEP_SIZE
+                    self.servo.pulse = self.servo.pulse + step
                 elif key == 27:  # ESC
                     return True
 
