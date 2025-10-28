@@ -1,0 +1,27 @@
+{
+  "inverse_kinematics_test": {
+    "title": "Inverse Kinematics Test: Select Servo Group",
+    "options": [
+      {
+        "label": "Front Left",
+        "action": "run",
+        "command": "bash inverse_kinematics/inverse_kinematics.sh front_left"
+      },
+      {
+        "label": "Front Right",
+        "action": "run",
+        "command": "bash inverse_kinematics/inverse_kinematics.sh front_right"
+      },
+      {
+        "label": "Rear Left",
+        "action": "run",
+        "command": "bash inverse_kinematics/inverse_kinematics.sh rear_left"
+      },
+      {
+        "label": "Rear Right",
+        "action": "run",
+        "command": "bash inverse_kinematics/inverse_kinematics.sh rear_right"
+      }
+    ]
+  }
+}

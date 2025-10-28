@@ -27,6 +27,12 @@
         "target": "manual_control_select"
       },
       {
+        "label": "Inverse Kinematics Test",
+        "description": "Test converting XYZ Positions into Servo Angles",
+        "action": "submenu",
+        "target": "inverse_kinematics_test"
+      },
+      {
         "label": "Export Configurations",
         "description": "Save the current configuration and servo calibration information",
         "action": "submenu",
