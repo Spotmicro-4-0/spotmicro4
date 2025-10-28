@@ -485,10 +485,6 @@ class MotionController:
     #     self.servos_configurations.front_right.leg.rest_angle = self.servos_configurations.front_right.leg.rest_angle + variation_leg - 5
     #     self.servos_configurations.front_right.foot.rest_angle = self.servos_configurations.front_right.foot.rest_angle - variation_feet + 5
 
-    #############################################
-    # Left thumbstick controls
-    #############################################
-
     def body_move_pitch_analog(self, raw_value):
         """
         Adjusts the robot's body pitch using analog input values.
@@ -498,15 +494,18 @@ class MotionController:
         """
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_leg_left_angle = int(self.maprange((5, -5), (180, 180), raw_value))
-        self._servo_service.rear_foot_left_angle = int(self.maprange((5, -5), (10, 50), raw_value))
-        self._servo_service.rear_leg_right_angle = int(self.maprange((5, -5), (0, 0), raw_value))
-        self._servo_service.rear_foot_right_angle = int(self.maprange((5, -5), (170, 130), raw_value))
+        # Legs move opposite directions for pitch (front down = rear up)
+        self._servo_service.front_leg_left_angle = int(self.maprange((-5, 5), (20, 180), raw_value))
+        self._servo_service.front_foot_left_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
 
-        self._servo_service.front_leg_left_angle = int(self.maprange((-5, 5), (160, 180), raw_value))
-        self._servo_service.front_foot_left_angle = int(self.maprange((-5, 5), (10, 50), raw_value))
-        self._servo_service.front_leg_right_angle = int(self.maprange((-5, 5), (20, 0), raw_value))
+        self._servo_service.front_leg_right_angle = int(self.maprange((-5, 5), (20, 180), raw_value))
         self._servo_service.front_foot_right_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
+
+        self._servo_service.rear_leg_left_angle = int(self.maprange((-5, 5), (180, 20), raw_value))
+        self._servo_service.rear_foot_left_angle = int(self.maprange((-5, 5), (130, 170), raw_value))
+
+        self._servo_service.rear_leg_right_angle = int(self.maprange((-5, 5), (180, 20), raw_value))
+        self._servo_service.rear_foot_right_angle = int(self.maprange((-5, 5), (130, 170), raw_value))
 
     def body_move_roll_analog(self, raw_value):
         """
@@ -517,11 +516,12 @@ class MotionController:
         """
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_shoulder_left_angle = int(self.maprange((5, -5), (145, 35), raw_value))
-        self._servo_service.rear_shoulder_right_angle = int(self.maprange((5, -5), (145, 35), raw_value))
-
+        # Roll: left and right shoulders move opposite
         self._servo_service.front_shoulder_left_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
-        self._servo_service.front_shoulder_right_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_left_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
+
+        self._servo_service.front_shoulder_right_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
+        self._servo_service.rear_shoulder_right_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
 
     def body_move_height_analog(self, raw_value):
         """
@@ -533,15 +533,17 @@ class MotionController:
 
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_leg_left_angle = int(self.maprange((5, -5), (160, 180), raw_value))
-        self._servo_service.rear_foot_left_angle = int(self.maprange((-5, 5), (10, 50), raw_value))
-        self._servo_service.rear_leg_right_angle = int(self.maprange((5, -5), (20, 0), raw_value))
-        self._servo_service.rear_foot_right_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
+        # Raise/lower body equally on all legs
+        for name in ["front_leg_left_angle", "rear_leg_left_angle", "front_leg_right_angle", "rear_leg_right_angle"]:
+            setattr(self._servo_service, name, int(self.maprange((-5, 5), (180, 20), raw_value)))
 
-        self._servo_service.front_leg_left_angle = int(self.maprange((5, -5), (160, 180), raw_value))
-        self._servo_service.front_foot_left_angle = int(self.maprange((-5, 5), (10, 50), raw_value))
-        self._servo_service.front_leg_right_angle = int(self.maprange((5, -5), (20, 0), raw_value))
-        self._servo_service.front_foot_right_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
+        for name in [
+            "front_foot_left_angle",
+            "rear_foot_left_angle",
+            "front_foot_right_angle",
+            "rear_foot_right_angle",
+        ]:
+            setattr(self._servo_service, name, int(self.maprange((-5, 5), (130, 170), raw_value)))
 
     def body_move_yaw_analog(self, raw_value):
         """
@@ -552,11 +554,12 @@ class MotionController:
         """
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.rear_shoulder_left_angle = int(self.maprange((5, -5), (145, 35), raw_value))
-        self._servo_service.rear_shoulder_right_angle = int(self.maprange((5, -5), (145, 35), raw_value))
+        # Yaw: diagonal shoulders move opposite
+        self._servo_service.front_shoulder_left_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
+        self._servo_service.rear_shoulder_right_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
 
-        self._servo_service.front_shoulder_left_angle = int(self.maprange((5, -5), (145, 35), raw_value))
-        self._servo_service.front_shoulder_right_angle = int(self.maprange((5, -5), (145, 35), raw_value))
+        self._servo_service.front_shoulder_right_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_left_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
 
     def _deactivate(self):
         """
