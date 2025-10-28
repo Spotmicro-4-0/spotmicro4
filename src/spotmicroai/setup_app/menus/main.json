@@ -24,7 +24,7 @@
         "label": "Servo Motion Test",
         "description": "Test each servo's motion individually",
         "action": "submenu",
-        "target": "calibrate_servo_manual_select"
+        "target": "manual_control_select"
       },
       {
         "label": "Export Configurations",
