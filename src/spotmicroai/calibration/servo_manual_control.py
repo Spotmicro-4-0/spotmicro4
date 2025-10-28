@@ -12,6 +12,7 @@ import curses
 import sys
 
 from spotmicroai.configuration._config_provider import ServoName
+from spotmicroai.constants import ANGLE_STEP_SIZE, POPUP_HEIGHT, POPUP_WIDTH
 from spotmicroai.servo import Servo, ServoFactory
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
@@ -20,11 +21,7 @@ import spotmicroai.setup_app.labels as LABELS
 class ServoManualControl:
     """Interactive manual servo control interface."""
 
-    POPUP_HEIGHT = 16
-    POPUP_WIDTH = 75
-    ANGLE_STEP_SIZE = 1  # degrees per adjustment
-
-    def __init__(self, stdscr, servo: Servo):
+    def __init__(self, stdscr, servo: Servo, servo_enum: ServoName):
         """Initialize manual control interface.
 
         Args:
@@ -35,27 +32,19 @@ class ServoManualControl:
         self.servo = servo
         # Start at the midpoint between min and max pulse
         self.current_pulse = (servo.min_pulse + servo.max_pulse) // 2
-        # Determine if servo is inverted
-        servo_name = servo.servo_name.value.lower()
-        self.is_inverted = "shoulder" in servo_name
+        self.formatted_servo_name = servo_enum.value.replace('_', ' ').title()
+
+        # Determine if servo is inverted based on pulse width relationship
+        self.is_inverted = servo.min_pulse > servo.max_pulse
 
     def get_popup_position(self):
         """Calculate centered popup position."""
         h, w = self.stdscr.getmaxyx()
-        start_y = max(1, (h - self.POPUP_HEIGHT) // 2)
-        start_x = max(1, (w - self.POPUP_WIDTH) // 2)
+        start_y = max(1, (h - POPUP_HEIGHT) // 2)
+        start_x = max(1, (w - POPUP_WIDTH) // 2)
         return start_y, start_x
 
-    def get_servo_target_min_angle(self) -> float:
-        """Get the target minimum angle for the current servo type."""
-        if "shoulder" in self.servo.servo_name.value.lower():
-            return 60.0
-        elif "leg" in self.servo.servo_name.value.lower():
-            return -20.0
-        else:
-            return 0.0
-
-    def calculate_angle_from_pulse(self, pulse: int | float) -> float:
+    def calculate_angle_from_pulse(self, pulse: int) -> int:
         """Calculate servo angle based on current pulse width and calibration.
 
         Args:
@@ -70,8 +59,6 @@ class ServoManualControl:
         if pulse_range == 0:
             return servo.rest_angle
 
-        target_min_angle = self.get_servo_target_min_angle()
-
         # Calculate angle proportionally across the range
         pulse_offset = pulse - servo.min_pulse
 
@@ -84,7 +71,7 @@ class ServoManualControl:
             angle_offset = (pulse_offset / pulse_range) * servo.range
 
         # Add the minimum angle offset to get the actual angle
-        angle = target_min_angle + angle_offset
+        angle = servo.min_angle + angle_offset
 
         return angle
 
@@ -101,18 +88,18 @@ class ServoManualControl:
             return
 
         # Calculate pulse change needed for the angle change
-        pulse_delta = (angle_delta / servo.range) * pulse_range
+        pulse_delta = int((angle_delta / servo.range) * pulse_range)
 
         if self.is_inverted:
             # For inverted servos, angle increase requires pulse decrease
             pulse_delta = -pulse_delta
 
-        self.current_pulse = self.servo.clamp_pulse(self.current_pulse + pulse_delta)
+        self.current_pulse = self.servo.pulse = self.current_pulse + pulse_delta
 
     def create_popup_window(self):
         """Create and configure a popup window."""
         start_y, start_x = self.get_popup_position()
-        popup_win = curses.newwin(self.POPUP_HEIGHT, self.POPUP_WIDTH, start_y, start_x)
+        popup_win = curses.newwin(POPUP_HEIGHT, POPUP_WIDTH, start_y, start_x)
         popup_win.keypad(True)
         popup_win.bkgd(" ", curses.color_pair(THEME.REGULAR_ROW))
         return popup_win
@@ -131,12 +118,12 @@ class ServoManualControl:
                 popup_win.box()
 
                 # Title
-                title = LABELS.MANUAL_TITLE.format(self.servo.get_formatted_servo_name())
-                title_x = (self.POPUP_WIDTH - len(title)) // 2
+                title = LABELS.MANUAL_TITLE.format(self.formatted_servo_name)
+                title_x = (POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
                 # Separator
-                popup_win.hline(2, 1, curses.ACS_HLINE, self.POPUP_WIDTH - 2)
+                popup_win.hline(2, 1, curses.ACS_HLINE, POPUP_WIDTH - 2)
 
                 # Current status
                 popup_win.addstr(4, 3, LABELS.MANUAL_CURRENT_PULSE_WIDTH, curses.A_BOLD)
@@ -156,7 +143,7 @@ class ServoManualControl:
                 popup_win.addstr(11, 3, f"  {int(rest_angle_display)}°")
 
                 # Instructions
-                popup_win.addstr(13, 3, LABELS.MANUAL_ADJUST_INSTRUCTION.format(self.ANGLE_STEP_SIZE), curses.A_DIM)
+                popup_win.addstr(13, 3, LABELS.MANUAL_ADJUST_INSTRUCTION.format(ANGLE_STEP_SIZE), curses.A_DIM)
                 popup_win.addstr(14, 3, LABELS.MANUAL_EXIT_INSTRUCTION, curses.A_DIM)
 
                 popup_win.refresh()
@@ -167,9 +154,9 @@ class ServoManualControl:
                 key = popup_win.getch()
 
                 if key == curses.KEY_UP:
-                    self.adjust_pulse_for_angle_change(self.ANGLE_STEP_SIZE)
+                    self.adjust_pulse_for_angle_change(ANGLE_STEP_SIZE)
                 elif key == curses.KEY_DOWN:
-                    self.adjust_pulse_for_angle_change(-self.ANGLE_STEP_SIZE)
+                    self.adjust_pulse_for_angle_change(-ANGLE_STEP_SIZE)
                 elif key == 27:  # ESC
                     return True
 
@@ -203,7 +190,7 @@ def main(servo_id: str) -> None:
             ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
             # stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
 
-            control = ServoManualControl(stdscr, servo)
+            control = ServoManualControl(stdscr, servo, servo_enum)
             return control.run()
 
         result = curses.wrapper(control_wrapper)

@@ -8,5 +8,3 @@ class ServoConfig:
     channel: int
     min_pulse: int
     max_pulse: int
-    rest_angle: int
-    range: int

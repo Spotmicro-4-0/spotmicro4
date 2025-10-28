@@ -8,87 +8,63 @@
   "pca9685_frequency": 50,
   "servo_front_shoulder_left": {
     "channel": 6,
-    "min_pulse": 1841,
-    "max_pulse": 1396,
-    "rest_angle": 151,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_front_leg_left": {
     "channel": 7,
-    "min_pulse": 2374,
-    "max_pulse": 981,
-    "rest_angle": 253,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_front_foot_left": {
     "channel": 8,
-    "min_pulse": 781,
-    "max_pulse": 1626,
-    "rest_angle": 38,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_front_shoulder_right": {
     "channel": 9,
-    "min_pulse": 1480,
-    "max_pulse": 1820,
-    "rest_angle": 90,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_front_leg_right": {
     "channel": 10,
-    "min_pulse": 900,
-    "max_pulse": 2280,
-    "rest_angle": 0,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_front_foot_right": {
     "channel": 11,
-    "min_pulse": 1350,
-    "max_pulse": 2190,
-    "rest_angle": 160,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_rear_shoulder_left": {
     "channel": 3,
-    "min_pulse": 1478,
-    "max_pulse": 1922,
-    "rest_angle": 162,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_rear_leg_left": {
     "channel": 4,
-    "min_pulse": 980,
-    "max_pulse": 2300,
-    "rest_angle": 180,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_rear_foot_left": {
     "channel": 5,
-    "min_pulse": 959,
-    "max_pulse": 1848,
-    "rest_angle": 65,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_rear_shoulder_right": {
     "channel": 0,
-    "min_pulse": 1480,
-    "max_pulse": 1830,
-    "rest_angle": 90,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_rear_leg_right": {
     "channel": 1,
-    "min_pulse": 930,
-    "max_pulse": 2325,
-    "rest_angle": 0,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "servo_rear_foot_right": {
     "channel": 2,
-    "min_pulse": 1380,
-    "max_pulse": 2240,
-    "rest_angle": 160,
-    "range": 270
+    "min_pulse": 500,
+    "max_pulse": 2500
   },
   "walking_cycle": [
     [-60, 150, 40],

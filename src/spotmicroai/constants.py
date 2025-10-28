@@ -57,3 +57,30 @@ AXIS_UPDATE_THRESHOLD = 0.01
 RECONNECT_RETRY_DELAY = 2.0
 # Delay between failed device detection cycles.
 DEVICE_SEARCH_INTERVAL = 2.5
+
+# ===============================
+# Calibration Wizard Constants
+# ===============================
+POPUP_HEIGHT = 16
+POPUP_WIDTH = 75
+CALIBRATION_STEP_SIZE = 10  # microseconds or degrees
+
+# ===============================
+# Servo Validation Constants
+# ===============================
+SERVO_PULSE_WIDTH_MIN = 500  # microseconds
+SERVO_PULSE_WIDTH_MAX = 2500  # microseconds
+
+# ===============================
+# Servo Manual Control Constants
+# ===============================
+ANGLE_STEP_SIZE = 1  # degrees per adjustment
+
+# ===============================
+# Calibration Wizard String Constants
+# ===============================
+# String formatting templates and constants
+CALIBRATION_POINT_DISPLAY_FORMAT = "{} µs @ {}°"
+CALIBRATION_POINT_LABEL_PREFIX = "Point {}: "
+UNDERSCORE_CHAR = "_"
+SPACE_CHAR = " "

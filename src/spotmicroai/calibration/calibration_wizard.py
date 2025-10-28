@@ -13,72 +13,52 @@ import curses
 import sys
 from typing import cast, Tuple
 
-from spotmicroai.calibration.calibration_specs import CALIBRATION_SPECS
-from spotmicroai.configuration._config_provider import ServoName, ConfigProvider
+from spotmicroai.calibration.calibration_points import CALIBRATION_POINTS, CalibrationPoint
+from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
+from spotmicroai.constants import (
+    CALIBRATION_STEP_SIZE,
+    POPUP_HEIGHT,
+    POPUP_WIDTH,
+    CALIBRATION_POINT_DISPLAY_FORMAT,
+    CALIBRATION_POINT_LABEL_PREFIX,
+    UNDERSCORE_CHAR,
+    SPACE_CHAR,
+)
+from spotmicroai.servo import JointType
 from spotmicroai.servo._servo import Servo
 from spotmicroai.servo._servo_factory import ServoFactory
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
 
-from . import CalibrationPoint, JointCalibrationSpec, JointType
-
-
-def get_joint_type_from_servo_name(servo_name: ServoName) -> JointType:
-    """Determine joint type from servo name."""
-    name_str = servo_name.value.lower()
-    if "foot" in name_str:
-        return JointType.FOOT
-    elif "leg" in name_str:
-        return JointType.LEG
-    elif "shoulder" in name_str:
-        return JointType.SHOULDER
-    raise ValueError(LABELS.WIZARD_JOINT_TYPE_ERROR.format(servo_name))
-
-
-def get_calibration_spec(joint_type: JointType) -> JointCalibrationSpec:
-    """Get calibration specification for a joint type from constants."""
-    spec_data = CALIBRATION_SPECS[joint_type.value]
-
-    points = [
-        CalibrationPoint(
-            description=point["description"],
-            physical_angle=point["physical_angle"],
-        )
-        for point in spec_data["points"]
-    ]
-
-    return JointCalibrationSpec(
-        joint_type=joint_type,
-        points=points,
-        target_min_angle=spec_data["target_min_angle"],
-        target_max_angle=spec_data["target_max_angle"],
-        rest_angle=spec_data["rest_angle"],
-    )
-
 
 class CalibrationWizard:
     """Interactive wizard for step-by-step servo calibration."""
 
-    POPUP_HEIGHT = 16
-    POPUP_WIDTH = 75
-    STEP_SIZE = 10  # microseconds or degrees
-
-    def __init__(self, stdscr, servo: Servo, spec: JointCalibrationSpec, config_provider: ConfigProvider):
+    def __init__(
+        self,
+        stdscr,
+        servo: Servo,
+        config_provider: ConfigProvider,
+        servo_enum: ServoName,
+    ):
         """Initialize wizard with the servo and spec."""
         self.stdscr = stdscr
         self.servo = servo
-        self.spec = spec
         self.config_provider = config_provider
-        self.current_pulse = servo.min_pulse
+        self.servo_enum = servo_enum
         self.captured_points: list[CalibrationPoint] = []
         self.popup_start_y = 0
         self.popup_start_x = 0
+        self.formatted_servo_name = servo_enum.value.replace(UNDERSCORE_CHAR, SPACE_CHAR).title()
+        # Get joint type and calibration spec
+        self.joint_type = JointType.from_servo_name(servo_enum)
+        self.points = CALIBRATION_POINTS[self.joint_type]
 
     def get_popup_position(self) -> Tuple[int, int]:
         """Calculate centered popup position."""
         h, w = self.stdscr.getmaxyx()
-        start_y = max(1, (h - self.POPUP_HEIGHT) // 2)
-        start_x = max(1, (w - self.POPUP_WIDTH) // 2)
+        start_y = max(1, (h - POPUP_HEIGHT) // 2)
+        start_x = max(1, (w - POPUP_WIDTH) // 2)
         return start_y, start_x
 
     def create_popup_window(self) -> curses.window:
@@ -88,10 +68,10 @@ class CalibrationWizard:
         # Draw shadow effect
         h, w = self.stdscr.getmaxyx()
         ui_utils.CursesUIHelper.draw_shadow(
-            self.stdscr, self.popup_start_y, self.popup_start_x, self.POPUP_WIDTH, self.POPUP_HEIGHT, h, w
+            self.stdscr, self.popup_start_y, self.popup_start_x, POPUP_WIDTH, POPUP_HEIGHT, h, w
         )
 
-        popup_win = curses.newwin(self.POPUP_HEIGHT, self.POPUP_WIDTH, self.popup_start_y, self.popup_start_x)
+        popup_win = curses.newwin(POPUP_HEIGHT, POPUP_WIDTH, self.popup_start_y, self.popup_start_x)
         popup_win.keypad(True)
         popup_win.bkgd(" ", curses.color_pair(THEME.REGULAR_ROW))
         return popup_win
@@ -100,7 +80,7 @@ class CalibrationWizard:
         """Redraw the shadow after refreshing the popup window."""
         h, w = self.stdscr.getmaxyx()
         ui_utils.CursesUIHelper.draw_shadow(
-            self.stdscr, self.popup_start_y, self.popup_start_x, self.POPUP_WIDTH, self.POPUP_HEIGHT, h, w
+            self.stdscr, self.popup_start_y, self.popup_start_x, POPUP_WIDTH, POPUP_HEIGHT, h, w
         )
         self.stdscr.refresh()
 
@@ -114,16 +94,16 @@ class CalibrationWizard:
                 popup_win.box()
 
                 # Title
-                title = LABELS.WIZARD_TITLE.format(self.servo.get_formatted_servo_name())
-                title_x = (self.POPUP_WIDTH - len(title)) // 2
+                title = LABELS.WIZARD_TITLE.format(self.formatted_servo_name)
+                title_x = (POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
                 # Separator
-                popup_win.hline(2, 1, curses.ACS_HLINE, self.POPUP_WIDTH - 2)
+                popup_win.hline(2, 1, curses.ACS_HLINE, POPUP_WIDTH - 2)
 
                 # Instructions
                 instructions = [
-                    LABELS.WIZARD_JOINT_TYPE_LINE.format(self.spec.joint_type.value.upper()),
+                    LABELS.WIZARD_JOINT_TYPE_LINE.format(self.joint_type.value.upper()),
                     "",
                     LABELS.WIZARD_INSTRUCTION_1,
                     LABELS.WIZARD_INSTRUCTION_2,
@@ -156,7 +136,6 @@ class CalibrationWizard:
         """Guide user to capture a single calibration point."""
         popup_win = self.create_popup_window()
         # Start at the midpoint between min and max pulse
-        current_pulse = (self.servo.min_pulse + self.servo.max_pulse) // 2
 
         try:
             while True:
@@ -164,38 +143,42 @@ class CalibrationWizard:
                 popup_win.box()
 
                 # Title
-                title = LABELS.WIZARD_POINT_TITLE.format(point_index + 1, len(self.spec.points))
-                title_x = (self.POPUP_WIDTH - len(title)) // 2
+                title = LABELS.WIZARD_POINT_TITLE.format(point_index + 1, len(self.points))
+                title_x = (POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
-                popup_win.hline(2, 1, curses.ACS_HLINE, self.POPUP_WIDTH - 2)
+                popup_win.hline(2, 1, curses.ACS_HLINE, POPUP_WIDTH - 2)
 
                 # Description
                 popup_win.addstr(4, 3, point.description)
                 popup_win.addstr(5, 3, LABELS.WIZARD_EXPECTED_ANGLE.format(point.physical_angle))
 
                 # Current values
-                popup_win.addstr(7, 3, LABELS.WIZARD_CURRENT_PULSE.format(current_pulse))
+                popup_win.addstr(7, 3, LABELS.WIZARD_CURRENT_PULSE.format(self.servo.pulse))
 
                 # Display Point 1: show only if point 1 has been captured
                 if len(self.captured_points) > 0:
-                    point1_str = f"{self.captured_points[0].pulse_width} µs @ {self.captured_points[0].physical_angle}°"
+                    point1_str = CALIBRATION_POINT_DISPLAY_FORMAT.format(
+                        self.captured_points[0].pulse_width, self.captured_points[0].physical_angle
+                    )
                 else:
                     point1_str = LABELS.WIZARD_DASH
-                popup_win.addstr(8, 3, f"Point 1: {point1_str}")
+                popup_win.addstr(8, 3, f"{CALIBRATION_POINT_LABEL_PREFIX.format(1)}{point1_str}")
 
                 # Display Point 2: show only if point 2 has been captured
                 if len(self.captured_points) > 1:
-                    point2_str = f"{self.captured_points[1].pulse_width} µs @ {self.captured_points[1].physical_angle}°"
+                    point2_str = CALIBRATION_POINT_DISPLAY_FORMAT.format(
+                        self.captured_points[1].pulse_width, self.captured_points[1].physical_angle
+                    )
                 else:
                     point2_str = LABELS.WIZARD_DASH
-                popup_win.addstr(9, 3, f"Point 2: {point2_str}")
+                popup_win.addstr(9, 3, f"{CALIBRATION_POINT_LABEL_PREFIX.format(2)}{point2_str}")
 
                 # Instructions
                 popup_win.addstr(
                     11,
                     3,
-                    LABELS.WIZARD_ADJUST_INSTRUCTION.format(self.STEP_SIZE),
+                    LABELS.WIZARD_ADJUST_INSTRUCTION.format(CALIBRATION_STEP_SIZE),
                     curses.A_DIM,
                 )
                 popup_win.addstr(12, 3, LABELS.WIZARD_ENTER_CONFIRM_ESC_CANCEL, curses.A_DIM)
@@ -203,18 +186,15 @@ class CalibrationWizard:
                 popup_win.refresh()
                 self.refresh_popup_shadow()
 
-                # Move servo to current pulse
-                self.servo.set_servo_pulse(current_pulse)
-
                 key = popup_win.getch()
 
                 if key == curses.KEY_UP:
-                    current_pulse = self.servo.clamp_pulse(current_pulse + self.STEP_SIZE)
+                    self.servo.pulse += CALIBRATION_STEP_SIZE
                 elif key == curses.KEY_DOWN:
-                    current_pulse = self.servo.clamp_pulse(current_pulse - self.STEP_SIZE)
+                    self.servo.pulse -= CALIBRATION_STEP_SIZE
                 elif key in (curses.KEY_ENTER, 10, 13):
                     # Capture this point
-                    point.pulse_width = current_pulse
+                    point.pulse_width = self.servo.pulse
                     self.captured_points.append(point)
                     return True
                 elif key == 27:  # ESC
@@ -225,7 +205,7 @@ class CalibrationWizard:
 
     def show_confirmation(self) -> bool:
         """Show confirmation screen with calculated values."""
-        if len(self.captured_points) != len(self.spec.points):
+        if len(self.captured_points) != len(self.points):
             return False
 
         popup_win = self.create_popup_window()
@@ -236,10 +216,10 @@ class CalibrationWizard:
                 popup_win.box()
 
                 title = LABELS.WIZARD_SUMMARY_TITLE
-                title_x = (self.POPUP_WIDTH - len(title)) // 2
+                title_x = (POPUP_WIDTH - len(title)) // 2
                 popup_win.addstr(1, title_x, title, curses.A_BOLD)
 
-                popup_win.hline(2, 1, curses.ACS_HLINE, self.POPUP_WIDTH - 2)
+                popup_win.hline(2, 1, curses.ACS_HLINE, POPUP_WIDTH - 2)
 
                 # Show captured values
                 row = 4
@@ -259,21 +239,21 @@ class CalibrationWizard:
                 angle_diff = point2.physical_angle - point1.physical_angle
                 pulse_diff = pulse2 - pulse1
                 pulse_per_degree = pulse_diff / angle_diff if angle_diff != 0 else 0
-                inferred_min = int(pulse1 + (self.spec.target_min_angle - point1.physical_angle) * pulse_per_degree)
-                inferred_max = int(pulse1 + (self.spec.target_max_angle - point1.physical_angle) * pulse_per_degree)
+                inferred_min = int(pulse1 + (self.servo.min_angle - point1.physical_angle) * pulse_per_degree)
+                inferred_max = int(pulse1 + (self.servo.max_angle - point1.physical_angle) * pulse_per_degree)
 
                 popup_win.addstr(row, 3, "")
                 row += 1
                 popup_win.addstr(
                     row,
                     3,
-                    f"Inferred Min Pulse ({self.spec.target_min_angle}°): {inferred_min} µs",
+                    LABELS.WIZARD_INFERRED_MIN_PULSE.format(self.servo.min_angle, inferred_min),
                 )
                 row += 1
                 popup_win.addstr(
                     row,
                     3,
-                    f"Inferred Max Pulse ({self.spec.target_max_angle}°): {inferred_max} µs",
+                    LABELS.WIZARD_INFERRED_MAX_PULSE.format(self.servo.max_angle, inferred_max),
                 )
                 row += 1
 
@@ -282,10 +262,10 @@ class CalibrationWizard:
                 popup_win.addstr(
                     row,
                     3,
-                    LABELS.WIZARD_TARGET_RANGE.format(self.spec.target_min_angle, self.spec.target_max_angle),
+                    LABELS.WIZARD_TARGET_RANGE.format(self.servo.min_angle, self.servo.max_angle),
                 )
                 row += 1
-                popup_win.addstr(row, 3, LABELS.WIZARD_REST_ANGLE.format(self.spec.rest_angle))
+                popup_win.addstr(row, 3, LABELS.WIZARD_REST_ANGLE.format(self.servo.rest_angle))
 
                 popup_win.addstr(13, 3, LABELS.WIZARD_ENTER_SAVE_ESC_CANCEL, curses.A_DIM)
 
@@ -329,32 +309,18 @@ class CalibrationWizard:
         pulse_per_degree = pulse_diff // angle_diff if angle_diff != 0 else 0
 
         # Infer min and max pulses using linear extrapolation to target angles
-        min_pulse = pulse1 + (self.spec.target_min_angle - angle1) * pulse_per_degree
-        max_pulse = pulse1 + (self.spec.target_max_angle - angle1) * pulse_per_degree
+        min_pulse = pulse1 + (self.servo.min_angle - angle1) * pulse_per_degree
+        max_pulse = pulse1 + (self.servo.max_angle - angle1) * pulse_per_degree
 
-        # Ensure min and max are in correct order
-        if min_pulse > max_pulse:
-            min_pulse, max_pulse = max_pulse, min_pulse
+        # Calculate target range (physical angle span)
+        target_range = self.servo.max_angle - self.servo.min_angle
 
-        # Calculate the target range
-        target_range = self.spec.target_max_angle - self.spec.target_min_angle
-
-        # Convert rest_angle from physical coordinates to servo local coordinates [0, range]
-        rest_angle_local = self.spec.rest_angle - self.spec.target_min_angle
-
-        # Validate rest angle is within range
-        if rest_angle_local < 0 or rest_angle_local > target_range:
-            raise ValueError(
-                f"Rest angle {self.spec.rest_angle}° is outside the target range "
-                f"[{self.spec.target_min_angle}°, {self.spec.target_max_angle}°]. "
-                f"Please adjust the rest_angle in calibration specs."
-            )
+        # 🔧 Recalibrate the servo instance in memory
+        self.servo.recalibrate(min_pulse, max_pulse, target_range)
 
         # Save to configuration
-        self.config_provider.set_servo_min_pulse(self.servo.servo_name, min_pulse)
-        self.config_provider.set_servo_max_pulse(self.servo.servo_name, max_pulse)
-        self.config_provider.set_servo_range(self.servo.servo_name, target_range)
-        self.config_provider.set_servo_rest_angle(self.servo.servo_name, rest_angle_local)
+        self.config_provider.set_servo_min_pulse(self.servo_enum, min_pulse)
+        self.config_provider.set_servo_max_pulse(self.servo_enum, max_pulse)
         self.config_provider.save_config()
 
     def run(self) -> bool:
@@ -363,7 +329,7 @@ class CalibrationWizard:
             if not self.show_introduction():
                 return False
 
-            for i, point in enumerate(self.spec.points):
+            for i, point in enumerate(self.points):
                 if not self.capture_calibration_point(i, point):
                     return False
 
@@ -439,10 +405,6 @@ def _calibrate_single_servo(servo_id: str) -> None:
         print(LABELS.WIZARD_VALID_SERVO_IDS.format(', '.join([s.value for s in ServoName])))
         raise
 
-    # Get joint type and calibration spec
-    joint_type = get_joint_type_from_servo_name(servo_enum)
-    spec = get_calibration_spec(joint_type)
-
     # Create the servo object and config provider
     servo = ServoFactory.create(servo_enum)
     config_provider = ConfigProvider()
@@ -456,7 +418,7 @@ def _calibrate_single_servo(servo_id: str) -> None:
         stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
         stdscr.refresh()
 
-        wizard = CalibrationWizard(stdscr, servo, spec, config_provider)
+        wizard = CalibrationWizard(stdscr, servo, config_provider, servo_enum)
         return wizard.run()
 
     result = curses.wrapper(wizard_wrapper)

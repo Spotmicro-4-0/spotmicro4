@@ -65,6 +65,12 @@ WIZARD_POINT_SUMMARY = "Point {}: {} µs @ {}°"
 WIZARD_TARGET_RANGE = "Target Range: {}° to {}°"
 WIZARD_REST_ANGLE = "Rest Angle: {}°"
 WIZARD_ENTER_SAVE_ESC_CANCEL = "ENTER to save, ESC to cancel"
+WIZARD_INFERRED_MIN_PULSE = "Inferred Min Pulse ({}°): {} µs"
+WIZARD_INFERRED_MAX_PULSE = "Inferred Max Pulse ({}°): {} µs"
+WIZARD_ERROR_REST_ANGLE_OUT_OF_RANGE = (
+    "Rest angle {:.1f}° is outside the target range [{:.1f}°, {:.1f}°]. "
+    "Please adjust the rest_angle in calibration specs."
+)
 WIZARD_ERROR_CALIBRATION = "Error during calibration: {}"
 WIZARD_NEED_TWO_POINTS = "Need at least 2 calibration points"
 WIZARD_PULSE_NOT_CAPTURED_1 = "Pulse width not captured for point 1"

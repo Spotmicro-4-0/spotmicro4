@@ -5,7 +5,8 @@ import sys
 from typing import Any, Dict, List
 
 from spotmicroai import Singleton
-from spotmicroai.configuration import ServoConfig, ServoName
+from spotmicroai.configuration._servo_config import ServoConfig
+from spotmicroai.configuration._servo_name import ServoName
 from spotmicroai.logger import Logger
 
 log = Logger().setup_logger('Configuration')
@@ -169,13 +170,7 @@ class ConfigProvider(metaclass=Singleton):
         """
         key = self._get_servo_key(servo_name)
         data = self._raw_data[key]
-        return ServoConfig(
-            channel=data['channel'],
-            min_pulse=data['min_pulse'],
-            max_pulse=data['max_pulse'],
-            rest_angle=data['rest_angle'],
-            range=data['range'],
-        )
+        return ServoConfig(channel=data['channel'], min_pulse=data['min_pulse'], max_pulse=data['max_pulse'])
 
     def set_servo(self, servo_name: ServoName, servo: ServoConfig) -> None:
         """
@@ -186,13 +181,7 @@ class ConfigProvider(metaclass=Singleton):
             servo: ServoConfig dataclass with parameters
         """
         key = self._get_servo_key(servo_name)
-        self._raw_data[key] = {
-            'channel': servo.channel,
-            'min_pulse': servo.min_pulse,
-            'max_pulse': servo.max_pulse,
-            'rest_angle': servo.rest_angle,
-            'range': servo.range,
-        }
+        self._raw_data[key] = {'channel': servo.channel, 'min_pulse': servo.min_pulse, 'max_pulse': servo.max_pulse}
 
     def get_servo_channel(self, servo_name: ServoName) -> int:
         """Get the PWM channel for a servo"""
@@ -225,28 +214,6 @@ class ConfigProvider(metaclass=Singleton):
         """Set the maximum pulse width for a servo"""
         servo = self.get_servo_config(servo_name)
         servo.max_pulse = pulse
-        self.set_servo(servo_name, servo)
-
-    def get_servo_rest_angle(self, servo_name: ServoName) -> int:
-        """Get the rest angle for a servo"""
-        servo = self.get_servo_config(servo_name)
-        return servo.rest_angle
-
-    def set_servo_rest_angle(self, servo_name: ServoName, angle: int) -> None:
-        """Set the rest angle for a servo"""
-        servo = self.get_servo_config(servo_name)
-        servo.rest_angle = angle
-        self.set_servo(servo_name, servo)
-
-    def get_servo_range(self, servo_name: ServoName) -> int:
-        """Get the angle range for a servo"""
-        servo = self.get_servo_config(servo_name)
-        return servo.range
-
-    def set_servo_range(self, servo_name: ServoName, range_degrees: int) -> None:
-        """Set the angle range for a servo"""
-        servo = self.get_servo_config(servo_name)
-        servo.range = range_degrees
         self.set_servo(servo_name, servo)
 
     def get_all_servos(self) -> Dict[ServoName, ServoConfig]:

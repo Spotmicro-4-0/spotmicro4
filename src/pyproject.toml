@@ -54,3 +54,28 @@ max-line-length = 120
 max-line-length = 120
 ignore = ["E203", "W503"]
 exclude = ["venv", "__pycache__", "build", "dist"]
+
+[tool.pyright]
+include = ["."]
+pythonVersion = "3.11"
+useLibraryCodeForTypes = true
+ignore = ["adafruit_motor"]
+exclude = ["**/venv", "**/__pycache__", "build", "dist", "tests/helpers"]
+typeCheckingMode = "strict"
+reportPrivateUsage = "error"
+reportUnusedImport = "error"
+reportUnusedVariable = "error"
+reportUndefinedVariable = "error"
+reportGeneralTypeIssues = "error"
+reportOptionalMemberAccess = "error"
+reportOptionalSubscript = "error"
+reportOptionalCall = "error"
+reportOptionalIterable = "error"
+reportOptionalContextManager = "error"
+reportOptionalOperand = "error"
+reportTypedDictNotRequiredAccess = "error"
+reportConstantRedefinition = "error"
+reportInvalidTypeForm = "error"
+reportIncompatibleMethodOverride = "error"
+reportIncompatibleVariableOverride = "error"
+
