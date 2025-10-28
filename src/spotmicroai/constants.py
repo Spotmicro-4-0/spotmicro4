@@ -7,8 +7,8 @@ SAFE_NEUTRAL = (0.0, 0.0, 0.0)
 
 ### Motion Controller Constants ###
 # Motion controller constants
-LEG_SERVO_OFFSET = 120
-FOOT_SERVO_OFFSET = 0
+# LEG_SERVO_OFFSET = 120
+# FOOT_SERVO_OFFSET = 0
 ROTATION_OFFSET = 40
 INACTIVITY_TIME = 10
 

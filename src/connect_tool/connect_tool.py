@@ -51,6 +51,8 @@ RSYNC_EXCLUDES = [
 TOTAL_STEPS = 9
 VERSION = "SpotmicroAI Setup Tool"
 USE_COLORS = True
+MAX_LOG_SIZE = 5 * 1024 * 1024  # 5 MB - rotate when log exceeds this size
+MAX_LOG_BACKUPS = 3  # Keep up to 3 rotated backups
 
 
 # ------------------------------------------------------------------
@@ -119,11 +121,41 @@ class SetupTool:
         """Write message to log file."""
         try:
             if not self.log_handle:
+                self._rotate_log_if_needed()
                 self.log_handle = open(self.log_file, "a", encoding="utf-8")
             self.log_handle.write(msg + "\n")
             self.log_handle.flush()
         except Exception as e:
             print(f"Warning: Could not write to log: {e}", file=sys.stderr)
+
+    def _rotate_log_if_needed(self):
+        """Rotate log file if it exceeds MAX_LOG_SIZE."""
+        if not self.log_file.exists():
+            return
+
+        try:
+            if self.log_file.stat().st_size > MAX_LOG_SIZE:
+                # Close current handle if open
+                if self.log_handle:
+                    self.log_handle.close()
+                    self.log_handle = None
+
+                # Rotate existing backups: setup.log.2 -> setup.log.3, etc.
+                for i in range(MAX_LOG_BACKUPS - 1, 0, -1):
+                    old = self.log_file.parent / f"{self.log_file.name}.{i}"
+                    new = self.log_file.parent / f"{self.log_file.name}.{i + 1}"
+                    if old.exists():
+                        if new.exists():
+                            new.unlink()
+                        old.rename(new)
+
+                # Move current log to setup.log.1
+                backup = self.log_file.parent / f"{self.log_file.name}.1"
+                if backup.exists():
+                    backup.unlink()
+                self.log_file.rename(backup)
+        except Exception as e:
+            print(f"Warning: Could not rotate log: {e}", file=sys.stderr)
 
     def _close_log(self):
         """Close the log file."""
@@ -541,7 +573,7 @@ def main():
     setup = SetupTool(args)
     ok = setup.run()
     if not ok:
-        print("See connect_tool/setup.log for more details")
+        print("See src/connect_tool/setup.log for more details")
     sys.exit(0 if ok else 1)
 
 
