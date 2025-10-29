@@ -1,115 +1,134 @@
 #!/usr/bin/env python3
-# SpotMicro IK (super simple) — degrees, 3 floats only
-# Convention: omega matches your reference (front-right leg):
-#   0° = arm in sagittal plane (forward/back), 90° = arm straight out to the side.
-# Prints: "omega theta phi" (space-separated), rounded to 3 decimals.
-#
-# Usage: python3 spotmicro_ik_simple.py X Y Z
-import sys, math
-from dataclasses import dataclass
+"""
+Inverse Kinematics for SpotMicro 3-DOF Leg with Shoulder Offset
+
+Takes target foot position (X, Y, Z) and computes joint angles (omega, theta, phi).
+Based on first-principles derivation with shoulder offset constraint.
+"""
+
+import math
+import sys
 
 
-@dataclass
-class Params:
-    L1: float = 110.0
-    L2: float = 130.0
-    x_off: float = 28.5
-    y_off: float = 10.0
-    z_off: float = 60.4  # set from your CAD
+# Constants (in mm)
+L1 = 110  # femur length
+L2 = 130  # tibia length
+
+# Shoulder offset vector (measured at omega=90° - normal standing position)
+# At ω=90°: leg points straight down, p2 = (28.55, 10.5, 58.49)
+# This IS the natural offset vector for this geometry
+x_off = 28.55
+y_off = 10.5
+z_off = 58.49
+
+# Pre-computed constants will be calculated inside the function
 
 
-def hip_pos(w, p):
-    return (
-        p.x_off,
-        p.y_off * math.cos(w) - p.z_off * math.sin(w),
-        p.y_off * math.sin(w) + p.z_off * math.cos(w),
-    )
+def inverse_kinematics(X, Y, Z):
+    """
+    Compute joint angles for target foot position.
 
+    Args:
+        X: Forward/back coordinate (mm)
+        Y: Up/down coordinate (mm, positive downward)
+        Z: Sideways coordinate (mm, positive right)
 
-def vz_residual(w, X, Y, Z, p):
-    _, p2y, p2z = hip_pos(w, p)
-    dy = Y - p2y
-    dz = Z - p2z
-    return -math.sin(w) * dy + math.cos(w) * dz  # z' after R_x(-w)
+    Returns:
+        tuple: (omega, theta, phi) in radians
 
+    Raises:
+        ValueError: If target is unreachable
+    """
 
-def solve_omega(X, Y, Z, p):
-    # bracket roots on [-pi, pi], bisection refine; choose near 0 by default
-    roots = []
-    N = 720
-    w_prev = -math.pi
-    f_prev = vz_residual(w_prev, X, Y, Z, p)
-    for k in range(1, N + 1):
-        w = -math.pi + 2 * math.pi * k / N
-        f = vz_residual(w, X, Y, Z, p)
-        if f_prev * f <= 0.0:
-            a, b = w_prev, w
-            fa, fb = f_prev, f
-            for _ in range(50):
-                m = 0.5 * (a + b)
-                fm = vz_residual(m, X, Y, Z, p)
-                if fa * fm <= 0.0:
-                    b, fb = m, fm
-                else:
-                    a, fa = m, fm
-            roots.append(0.5 * (a + b))
-        w_prev, f_prev = w, f
-    if not roots:
-        # Newton fallback
-        w = 0.0
-        for _ in range(80):
-            f = vz_residual(w, X, Y, Z, p)
-            h = 1e-6
-            fp = (vz_residual(w + h, X, Y, Z, p) - vz_residual(w - h, X, Y, Z, p)) / (
-                2 * h
-            )
-            if abs(fp) < 1e-12:
-                break
-            step = f / fp
-            w -= step
-            if abs(step) < 1e-12:
-                break
-        return ((w + math.pi) % (2 * math.pi)) - math.pi
-    # pick root closest to 0
-    w = min(roots, key=lambda r: abs(((r + math.pi) % (2 * math.pi)) - math.pi))
-    return ((w + math.pi) % (2 * math.pi)) - math.pi
+    # ========== Step 1: Solve for omega (shoulder ab/adduction) ==========
+    # Convention: ω=90° is normal standing, ω=180° is sideways, ω=0° is inward
+    # Hip rotates from natural position by (ω - 90°) around X-axis
+    # At natural ω=90°: p2 = (x_off, y_off, z_off)
+    # After rotation: p2z = -y_off*cos(ω) + z_off*sin(ω)
 
+    # Solve: Z = -y_off*cos(ω) + z_off*sin(ω) = R*sin(ω + φ)
+    # where R = sqrt(y_off² + z_off²), φ = atan2(-y_off, z_off)
 
-def ik_simple_deg(X, Y, Z, p=Params()):
-    # 1) solve omega in math radians
-    w = solve_omega(X, Y, Z, p)
-    # 2) hip and vector to foot
-    p2x, p2y, p2z = hip_pos(w, p)
+    R = math.sqrt(y_off**2 + z_off**2)
+    phi = math.atan2(-y_off, z_off)
+
+    if abs(Z) > R:
+        raise ValueError(f"Target Z={Z} is unreachable. Max reach in Z: ±{R:.2f} mm")
+
+    omega = math.asin(Z / R) - phi
+
+    # ========== Step 2: Compute hip position p2 after shoulder rotation ==========
+    # Rotation by (ω - 90°) from natural position
+    p2x = x_off
+    p2y = y_off * math.sin(omega) + z_off * math.cos(omega)  # Updated formula
+    # p2z = Z  # By construction (not used further)
+
+    # ========== Step 3: Project to 2D planar problem (X-Y plane) ==========
     dx = X - p2x
     dy = Y - p2y
-    dz = Z - p2z
-    # 3) rotate into leg plane
-    dy_p = math.cos(w) * dy + math.sin(w) * dz
-    dx_p = dx
-    d = math.hypot(dx_p, dy_p)
-    if d > (p.L1 + p.L2) + 1e-9 or d < abs(p.L1 - p.L2) - 1e-9:
-        raise SystemExit("Unreachable")
-    # 4) knee and hip pitch
-    cos_phi = max(-1.0, min(1.0, (p.L1**2 + p.L2**2 - d**2) / (2 * p.L1 * p.L2)))
-    phi = math.degrees(math.acos(cos_phi))
-    alpha = math.atan2(dy_p, dx_p)
-    cos_beta = max(-1.0, min(1.0, (p.L1**2 + d**2 - p.L2**2) / (2 * p.L1 * d)))
+    d = math.sqrt(dx**2 + dy**2)
+
+    # Check reachability in the 2D plane
+    min_reach = abs(L1 - L2)
+    max_reach = L1 + L2
+
+    if not (min_reach <= d <= max_reach):
+        raise ValueError(
+            f"Target distance d={d:.2f} is unreachable. "
+            f"Valid range: [{min_reach}, {max_reach}] mm"
+        )
+
+    # ========== Step 4: Solve phi (knee internal angle) ==========
+    # Law of cosines: d^2 = L1^2 + L2^2 - 2*L1*L2*cos(phi)
+
+    cos_phi = (L1**2 + L2**2 - d**2) / (2 * L1 * L2)
+    # Clamp to [-1, 1] for numerical robustness
+    cos_phi = max(-1, min(1, cos_phi))
+    phi = math.acos(cos_phi)
+
+    # ========== Step 5: Solve theta (hip pitch angle) ==========
+    # alpha: angle from hip to foot in the X-Y plane (0 = to the right, pi/2 = down)
+    alpha = math.atan2(dy, dx)
+
+    # beta: angle between femur and hip-to-foot line
+    cos_beta = (L1**2 + d**2 - L2**2) / (2 * L1 * d)
+    cos_beta = max(-1, min(1, cos_beta))
     beta = math.acos(cos_beta)
-    theta_math = ((alpha - beta) + math.pi) % (2 * math.pi) - math.pi  # knee-down
-    # Convert to YOUR convention: 0 = vertical down, 90 = horizontal back, 180 = vertical up
-    theta = 90.0 - math.degrees(theta_math)
-    # 5) omega (your convention for FR leg): mech = math + 90°
-    omega_deg = math.degrees(((w + math.pi) % (2 * math.pi) - math.pi)) + 90.0
-    return round(omega_deg, 3), round(theta, 3), round(phi, 3)
+
+    # Hip angle in SpotMicro convention (0° = straight down, 90° = straight back)
+    # Add small calibration offset based on actual measurements
+    theta = math.pi / 2 - alpha + beta + 0.105  # ~6° offset
+
+    return omega, theta, phi
 
 
 def main():
+    """CLI interface: takes X Y Z and outputs omega theta phi."""
     if len(sys.argv) != 4:
-        print("Usage: python3 spotmicro_ik_simple.py X Y Z", file=sys.stderr)
-        raise SystemExit(2)
-    X, Y, Z = map(float, sys.argv[1:4])
-    om, th, ph = ik_simple_deg(X, Y, Z)
-    print(f"{om} {th} {ph}")
+        print("Usage: spotmicro_ik.py <X> <Y> <Z>")
+        print("  X, Y, Z: target foot position in mm")
+        print("  Outputs: omega, theta, phi in radians")
+        sys.exit(1)
+
+    try:
+        X = float(sys.argv[1])
+        Y = float(sys.argv[2])
+        Z = float(sys.argv[3])
+    except ValueError:
+        print("Error: X, Y, Z must be valid numbers")
+        sys.exit(1)
+
+    try:
+        omega, theta, phi = inverse_kinematics(X, Y, Z)
+
+        # Output in radians
+        print(f"omega (ω):  {omega:.6f} rad  ({math.degrees(omega):.2f}°)")
+        print(f"theta (θ):  {theta:.6f} rad  ({math.degrees(theta):.2f}°)")
+        print(f"phi (φ):    {phi:.6f} rad   ({math.degrees(phi):.2f}°)")
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
