@@ -5,7 +5,7 @@
       {
         "label": "Run Hardware and System Checks",
         "action": "run",
-        "command": "python3 scripts/run_diagnostics.py"
+        "command": "bash diagnostics/diagnostics.sh"
       },
       {
         "label": "Back",
