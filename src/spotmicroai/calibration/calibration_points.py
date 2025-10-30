@@ -19,11 +19,11 @@ FOOT_CALIBRATION_POINTS = [
 ]
 
 # Leg calibration: Maps physical angles to servo pulse widths
-# Calibrate at two easily measurable reference points (0° and 90°)
+# Calibrate at two easily measurable reference points (90° and 0°)
 # and infer the target range through linear extrapolation
 LEG_CALIBRATION_POINTS = [
-    CalibrationPoint("Reference position 1 (leg vertical, 0°)", 0),
-    CalibrationPoint("Reference position 2 (leg horizontal, 90°)", 90),
+    CalibrationPoint("Reference position 1 (leg horizontal, 90°)", 90),
+    CalibrationPoint("Reference position 2 (leg vertical, 0°)", 0),
 ]
 
 # Shoulder calibration: Maps physical angles to servo pulse widths

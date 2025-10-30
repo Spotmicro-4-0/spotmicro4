@@ -307,19 +307,19 @@ class CalibrationWizard:
         pulse1 = point1.pulse_width
         pulse2 = point2.pulse_width
 
-        # Calculate pulse per degree
+        # Calculate pulse per degree (use float division for precision)
         angle_diff = angle2 - angle1
         pulse_diff = pulse2 - pulse1
-        pulse_per_degree = pulse_diff // angle_diff if angle_diff != 0 else 0
+        pulse_per_degree = pulse_diff / angle_diff if angle_diff != 0 else 0
 
         # Infer min and max pulses using linear extrapolation to target angles
         min_pulse = pulse1 + (self.servo.min_angle - angle1) * pulse_per_degree
         max_pulse = pulse1 + (self.servo.max_angle - angle1) * pulse_per_degree
 
-        # Clamp min and max pulses to valid servo range
-        min_pulse = max(SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, int(min_pulse)))
+        # Clamp min and max pulses to valid servo range (round to nearest int)
+        min_pulse = max(SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, round(min_pulse)))
         max_pulse = max(
-            SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, int(max_pulse))
+            SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, round(max_pulse))
         )  # Calculate target range (physical angle span)
         target_range = self.servo.max_angle - self.servo.min_angle
 
