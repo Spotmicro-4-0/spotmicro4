@@ -1,6 +1,7 @@
-"""Theme definitions for setup_app.
+"""Theme definitions for SpotMicroAI terminal applications.
 
-Central place for color pair ids and default color assignments.
+Central place for color pair ids and default color assignments that can be
+reused by the config app and other curses-based tools.
 """
 
 import curses
@@ -29,15 +30,15 @@ __all__ = [
 ]
 
 # Box-drawing characters for borders (exported so callers can reuse)
-TL = '┌'  # top-left
-TR = '┐'  # top-right
-BL = '└'  # bottom-left
-BR = '┘'  # bottom-right
-HOR = '─'
-VERT = '│'
+TL = "┌"  # top-left
+TR = "┐"  # top-right
+BL = "└"  # bottom-left
+BR = "┘"  # bottom-right
+HOR = "─"
+VERT = "│"
 
 # Scroll indicators
-SCROLL_UP = '▲'
-SCROLL_DOWN = '▼'
+SCROLL_UP = "▲"
+SCROLL_DOWN = "▼"
 
 __all__.extend(["TL", "TR", "BL", "BR", "HOR", "VERT", "SCROLL_UP", "SCROLL_DOWN"])

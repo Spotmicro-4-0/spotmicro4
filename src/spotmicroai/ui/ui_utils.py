@@ -2,7 +2,7 @@
 Shared UI utilities for curses-based menu and calibration interfaces.
 
 This module provides reusable drawing functions, layout helpers, and constants
-for building consistent terminal UIs across the setup application.
+for building consistent terminal UIs across SpotMicroAI tools.
 """
 
 import curses
@@ -20,7 +20,7 @@ class CursesUIHelper:
         for y in range(start_y + 1, min(start_y + box_height + 1, h)):
             if start_x + box_width < w:
                 try:
-                    stdscr.addstr(y, start_x + box_width, '  ', curses.color_pair(THEME.SHADOW))
+                    stdscr.addstr(y, start_x + box_width, "  ", curses.color_pair(THEME.SHADOW))
                 except curses.error:
                     pass
         if start_y + box_height < h:
@@ -28,7 +28,10 @@ class CursesUIHelper:
             if shadow_width > 0:
                 try:
                     stdscr.addstr(
-                        start_y + box_height, start_x + 2, ' ' * shadow_width, curses.color_pair(THEME.SHADOW)
+                        start_y + box_height,
+                        start_x + 2,
+                        " " * shadow_width,
+                        curses.color_pair(THEME.SHADOW),
                     )
                 except curses.error:
                     pass
@@ -69,7 +72,7 @@ class CursesUIHelper:
                     stdscr.addstr(
                         y,
                         start_x + 1,
-                        ' ' * max(0, min(box_width - 2, w - start_x - 1)),
+                        " " * max(0, min(box_width - 2, w - start_x - 1)),
                         curses.color_pair(THEME.REGULAR_ROW),
                     )
                 except curses.error:
@@ -186,7 +189,7 @@ class CursesUIHelper:
             width_to_use = max(0, width_to_use)
 
             # Fill background first
-            stdscr.addstr(y, x, ' ' * width_to_use, curses.color_pair(THEME.HIGHLIGHTED_ROW))
+            stdscr.addstr(y, x, " " * width_to_use, curses.color_pair(THEME.HIGHLIGHTED_ROW))
             # Draw text on top
             display_text = text[:width_to_use]
             stdscr.addstr(y, x, display_text, curses.color_pair(THEME.HIGHLIGHTED_ROW) | attrs)

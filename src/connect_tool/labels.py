@@ -49,7 +49,7 @@ MSG_CONFIG_FOUND = "Existing configuration found"
 MSG_SYNCING_CHANGES = "Syncing code changes..."
 MSG_EXEC_PERMISSIONS_SET = "Setting execute permissions"
 MSG_CONFIG_FILE_COPIED = "Config file copied"
-MSG_LAUNCHING_SETUP_APP = "Launching Setup App on Raspberry Pi..."
+MSG_LAUNCHING_CONFIG_APP = "Launching Config App on Raspberry Pi..."
 MSG_TRANSFERRING_FILES = "Transferring project files..."
 
 # Warning messages
@@ -67,7 +67,7 @@ STEP_CREATE_VENV = "Create Virtual Environment"
 STEP_COPY_FILES = "Copy Project Files"
 STEP_INSTALL_PACKAGES = "Install Python Packages"
 STEP_FINALIZE = "Finalize Setup"
-STEP_LAUNCH_APP = "Launch Setup Application"
+STEP_LAUNCH_APP = "Launch Config App"
 
 # Sub-step descriptions
 SUBSTEP_UPDATING_PACKAGES = "Updating package list"

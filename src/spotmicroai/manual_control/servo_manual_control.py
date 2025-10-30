@@ -12,8 +12,8 @@ import sys
 from spotmicroai.configuration._config_provider import ServoName
 from spotmicroai.constants import CALIBRATION_STEP_SIZE, POPUP_HEIGHT, POPUP_WIDTH
 from spotmicroai.servo import ServoFactory
-from spotmicroai.setup_app import theme as THEME, ui_utils
-import spotmicroai.setup_app.labels as LABELS
+from spotmicroai.ui import theme as THEME, ui_utils
+import spotmicroai.labels as LABELS
 
 
 class ServoManualControl:

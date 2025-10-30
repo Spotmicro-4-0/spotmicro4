@@ -5,16 +5,21 @@ Provides pulse width and angle-based servo positioning with safety clamping.
 """
 
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
-from spotmicroai.constants import SERVO_PULSE_WIDTH_MIN, SERVO_PULSE_WIDTH_MAX
+from spotmicroai.constants import SERVO_PULSE_WIDTH_MAX, SERVO_PULSE_WIDTH_MIN
 from spotmicroai.drivers import PCA9685
-from spotmicroai.servo import JOINT_ANGLE_LIMITS, Servo, JointType
+from spotmicroai.servo import JOINT_ANGLE_LIMITS, JointType, Servo
+from spotmicroai.labels import (
+    ERR_SERVO_CONFIG_MAX_PULSE_OUT_OF_RANGE,
+    ERR_SERVO_CONFIG_MIN_MAX_EQUAL,
+    ERR_SERVO_CONFIG_MIN_PULSE_OUT_OF_RANGE,
+)
 
 
 class ServoFactory:
     """Factory for creating servo instances with proper initialization."""
 
     @staticmethod
-    def _validate_servo_config(servo_name: ServoName, min_pulse: int, max_pulse: int) -> None:
+    def _validate_servo_config(servo_name: ServoName, min_pulse: float, max_pulse: float) -> None:
         """Validate servo pulse width configuration.
 
         Args:
@@ -27,17 +32,27 @@ class ServoFactory:
         """
         if min_pulse == max_pulse:
             raise ValueError(
-                f"Invalid servo config for {servo_name}: min_pulse ({min_pulse}) cannot equal max_pulse ({max_pulse})"
+                ERR_SERVO_CONFIG_MIN_MAX_EQUAL.format(servo_name=servo_name, min_pulse=min_pulse, max_pulse=max_pulse)
             )
 
         if not (SERVO_PULSE_WIDTH_MIN <= min_pulse <= SERVO_PULSE_WIDTH_MAX):
             raise ValueError(
-                f"Invalid servo config for {servo_name}: min_pulse ({min_pulse}) must be between {SERVO_PULSE_WIDTH_MIN} and {SERVO_PULSE_WIDTH_MAX} microseconds"
+                ERR_SERVO_CONFIG_MIN_PULSE_OUT_OF_RANGE.format(
+                    servo_name=servo_name,
+                    min_pulse=min_pulse,
+                    SERVO_PULSE_WIDTH_MIN=SERVO_PULSE_WIDTH_MIN,
+                    SERVO_PULSE_WIDTH_MAX=SERVO_PULSE_WIDTH_MAX,
+                )
             )
 
         if not (SERVO_PULSE_WIDTH_MIN <= max_pulse <= SERVO_PULSE_WIDTH_MAX):
             raise ValueError(
-                f"Invalid servo config for {servo_name}: max_pulse ({max_pulse}) must be between {SERVO_PULSE_WIDTH_MIN} and {SERVO_PULSE_WIDTH_MAX} microseconds"
+                ERR_SERVO_CONFIG_MAX_PULSE_OUT_OF_RANGE.format(
+                    servo_name=servo_name,
+                    max_pulse=max_pulse,
+                    SERVO_PULSE_WIDTH_MIN=SERVO_PULSE_WIDTH_MIN,
+                    SERVO_PULSE_WIDTH_MAX=SERVO_PULSE_WIDTH_MAX,
+                )
             )
 
     @staticmethod

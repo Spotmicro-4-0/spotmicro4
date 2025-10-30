@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-"""
-Interactive inverse kinematics control for Spotmicro leg positioning.
-
-Allows real-time adjustment of X, Y, Z coordinates for a selected leg corner,
-computes inverse kinematics, and sends angles to the shoulder, leg, and foot servos.
-
-Uses arrow keys to navigate and adjust coordinates:
-- UP/DOWN: Select X, Y, or Z parameter
-- LEFT/RIGHT: Decrease/Increase selected parameter value
-"""
-
 import curses
 import sys
 
@@ -19,8 +8,7 @@ from spotmicroai.configuration._config_provider import ServoName
 from spotmicroai.constants import POPUP_HEIGHT, POPUP_WIDTH
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate
 from spotmicroai.servo import ServoFactory
-from spotmicroai.setup_app import theme as THEME, ui_utils
-
+from spotmicroai.ui import theme as THEME, ui_utils
 
 # Mapping from corner names to servo tuples (shoulder, leg, foot)
 CORNER_TO_SERVOS = {
@@ -130,7 +118,7 @@ class InverseKinematicsControl:
                 popup.addstr(
                     14,
                     3,
-                    "↑/↓ select param | ←/→ adjust ±{:.1f} mm".format(self.step_size),
+                    f"↑/↓ select param | ←/→ adjust ±{self.step_size:.1f} mm",
                     curses.A_DIM,
                 )
                 popup.addstr(15, 3, "ESC to exit", curses.A_DIM)

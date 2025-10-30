@@ -28,11 +28,11 @@ class Servo:
     def __init__(
         self,
         pwm_channel,
-        min_pulse: int,
-        max_pulse: int,
-        min_angle: int,
-        max_angle: int,
-        rest_angle: int,
+        min_pulse: float,
+        max_pulse: float,
+        min_angle: float,
+        max_angle: float,
+        rest_angle: float,
     ) -> None:
         """
         Initialize the servo with calibration values.
@@ -72,12 +72,12 @@ class Servo:
         self.angle = rest_angle
 
     @property
-    def angle(self) -> int:
+    def angle(self) -> float:
         """Get the current physical angle in degrees, computed from the current pulse."""
         return self._pulse_to_angle(self.pulse)
 
     @angle.setter
-    def angle(self, value: int) -> None:
+    def angle(self, value: float) -> None:
         """
         Move the servo to the requested physical angle.
 
@@ -96,14 +96,14 @@ class Servo:
         self.pulse = pulse
 
     @property
-    def pulse(self) -> int:
+    def pulse(self) -> float:
         """Get the current pulse width in microseconds."""
         # Calculate pulse from the current duty cycle
         # Reverse of _pulse_to_duty_cycle: pulse = (duty_cycle / 65535) * 20000
-        return int((self._pwm_channel.duty_cycle / 65535.0) * 20000)
+        return (self._pwm_channel.duty_cycle / 65535.0) * 20000
 
     @pulse.setter
-    def pulse(self, value: int) -> None:
+    def pulse(self, value: float) -> None:
         """Set the servo to a specific pulse width and update the angle.
 
         Args:
@@ -115,40 +115,40 @@ class Servo:
         clamped_pulse = max(min_pulse_abs, min(max_pulse_abs, value))
         self._write_pulse(clamped_pulse)
 
-    def set_pulse_unsafe(self, value: int) -> None:
+    def set_pulse_unsafe(self, value: float) -> None:
         """Set the servo pulse width directly, bypassing safety clamps (for calibration)."""
         self._write_pulse(value)
 
-    def _write_pulse(self, pulse_us: int) -> None:
+    def _write_pulse(self, pulse_us: float) -> None:
         """Low-level helper to send a pulse width to the PWM channel."""
-        self._pwm_channel.duty_cycle = int((pulse_us / 20000.0) * 65535)
+        self._pwm_channel.duty_cycle = (pulse_us / 20000.0) * 65535
 
     @property
-    def min_pulse(self) -> int:
+    def min_pulse(self) -> float:
         """Get the minimum pulse width in microseconds."""
         return self._min_pulse
 
     @property
-    def max_pulse(self) -> int:
+    def max_pulse(self) -> float:
         """Get the maximum pulse width in microseconds."""
         return self._max_pulse
 
     @property
-    def min_angle(self) -> int:
+    def min_angle(self) -> float:
         """Get the minimum angle in degrees."""
         return self._min_angle
 
     @property
-    def max_angle(self) -> int:
+    def max_angle(self) -> float:
         """Get the maximum angle in degrees."""
         return self._max_angle
 
     @property
-    def rest_angle(self) -> int:
+    def rest_angle(self) -> float:
         """Get the rest angle in degrees."""
         return self._rest_angle
 
-    def recalibrate(self, min_pulse: int, max_pulse: int, new_range: int) -> None:
+    def recalibrate(self, min_pulse: float, max_pulse: float, new_range: float) -> None:
         """
         Recalibrate the servo with new pulse width limits and actuation range.
 
@@ -177,7 +177,7 @@ class Servo:
 
         self.angle = self._rest_angle
 
-    def _angle_to_pulse(self, angle: int) -> int:
+    def _angle_to_pulse(self, angle: float) -> float:
         """Convert a physical angle to its corresponding pulse width.
 
         Handles inverted servos correctly.
@@ -190,12 +190,12 @@ class Servo:
 
         if self._is_inverted:
             # For inverted servos, reverse direction and base off _max_pulse
-            return int(self._max_pulse + (1.0 - normalized) * (self._min_pulse - self._max_pulse))
+            return self._max_pulse + (1.0 - normalized) * (self._min_pulse - self._max_pulse)
         else:
             # Normal mapping
-            return int(self._min_pulse + normalized * (self._max_pulse - self._min_pulse))
+            return self._min_pulse + normalized * (self._max_pulse - self._min_pulse)
 
-    def _pulse_to_angle(self, pulse: int) -> int:
+    def _pulse_to_angle(self, pulse: float) -> float:
         """Convert a pulse width to its corresponding physical angle.
 
         Args:
@@ -211,7 +211,7 @@ class Servo:
             normalized = (pulse - self._min_pulse) / (self._max_pulse - self._min_pulse)
 
         # Compute angle using integer math for consistency
-        angle = self._min_angle + int(round(normalized * self._angle_range))
+        angle = self._min_angle + round(normalized * self._angle_range)
 
         # Clamp just in case of rounding edge cases
         if angle < self._min_angle:

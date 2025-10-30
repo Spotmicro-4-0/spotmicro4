@@ -33,7 +33,7 @@ MSG_TRANSFERRING_FILES = "Transferring files to Raspberry Pi..."
 MSG_FILES_COPIED = "Files copied successfully"
 MSG_FILES_SYNCED = "Files synchronized successfully"
 MSG_EXEC_PERMISSIONS_SET = "Setting executable permissions on shell scripts"
-MSG_LAUNCHING_SETUP_APP = "Launching setup application..."
+MSG_LAUNCHING_CONFIG_APP = "Launching config application..."
 MSG_SYNCING_CHANGES = "Syncing code changes..."
 MSG_SETUP_COMPLETED = "Setup completed successfully!"
 
@@ -70,7 +70,7 @@ STEP_CREATE_VENV = "Create Python virtual environment"
 STEP_COPY_FILES = "Copy project files"
 STEP_INSTALL_PACKAGES = "Install Python packages"
 STEP_FINALIZE = "Finalize deployment"
-STEP_LAUNCH_APP = "Launch setup application"
+STEP_LAUNCH_APP = "Launch config application"
 
 # Sub-step labels
 SUBSTEP_TESTING_SSH = "Testing SSH connection..."

@@ -433,11 +433,11 @@ class SetupTool:
         )
         return True
 
-    def launch_setup_app(self):
-        """Launch the setup application on the Raspberry Pi."""
+    def launch_config_app(self):
+        """Launch the configuration application on the Raspberry Pi."""
         self.print_step(9, LABELS.STEP_LAUNCH_APP)
-        cmd = f"cd ~/{PROJECT_DIR} && bash setup_app.sh"
-        self.print_info(LABELS.MSG_LAUNCHING_SETUP_APP)
+        cmd = f"cd ~/{PROJECT_DIR} && bash config_app.sh"
+        self.print_info(LABELS.MSG_LAUNCHING_CONFIG_APP)
         host = f"{self.config['username']}@{self.config['hostname']}"
         key = self.config.get("ssh_key_path")
         base = f"ssh -t -o ConnectTimeout={SSH_CONNECT_TIMEOUT} {SSH_OPTS}"
@@ -482,7 +482,7 @@ class SetupTool:
             self.print_info(LABELS.MSG_FILES_SYNCED)
             self._post_deploy_finalize()
             if not getattr(self.args, "skip_menu", False):
-                return self.launch_setup_app()
+                return self.launch_config_app()
             return True
         self.print_err(LABELS.ERR_SYNC_FAILED)
         return False
@@ -504,7 +504,7 @@ class SetupTool:
         ]
         # Only add the menu launch step if not skipping
         if not getattr(self.args, "skip_menu", False):
-            steps.append((self.launch_setup_app, LABELS.STEP_LAUNCH_APP))
+            steps.append((self.launch_config_app, LABELS.STEP_LAUNCH_APP))
 
         for func, name in steps:
             if not func():
@@ -568,7 +568,7 @@ def main():
     """Parse command line arguments and run the setup tool."""
     parser = argparse.ArgumentParser(description=LABELS.CLI_DESCRIPTION)
     parser.add_argument("--reset", action="store_true", help=LABELS.CLI_CLEAN_HELP)
-    parser.add_argument("--skip-menu", action="store_true", help="Skip launching the setup menu app")
+    parser.add_argument("--skip-menu", action="store_true", help="Skip launching the config app UI")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
     setup = SetupTool(args)

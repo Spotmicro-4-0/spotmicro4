@@ -25,8 +25,8 @@ from spotmicroai.constants import (
 from spotmicroai.servo import JointType
 from spotmicroai.servo._servo import Servo
 from spotmicroai.servo._servo_factory import ServoFactory
-from spotmicroai.setup_app import theme as THEME, ui_utils
-import spotmicroai.setup_app.labels as LABELS
+from spotmicroai.ui import theme as THEME, ui_utils
+import spotmicroai.labels as LABELS
 
 
 class CalibrationWizard:

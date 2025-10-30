@@ -15,7 +15,7 @@ try:  # Windows builds may not ship with curses
 except ImportError:  # pragma: no cover - fallback path
     curses = None  # type: ignore[assignment]
 
-from spotmicroai.setup_app import theme as THEME, ui_utils
+from spotmicroai.ui import theme as THEME, ui_utils
 
 
 class TelemetryDisplay:
@@ -23,7 +23,7 @@ class TelemetryDisplay:
     Structured telemetry dashboard.
 
     Draws a centered panel with consistent styling using helpers shared with the
-    calibration wizard and setup application. Automatically switches to a simple
+    calibration wizard and config application. Automatically switches to a simple
     ANSI renderer if curses cannot be initialized.
     """
 

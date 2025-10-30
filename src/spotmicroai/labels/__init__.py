@@ -144,3 +144,10 @@ CALIBRATION_POINT_DISPLAY_FORMAT = "{} µs @ {}°"
 CALIBRATION_POINT_LABEL_PREFIX = "Point {}: "
 UNDERSCORE_CHAR = "_"
 SPACE_CHAR = " "
+
+# Error messages for servo configuration validation
+ERR_SERVO_CONFIG_MIN_MAX_EQUAL = (
+    "Invalid servo config for {servo_name}: min_pulse ({min_pulse}) cannot equal max_pulse ({max_pulse})"
+)
+ERR_SERVO_CONFIG_MIN_PULSE_OUT_OF_RANGE = "Invalid servo config for {servo_name}: min_pulse ({min_pulse}) must be between {SERVO_PULSE_WIDTH_MIN} and {SERVO_PULSE_WIDTH_MAX} microseconds"
+ERR_SERVO_CONFIG_MAX_PULSE_OUT_OF_RANGE = "Invalid servo config for {servo_name}: max_pulse ({max_pulse}) must be between {SERVO_PULSE_WIDTH_MIN} and {SERVO_PULSE_WIDTH_MAX} microseconds"

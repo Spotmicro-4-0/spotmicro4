@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MenuApp - Generic JSON-driven terminal menu system for SpotMicroAI setup tool.
+ConfigApp - JSON-driven terminal UI for configuring SpotMicroAI.
 
 This module implements a curses-based hierarchical menu system that:
 - Loads menu definitions from JSON files.
@@ -13,7 +13,7 @@ This module implements a curses-based hierarchical menu system that:
 Example JSON:
 {
     "main": {
-        "title": "SpotMicroAI Setup Tool",
+        "title": "SpotMicroAI Config App",
         "options": [
             { "label": "Deploy", "action": "submenu", "target": "deploy_menu" },
             { "label": "Run Calibration", "action": "run", "command": "python3 modules/calibrate.py" },
@@ -30,13 +30,17 @@ Example JSON:
 }
 """
 
+import json
+from pathlib import Path
+
 import curses
 from enum import Enum
 import subprocess
 import sys
 from typing import Any, Mapping
 
-from . import labels as LABELS, theme as THEME, ui_utils
+import spotmicroai.labels as LABELS
+from spotmicroai.ui import theme as THEME, ui_utils
 
 
 class MenuAction(Enum):
@@ -46,7 +50,7 @@ class MenuAction(Enum):
     RUN = "run"
 
 
-class MenuApp:
+class ConfigApp:
     """
     Core curses-based menu handler.
 
@@ -81,7 +85,7 @@ class MenuApp:
 
     def __init__(self, menus: Mapping[str, Any], entry_menu: str = "main", context: dict | None = None) -> None:
         """
-        Initialize the MenuApp with in-memory menu definitions.
+        Initialize the ConfigApp with in-memory menu definitions.
 
         Args:
             menus (Mapping[str, Any]): Menu definitions keyed by menu name.
@@ -535,3 +539,54 @@ class MenuApp:
         """No-op screen refresh to resume curses cleanly."""
         stdscr.clear()
         stdscr.refresh()
+
+
+def load_menus(base_dir: Path) -> dict[str, dict]:
+    """
+    Load and merge multiple menu JSON files into a single dictionary in memory.
+
+    Args:
+        base_dir (Path): Directory containing menu files.
+
+    Returns:
+        dict: Combined menu structure.
+    """
+    combined: dict[str, dict] = {}
+
+    if not base_dir.exists():
+        raise FileNotFoundError(f"Menu directory not found: {base_dir}")
+
+    json_files = sorted(base_dir.glob("*.json"))
+    if not json_files:
+        print(f"[WARN] No menu definitions found in {base_dir}")
+
+    for file_path in json_files:
+        try:
+            data = json.loads(file_path.read_text(encoding="utf-8"))
+            combined.update(data)
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] Failed to parse {file_path}: {e}")
+
+    return combined
+
+
+def main() -> None:
+    """
+    Application entry point for the Config App.
+
+    1. Load all menu definition files dynamically.
+    2. Combine them in memory.
+    3. Start the ConfigApp UI with entry_menu="main".
+    """
+    base_dir = Path(__file__).resolve().parent / "menus"
+
+    menus = load_menus(base_dir)
+    if "main" not in menus:
+        raise KeyError("Missing 'main' menu in loaded definitions.")
+
+    app = ConfigApp(menus, entry_menu="main")
+    app.run()
+
+
+if __name__ == "__main__":
+    main()

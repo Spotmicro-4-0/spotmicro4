@@ -30,7 +30,7 @@ class ConfigProvider(metaclass=Singleton):
         config.save_config()
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._raw_data: Dict[str, Any] = {}
 
         try:
@@ -39,11 +39,11 @@ class ConfigProvider(metaclass=Singleton):
         except Exception as e:
             log.error('Problem while loading the configuration file: %s', e)
 
-    def load_config(self):
+    def load_config(self) -> None:
         """Load configuration from JSON file"""
         try:
-            config_path = Path.home() / 'spotmicroai' / 'spotmicroai.json'
-            default_path = Path.home() / 'spotmicroai' / 'configuration' / 'spotmicroai.template'
+            config_path: Path = Path.home() / 'spotmicroai' / 'spotmicroai.json'
+            default_path: Path = Path.home() / 'spotmicroai' / 'configuration' / 'spotmicroai.template'
 
             # Copy default if config doesn't exist
             if not config_path.exists() and default_path.exists():
@@ -194,23 +194,23 @@ class ConfigProvider(metaclass=Singleton):
         servo.channel = channel
         self.set_servo(servo_name, servo)
 
-    def get_servo_min_pulse(self, servo_name: ServoName) -> int:
+    def get_servo_min_pulse(self, servo_name: ServoName) -> float:
         """Get the minimum pulse width for a servo"""
         servo = self.get_servo_config(servo_name)
         return servo.min_pulse
 
-    def set_servo_min_pulse(self, servo_name: ServoName, pulse: int) -> None:
+    def set_servo_min_pulse(self, servo_name: ServoName, pulse: float) -> None:
         """Set the minimum pulse width for a servo"""
         servo = self.get_servo_config(servo_name)
         servo.min_pulse = pulse
         self.set_servo(servo_name, servo)
 
-    def get_servo_max_pulse(self, servo_name: ServoName) -> int:
+    def get_servo_max_pulse(self, servo_name: ServoName) -> float:
         """Get the maximum pulse width for a servo"""
         servo = self.get_servo_config(servo_name)
         return servo.max_pulse
 
-    def set_servo_max_pulse(self, servo_name: ServoName, pulse: int) -> None:
+    def set_servo_max_pulse(self, servo_name: ServoName, pulse: float) -> None:
         """Set the maximum pulse width for a servo"""
         servo = self.get_servo_config(servo_name)
         servo.max_pulse = pulse

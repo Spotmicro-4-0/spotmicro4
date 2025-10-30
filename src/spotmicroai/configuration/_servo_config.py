@@ -6,5 +6,5 @@ class ServoConfig:
     """Servo configuration dataclass"""
 
     channel: int
-    min_pulse: int
-    max_pulse: int
+    min_pulse: float
+    max_pulse: float
