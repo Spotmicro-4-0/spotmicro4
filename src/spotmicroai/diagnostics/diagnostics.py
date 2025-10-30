@@ -20,21 +20,14 @@ from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.constants import (
     POPUP_HEIGHT,
     POPUP_WIDTH,
-    UNDERSCORE_CHAR,
-    SPACE_CHAR,
+    SWEEP_RATE_DEG_PER_FRAME,
+    FRAME_DURATION,
 )
 from spotmicroai.servo import JointType
 from spotmicroai.servo._servo import Servo
 from spotmicroai.servo._servo_factory import ServoFactory
 from spotmicroai.setup_app import theme as THEME, ui_utils
 import spotmicroai.setup_app.labels as LABELS
-
-
-# Configurable sweep rate: degrees per frame (adjust for speed)
-SWEEP_RATE_DEG_PER_FRAME = 0.5
-# Frame rate in Hz
-FRAME_RATE_HZ = 50
-FRAME_DURATION = 1.0 / FRAME_RATE_HZ
 
 
 class DiagnosticsWizard:
@@ -203,7 +196,9 @@ class DiagnosticsWizard:
                     pass
 
                 # Show which servos are being tested
-                servo_names_str = ", ".join([s.value.replace(UNDERSCORE_CHAR, SPACE_CHAR).title() for s in servo_names])
+                servo_names_str = ", ".join(
+                    [s.value.replace(LABELS.UNDERSCORE_CHAR, LABELS.SPACE_CHAR).title() for s in servo_names]
+                )
                 label_text = LABELS.DIAG_JOINT_TYPE_LABEL.format(servo_names_str[:50])
                 self._safe_addstr(popup_win, 4, 2, label_text)
 
@@ -216,7 +211,7 @@ class DiagnosticsWizard:
                 for servo_name in servo_names:
                     if row < 13:  # Limit to 4 servos displayed
                         servo = self.servos[servo_name]
-                        display_name = servo_name.value.replace(UNDERSCORE_CHAR, SPACE_CHAR).title()
+                        display_name = servo_name.value.replace(LABELS.UNDERSCORE_CHAR, LABELS.SPACE_CHAR).title()
                         angle_text = LABELS.DIAG_SERVO_ANGLE_DISPLAY.format(display_name, current_angle)
                         self._safe_addstr(popup_win, row, 3, angle_text)
                         row += 1

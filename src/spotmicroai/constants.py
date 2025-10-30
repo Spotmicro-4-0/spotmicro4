@@ -32,6 +32,9 @@ FRAME_RATE_HZ = 50
 FRAME_DURATION = 1.0 / FRAME_RATE_HZ
 TELEMETRY_UPDATE_INTERVAL = 2  # Update telemetry display every N frames
 
+# Diagnostics Constants
+SWEEP_RATE_DEG_PER_FRAME = 0.5  # Configurable sweep rate: degrees per frame (adjust for speed)
+
 DEFAULT_SLEEP = 0.1
 
 
@@ -64,6 +67,10 @@ DEVICE_SEARCH_INTERVAL = 2.5
 POPUP_HEIGHT = 16
 POPUP_WIDTH = 75
 CALIBRATION_STEP_SIZE = 10  # microseconds or degrees
+# Offset in degrees for servo calibration due to geometry
+GEOMETRY_OFFSET_SHOULDER = 0
+GEOMETRY_OFFSET_LEG = 9.5
+GEOMETRY_OFFSET_FOOT = 0
 
 # ===============================
 # Servo Validation Constants
@@ -75,12 +82,3 @@ SERVO_PULSE_WIDTH_MAX = 2500  # microseconds
 # Servo Manual Control Constants
 # ===============================
 ANGLE_STEP_SIZE = 1  # degrees per adjustment
-
-# ===============================
-# Calibration Wizard String Constants
-# ===============================
-# String formatting templates and constants
-CALIBRATION_POINT_DISPLAY_FORMAT = "{} µs @ {}°"
-CALIBRATION_POINT_LABEL_PREFIX = "Point {}: "
-UNDERSCORE_CHAR = "_"
-SPACE_CHAR = " "

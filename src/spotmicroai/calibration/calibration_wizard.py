@@ -19,10 +19,6 @@ from spotmicroai.constants import (
     CALIBRATION_STEP_SIZE,
     POPUP_HEIGHT,
     POPUP_WIDTH,
-    CALIBRATION_POINT_DISPLAY_FORMAT,
-    CALIBRATION_POINT_LABEL_PREFIX,
-    UNDERSCORE_CHAR,
-    SPACE_CHAR,
     SERVO_PULSE_WIDTH_MIN,
     SERVO_PULSE_WIDTH_MAX,
 )
@@ -51,7 +47,7 @@ class CalibrationWizard:
         self.captured_points: list[CalibrationPoint] = []
         self.popup_start_y = 0
         self.popup_start_x = 0
-        self.formatted_servo_name = servo_enum.value.replace(UNDERSCORE_CHAR, SPACE_CHAR).title()
+        self.formatted_servo_name = servo_enum.value.replace(LABELS.UNDERSCORE_CHAR, LABELS.SPACE_CHAR).title()
         # Get joint type and calibration spec
         self.joint_type = JointType.from_servo_name(servo_enum)
         self.points = CALIBRATION_POINTS[self.joint_type]
@@ -160,21 +156,21 @@ class CalibrationWizard:
 
                 # Display Point 1: show only if point 1 has been captured
                 if len(self.captured_points) > 0:
-                    point1_str = CALIBRATION_POINT_DISPLAY_FORMAT.format(
+                    point1_str = LABELS.CALIBRATION_POINT_DISPLAY_FORMAT.format(
                         self.captured_points[0].pulse_width, self.captured_points[0].physical_angle
                     )
                 else:
                     point1_str = LABELS.WIZARD_DASH
-                popup_win.addstr(8, 3, f"{CALIBRATION_POINT_LABEL_PREFIX.format(1)}{point1_str}")
+                popup_win.addstr(8, 3, f"{LABELS.CALIBRATION_POINT_LABEL_PREFIX.format(1)}{point1_str}")
 
                 # Display Point 2: show only if point 2 has been captured
                 if len(self.captured_points) > 1:
-                    point2_str = CALIBRATION_POINT_DISPLAY_FORMAT.format(
+                    point2_str = LABELS.CALIBRATION_POINT_DISPLAY_FORMAT.format(
                         self.captured_points[1].pulse_width, self.captured_points[1].physical_angle
                     )
                 else:
                     point2_str = LABELS.WIZARD_DASH
-                popup_win.addstr(9, 3, f"{CALIBRATION_POINT_LABEL_PREFIX.format(2)}{point2_str}")
+                popup_win.addstr(9, 3, f"{LABELS.CALIBRATION_POINT_LABEL_PREFIX.format(2)}{point2_str}")
 
                 # Instructions
                 popup_win.addstr(

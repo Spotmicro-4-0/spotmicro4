@@ -137,3 +137,10 @@ DIAG_INTRO_LINE_7 = "  • Left/right symmetry"
 DIAG_INTRO_LINE_8 = "  • Full range of motion"
 DIAG_SUCCESS_ALL_SERVOS = "✓ All servo groups tested successfully"
 DIAG_SUCCESS_NO_ERRORS = "✓ No errors detected during diagnostics"
+
+# Calibration Wizard String Constants
+# String formatting templates and constants
+CALIBRATION_POINT_DISPLAY_FORMAT = "{} µs @ {}°"
+CALIBRATION_POINT_LABEL_PREFIX = "Point {}: "
+UNDERSCORE_CHAR = "_"
+SPACE_CHAR = " "
