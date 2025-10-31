@@ -40,8 +40,8 @@ class DebouncedButton:
         self.key = key
         self.debounce_time = debounce_time
         self.on_press = on_press
-        self._last_trigger_time = 0
-        self._previous_value = 0
+        self._last_trigger_time = 0.0
+        self._previous_value = 0.0
 
     def update(self, event: dict) -> bool:
         """
