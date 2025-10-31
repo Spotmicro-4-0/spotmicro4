@@ -6,8 +6,8 @@ Provides pulse width and angle-based servo positioning with safety clamping.
 
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.constants import SERVO_PULSE_WIDTH_MAX, SERVO_PULSE_WIDTH_MIN
-from spotmicroai.drivers import PCA9685
 from spotmicroai.servo import JOINT_ANGLE_LIMITS, JointType, Servo
+from spotmicroai.servo.pca9685 import PCA9685
 from spotmicroai.labels import (
     ERR_SERVO_CONFIG_MAX_PULSE_OUT_OF_RANGE,
     ERR_SERVO_CONFIG_MIN_MAX_EQUAL,

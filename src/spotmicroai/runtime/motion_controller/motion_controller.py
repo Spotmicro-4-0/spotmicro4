@@ -6,7 +6,7 @@ import time
 
 import spotmicroai.constants as constants
 from spotmicroai.buzzer.buzzer import Buzzer
-from spotmicroai.drivers.pca9685 import PCA9685
+from spotmicroai.servo.pca9685 import PCA9685
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.motion_controller.enums import ControllerEvent
 from spotmicroai.runtime.motion_controller.services.button_manager import ButtonManager
