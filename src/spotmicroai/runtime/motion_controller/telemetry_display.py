@@ -15,7 +15,7 @@ try:  # Windows builds may not ship with curses
 except ImportError:  # pragma: no cover - fallback path
     curses = None  # type: ignore[assignment]
 
-from spotmicroai.ui import theme as THEME, ui_utils
+from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 
 
 class TelemetryDisplay:

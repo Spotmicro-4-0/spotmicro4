@@ -40,7 +40,7 @@ import sys
 from typing import Any, Mapping
 
 import spotmicroai.labels as LABELS
-from spotmicroai.ui import theme as THEME, ui_utils
+from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 
 
 class MenuAction(Enum):
