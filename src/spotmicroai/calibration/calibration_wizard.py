@@ -11,7 +11,7 @@ Usage: calibration_wizard.py <SERVO_ID>
 
 import curses
 import sys
-from typing import cast, Tuple
+from typing import Tuple
 
 from spotmicroai.calibration.calibration_points import CALIBRATION_POINTS, CalibrationPoint
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
@@ -19,14 +19,14 @@ from spotmicroai.constants import (
     CALIBRATION_STEP_SIZE,
     POPUP_HEIGHT,
     POPUP_WIDTH,
-    SERVO_PULSE_WIDTH_MIN,
     SERVO_PULSE_WIDTH_MAX,
+    SERVO_PULSE_WIDTH_MIN,
 )
+import spotmicroai.labels as LABELS
 from spotmicroai.servo import JointType
 from spotmicroai.servo._servo import Servo
 from spotmicroai.servo._servo_factory import ServoFactory
 from spotmicroai.ui import theme as THEME, ui_utils
-import spotmicroai.labels as LABELS
 
 
 class CalibrationWizard:
@@ -55,8 +55,8 @@ class CalibrationWizard:
     def get_popup_position(self) -> Tuple[int, int]:
         """Calculate centered popup position."""
         h, w = self.stdscr.getmaxyx()
-        start_y = max(1, (h - POPUP_HEIGHT) // 2)
-        start_x = max(1, (w - POPUP_WIDTH) // 2)
+        start_y = max(1, int((h - POPUP_HEIGHT) / 2))
+        start_x = max(1, int((w - POPUP_WIDTH) / 2))
         return start_y, start_x
 
     def create_popup_window(self) -> curses.window:
@@ -152,12 +152,12 @@ class CalibrationWizard:
                 popup_win.addstr(5, 3, LABELS.WIZARD_EXPECTED_ANGLE.format(point.physical_angle))
 
                 # Current values
-                popup_win.addstr(7, 3, LABELS.WIZARD_CURRENT_PULSE.format(self.servo.pulse))
+                popup_win.addstr(7, 3, LABELS.WIZARD_CURRENT_PULSE.format(f"{self.servo.pulse:.2f}"))
 
                 # Display Point 1: show only if point 1 has been captured
                 if len(self.captured_points) > 0:
                     point1_str = LABELS.CALIBRATION_POINT_DISPLAY_FORMAT.format(
-                        self.captured_points[0].pulse_width, self.captured_points[0].physical_angle
+                        f"{self.captured_points[0].pulse_width:.2f}", self.captured_points[0].physical_angle
                     )
                 else:
                     point1_str = LABELS.WIZARD_DASH
@@ -166,7 +166,7 @@ class CalibrationWizard:
                 # Display Point 2: show only if point 2 has been captured
                 if len(self.captured_points) > 1:
                     point2_str = LABELS.CALIBRATION_POINT_DISPLAY_FORMAT.format(
-                        self.captured_points[1].pulse_width, self.captured_points[1].physical_angle
+                        f"{self.captured_points[1].pulse_width:.2f}", self.captured_points[1].physical_angle
                     )
                 else:
                     point2_str = LABELS.WIZARD_DASH
@@ -231,33 +231,35 @@ class CalibrationWizard:
                     popup_win.addstr(
                         row,
                         3,
-                        LABELS.WIZARD_POINT_SUMMARY.format(i + 1, point.pulse_width, point.physical_angle),
+                        LABELS.WIZARD_POINT_SUMMARY.format(i + 1, f"{point.pulse_width:.2f}", point.physical_angle),
                     )
                     row += 1
 
                 # Calculate inferred min/max pulses
                 point1 = self.captured_points[0]
                 point2 = self.captured_points[1]
-                pulse1 = cast(int, point1.pulse_width)
-                pulse2 = cast(int, point2.pulse_width)
+                assert point1.pulse_width is not None
+                assert point2.pulse_width is not None
+                pulse1 = point1.pulse_width
+                pulse2 = point2.pulse_width
                 angle_diff = point2.physical_angle - point1.physical_angle
                 pulse_diff = pulse2 - pulse1
                 pulse_per_degree = pulse_diff / angle_diff if angle_diff != 0 else 0
-                inferred_min = int(pulse1 + (self.servo.min_angle - point1.physical_angle) * pulse_per_degree)
-                inferred_max = int(pulse1 + (self.servo.max_angle - point1.physical_angle) * pulse_per_degree)
+                inferred_min = pulse1 + (self.servo.min_angle - point1.physical_angle) * pulse_per_degree
+                inferred_max = pulse1 + (self.servo.max_angle - point1.physical_angle) * pulse_per_degree
 
                 popup_win.addstr(row, 3, "")
                 row += 1
                 popup_win.addstr(
                     row,
                     3,
-                    LABELS.WIZARD_INFERRED_MIN_PULSE.format(self.servo.min_angle, inferred_min),
+                    LABELS.WIZARD_INFERRED_MIN_PULSE.format(self.servo.min_angle, f"{inferred_min:.2f}"),
                 )
                 row += 1
                 popup_win.addstr(
                     row,
                     3,
-                    LABELS.WIZARD_INFERRED_MAX_PULSE.format(self.servo.max_angle, inferred_max),
+                    LABELS.WIZARD_INFERRED_MAX_PULSE.format(self.servo.max_angle, f"{inferred_max:.2f}"),
                 )
                 row += 1
 
@@ -316,10 +318,10 @@ class CalibrationWizard:
         min_pulse = pulse1 + (self.servo.min_angle - angle1) * pulse_per_degree
         max_pulse = pulse1 + (self.servo.max_angle - angle1) * pulse_per_degree
 
-        # Clamp min and max pulses to valid servo range (round to nearest int)
-        min_pulse = max(SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, round(min_pulse)))
+        # Clamp min and max pulses to valid servo range
+        min_pulse = max(SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, min_pulse))
         max_pulse = max(
-            SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, round(max_pulse))
+            SERVO_PULSE_WIDTH_MIN, min(SERVO_PULSE_WIDTH_MAX, max_pulse)
         )  # Calculate target range (physical angle span)
         target_range = self.servo.max_angle - self.servo.min_angle
 

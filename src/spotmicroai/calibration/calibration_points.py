@@ -8,8 +8,8 @@ class CalibrationPoint:
     """Represents a calibration point with angle and pulse width."""
 
     description: str
-    physical_angle: int  # The actual angle in degrees IRL
-    pulse_width: int | None = None  # Captured pulse width in microseconds
+    physical_angle: float  # The actual angle in degrees IRL
+    pulse_width: float | None = None  # Captured pulse width in microseconds
 
 
 # Foot calibration: Maps physical angles to servo pulse widths
