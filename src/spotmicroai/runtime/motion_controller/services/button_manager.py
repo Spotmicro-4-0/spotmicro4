@@ -1,6 +1,6 @@
 from typing import Callable, Optional
 
-from spotmicroai.runtime.motion_controller.wrappers.debounced_button import DebouncedButton
+from spotmicroai.runtime.motion_controller.debounced_button import DebouncedButton
 
 
 class ButtonManager:
