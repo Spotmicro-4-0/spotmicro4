@@ -5,7 +5,7 @@
       {
         "label": "View Latest Logs and Telemetry",
         "action": "run",
-        "command": "python3 calibration/review_logs.py"
+        "command": "python3 spot_config/calibration/review_logs.py"
       },
       {
         "label": "Back",

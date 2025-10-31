@@ -15,10 +15,11 @@ SERVO_ID="$1"
 # Get the absolute path to this script's directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Go up 2 levels: calibration/ -> spotmicroai/ -> src/
-SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
-
-# The venv is in the src directory
+# Resolve project structure:
+# calibration/ -> spot_config/ -> spotmicroai/ -> src/
+SPOT_CONFIG_DIR="$(dirname "$SCRIPT_DIR")"
+SPOTMICROAI_DIR="$(dirname "$SPOT_CONFIG_DIR")"
+SRC_DIR="$(dirname "$SPOTMICROAI_DIR")"
 VENV_PATH="$SRC_DIR/.venv"
 
 if [ ! -d "$VENV_PATH/bin" ]; then
@@ -34,4 +35,4 @@ export PYTHONPATH="$SRC_DIR:${PYTHONPATH:-}"
 
 # Run the Python script as a module to support relative imports
 cd "$SRC_DIR"
-python3 -m spotmicroai.calibration.calibration_wizard "$SERVO_ID"
+python3 -m spotmicroai.spot_config.calibration.calibration_wizard "$SERVO_ID"

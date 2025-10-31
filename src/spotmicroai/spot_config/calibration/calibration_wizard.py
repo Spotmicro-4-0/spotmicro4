@@ -13,7 +13,7 @@ import curses
 import sys
 from typing import Tuple
 
-from spotmicroai.calibration.calibration_points import CALIBRATION_POINTS, CalibrationPoint
+from spotmicroai.spot_config.calibration.calibration_points import CALIBRATION_POINTS, CalibrationPoint
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.constants import (
     CALIBRATION_STEP_SIZE,

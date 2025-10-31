@@ -5,67 +5,67 @@
       {
         "label": "Calibrate All Servos",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh all"
+        "command": "bash spot_config/calibration/calibration_wizard.sh all"
       },
       {
         "label": "Front Shoulder Left",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh front_shoulder_left"
+        "command": "bash spot_config/calibration/calibration_wizard.sh front_shoulder_left"
       },
       {
         "label": "Front Leg Left",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh front_leg_left"
+        "command": "bash spot_config/calibration/calibration_wizard.sh front_leg_left"
       },
       {
         "label": "Front Foot Left",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh front_foot_left"
+        "command": "bash spot_config/calibration/calibration_wizard.sh front_foot_left"
       },
       {
         "label": "Front Shoulder Right",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh front_shoulder_right"
+        "command": "bash spot_config/calibration/calibration_wizard.sh front_shoulder_right"
       },
       {
         "label": "Front Leg Right",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh front_leg_right"
+        "command": "bash spot_config/calibration/calibration_wizard.sh front_leg_right"
       },
       {
         "label": "Front Foot Right",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh front_foot_right"
+        "command": "bash spot_config/calibration/calibration_wizard.sh front_foot_right"
       },
       {
         "label": "Rear Shoulder Left",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh rear_shoulder_left"
+        "command": "bash spot_config/calibration/calibration_wizard.sh rear_shoulder_left"
       },
       {
         "label": "Rear Leg Left",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh rear_leg_left"
+        "command": "bash spot_config/calibration/calibration_wizard.sh rear_leg_left"
       },
       {
         "label": "Rear Foot Left",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh rear_foot_left"
+        "command": "bash spot_config/calibration/calibration_wizard.sh rear_foot_left"
       },
       {
         "label": "Rear Shoulder Right",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh rear_shoulder_right"
+        "command": "bash spot_config/calibration/calibration_wizard.sh rear_shoulder_right"
       },
       {
         "label": "Rear Leg Right",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh rear_leg_right"
+        "command": "bash spot_config/calibration/calibration_wizard.sh rear_leg_right"
       },
       {
         "label": "Rear Foot Right",
         "action": "run",
-        "command": "bash calibration/calibration_wizard.sh rear_foot_right"
+        "command": "bash spot_config/calibration/calibration_wizard.sh rear_foot_right"
       },
       {
         "label": "Back",
