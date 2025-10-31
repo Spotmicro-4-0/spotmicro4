@@ -492,7 +492,6 @@ class MotionController:
         Args:
             raw_value: The raw analog input value for pitch adjustment.
         """
-        print(raw_value)
         raw_value = math.floor(raw_value * 10 / 2)
 
         # Legs move opposite directions for pitch (front down = rear up)

@@ -6,7 +6,7 @@
         "label": "Start Spotmicro Runtime",
         "description": "Starts the robot's runtime",
         "action": "run",
-        "command": "./run.sh"
+        "command": "./runtime.sh"
       },
       {
         "label": "Configuration Editor",

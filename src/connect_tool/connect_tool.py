@@ -436,7 +436,7 @@ class SetupTool:
     def launch_config_app(self):
         """Launch the configuration application on the Raspberry Pi."""
         self.print_step(9, LABELS.STEP_LAUNCH_APP)
-        cmd = f"cd ~/{PROJECT_DIR} && bash config_app.sh"
+        cmd = f"cd ~/{PROJECT_DIR} && bash spot_config.sh"
         self.print_info(LABELS.MSG_LAUNCHING_CONFIG_APP)
         host = f"{self.config['username']}@{self.config['hostname']}"
         key = self.config.get("ssh_key_path")

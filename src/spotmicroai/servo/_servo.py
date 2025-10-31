@@ -59,6 +59,7 @@ class Servo:
         # Calculate range for Adafruit servo (always positive)
         self._pulse_range = abs(max_pulse - min_pulse)
         self._angle_range = abs(max_angle - min_angle)
+        self._channel_index = getattr(pwm_channel, "_channel", None)
 
         # Initialize Adafruit servo with absolute values for range
         self._servo = adafruit_servo.Servo(

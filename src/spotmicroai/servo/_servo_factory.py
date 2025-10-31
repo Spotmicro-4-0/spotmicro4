@@ -6,13 +6,13 @@ Provides pulse width and angle-based servo positioning with safety clamping.
 
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.constants import SERVO_PULSE_WIDTH_MAX, SERVO_PULSE_WIDTH_MIN
-from spotmicroai.servo import JOINT_ANGLE_LIMITS, JointType, Servo
-from spotmicroai.servo.pca9685 import PCA9685
 from spotmicroai.labels import (
     ERR_SERVO_CONFIG_MAX_PULSE_OUT_OF_RANGE,
     ERR_SERVO_CONFIG_MIN_MAX_EQUAL,
     ERR_SERVO_CONFIG_MIN_PULSE_OUT_OF_RANGE,
 )
+from spotmicroai.servo import JOINT_ANGLE_LIMITS, JointType, Servo
+from spotmicroai.servo.pca9685 import PCA9685
 
 
 class ServoFactory:
@@ -35,7 +35,7 @@ class ServoFactory:
                 ERR_SERVO_CONFIG_MIN_MAX_EQUAL.format(servo_name=servo_name, min_pulse=min_pulse, max_pulse=max_pulse)
             )
 
-        if not (SERVO_PULSE_WIDTH_MIN <= min_pulse <= SERVO_PULSE_WIDTH_MAX):
+        if not SERVO_PULSE_WIDTH_MIN <= min_pulse <= SERVO_PULSE_WIDTH_MAX:
             raise ValueError(
                 ERR_SERVO_CONFIG_MIN_PULSE_OUT_OF_RANGE.format(
                     servo_name=servo_name,
@@ -45,7 +45,7 @@ class ServoFactory:
                 )
             )
 
-        if not (SERVO_PULSE_WIDTH_MIN <= max_pulse <= SERVO_PULSE_WIDTH_MAX):
+        if not SERVO_PULSE_WIDTH_MIN <= max_pulse <= SERVO_PULSE_WIDTH_MAX:
             raise ValueError(
                 ERR_SERVO_CONFIG_MAX_PULSE_OUT_OF_RANGE.format(
                     servo_name=servo_name,

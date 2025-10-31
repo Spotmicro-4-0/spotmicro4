@@ -34,7 +34,7 @@ class PCA9685(metaclass=Singleton):
 
     config_provider = ConfigProvider()
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the PCA9685Board."""
         self._i2c = busio.I2C(SCL, SDA)
         self._pca9685 = None

@@ -24,7 +24,7 @@ Activate your virtual environment and start your main Python script:
 ```bash
 cd ~/spotmicroai
 source venv/bin/activate
-./run.sh
+./runtime.sh
 ```
 Confirm it’s running in the background and note its PID:
 ```bash
@@ -93,9 +93,8 @@ This prevents 100% CPU when the robot is inactive.
 ## Summary
 | Session | Purpose | Key Command |
 |----------|----------|--------------|
-| 1 | Run your code | `./run.sh` |
+| 1 | Run your code | `./runtime.sh` |
 | 2 | Watch system load | `htop` |
 | 3 | Profile code | `sudo py-spy top --pid <PID>` |
 
 Once you’ve identified the busy function, optimize it and repeat to confirm CPU drops when idle.
-

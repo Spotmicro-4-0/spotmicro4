@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/pi/spotmicroai/run.sh
+ExecStart=/home/pi/spotmicroai/runtime.sh
 WorkingDirectory=/home/pi/spotmicroai
 StandardOutput=inherit
 StandardError=inherit
@@ -13,4 +13,3 @@ User=pi
 
 [Install]
 WantedBy=multi-user.target
-
