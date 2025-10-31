@@ -21,11 +21,11 @@ case "$CORNER" in
         ;;
 esac
 
-# Directory that contains this script (inverse_kinematics/)
+# Directory that contains this script (spot_config/inverse_kinematics/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Go up two levels to reach src/
-SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+# Go up three levels to reach src/
+SRC_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 
 # Virtual environment location
 VENV_PATH="$SRC_DIR/.venv"

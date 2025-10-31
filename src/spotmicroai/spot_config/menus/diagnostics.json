@@ -5,7 +5,7 @@
       {
         "label": "Run Hardware and System Checks",
         "action": "run",
-        "command": "bash diagnostics/diagnostics.sh"
+        "command": "bash spot_config/diagnostics/diagnostics.sh"
       },
       {
         "label": "Back",

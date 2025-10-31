@@ -5,22 +5,22 @@
       {
         "label": "Front Left",
         "action": "run",
-        "command": "bash inverse_kinematics/inverse_kinematics.sh front_left"
+        "command": "bash spot_config/inverse_kinematics/inverse_kinematics.sh front_left"
       },
       {
         "label": "Front Right",
         "action": "run",
-        "command": "bash inverse_kinematics/inverse_kinematics.sh front_right"
+        "command": "bash spot_config/inverse_kinematics/inverse_kinematics.sh front_right"
       },
       {
         "label": "Rear Left",
         "action": "run",
-        "command": "bash inverse_kinematics/inverse_kinematics.sh rear_left"
+        "command": "bash spot_config/inverse_kinematics/inverse_kinematics.sh rear_left"
       },
       {
         "label": "Rear Right",
         "action": "run",
-        "command": "bash inverse_kinematics/inverse_kinematics.sh rear_right"
+        "command": "bash spot_config/inverse_kinematics/inverse_kinematics.sh rear_right"
       }
     ]
   }

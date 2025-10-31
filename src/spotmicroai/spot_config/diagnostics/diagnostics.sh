@@ -8,8 +8,8 @@ set -euo pipefail
 # Get the absolute path to this script's directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Go up 2 levels: diagnostics/ -> spotmicroai/ -> src/
-SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+# Go up 3 levels: diagnostics/ -> spot_config/ -> spotmicroai/ -> src/
+SRC_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 
 # The venv is in the src directory
 VENV_PATH="$SRC_DIR/.venv"
@@ -27,4 +27,4 @@ export PYTHONPATH="$SRC_DIR:${PYTHONPATH:-}"
 
 # Run the Python script as a module to support relative imports
 cd "$SRC_DIR"
-python3 -m spotmicroai.diagnostics.diagnostics
+python3 -m spotmicroai.spot_config.diagnostics.diagnostics

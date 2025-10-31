@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import sys
 
-from spotmicroai.inverse_kinematics.inverse_kinematics_control import (
+from spotmicroai.spot_config.inverse_kinematics.inverse_kinematics_control import (
     CORNER_TO_SERVOS,
     main as run_control,
 )

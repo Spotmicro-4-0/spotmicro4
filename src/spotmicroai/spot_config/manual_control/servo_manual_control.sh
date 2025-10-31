@@ -15,8 +15,8 @@ SERVO_ID="$1"
 # Get the absolute path to this script's directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Go up 2 levels: manual_control/ -> spotmicroai/ -> src/
-SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+# Go up 3 levels: manual_control/ -> spot_config/ -> spotmicroai/ -> src/
+SRC_DIR="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 
 # The venv is in the src directory
 VENV_PATH="$SRC_DIR/.venv"
