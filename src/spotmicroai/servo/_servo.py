@@ -121,7 +121,7 @@ class Servo:
 
     def _write_pulse(self, pulse_us: float) -> None:
         """Low-level helper to send a pulse width to the PWM channel."""
-        self._pwm_channel.duty_cycle = (pulse_us / 20000.0) * 65535
+        self._pwm_channel.duty_cycle = int((pulse_us / 20000.0) * 65535)
 
     @property
     def min_pulse(self) -> float:
