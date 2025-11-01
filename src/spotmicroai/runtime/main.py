@@ -8,6 +8,7 @@ from spotmicroai.runtime.abort_controller.abort_controller import AbortControlle
 from spotmicroai.runtime.lcd_screen_controller.lcd_screen_controller import LCDScreenController
 from spotmicroai.runtime.motion_controller.motion_controller import MotionController
 from spotmicroai.runtime.remote_controller.remote_controller import RemoteControllerController
+from spotmicroai.runtime.telemetry_controller.telemetry_controller import TelemetryController
 
 log = Logger().setup_logger()
 
@@ -32,11 +33,17 @@ def process_output_lcd_screen_controller(communication_queues):
     lcd_screen.do_process_events_from_queue()
 
 
+def process_telemetry_controller(communication_queues):
+    telemetry = TelemetryController(communication_queues)
+    telemetry.do_process_events_from_queue()
+
+
 def create_controllers_queues():
     communication_queues = {
         'abort_controller': multiprocessing.Queue(10),
         'motion_controller': multiprocessing.Queue(1),
         'lcd_screen_controller': multiprocessing.Queue(10),
+        'telemetry_controller': multiprocessing.Queue(10),
     }
 
     log.info('Created the communication queues: %s', ", ".join(communication_queues.keys()))
@@ -79,11 +86,19 @@ def main():
     )
     lcd_screen_controller.daemon = True
 
+    # Telemetry controller
+    # Renders system telemetry data on the host terminal
+    telemetry_controller = multiprocessing.Process(
+        target=process_telemetry_controller, args=(communication_queues,)
+    )
+    telemetry_controller.daemon = True
+
     # Start the threads, queues messages are produced and consumed in those
     abort_controller.start()
     motion_controller.start()
     remote_controller_controller.start()
     lcd_screen_controller.start()
+    telemetry_controller.start()
 
     if not abort_controller.is_alive():
         log.error("SpotMicro can't work without abort_controller")
@@ -97,11 +112,16 @@ def main():
         log.error("SpotMicro can't work without remote_controller_controller")
         sys.exit(1)
 
+    if not telemetry_controller.is_alive():
+        log.error("SpotMicro can't work without telemetry_controller")
+        sys.exit(1)
+
     # Make sure the thread/process ends
     abort_controller.join()
     motion_controller.join()
     remote_controller_controller.join()
     lcd_screen_controller.join()
+    telemetry_controller.join()
 
     close_controllers_queues(communication_queues)
 

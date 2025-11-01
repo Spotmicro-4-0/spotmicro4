@@ -1,14 +1,18 @@
 """
-Telemetry Display Module for SpotMicroAI Motion Controller.
-
-Provides a curses-based dashboard styled like the setup utilities so telemetry
-updates render in-place without flicker. Falls back to ANSI text mode if curses
-is unavailable (e.g. on Windows).
+Telemetry controller responsible for rendering runtime metrics.
 """
 
-from datetime import datetime
 import atexit
-from typing import Any, Dict, Optional
+from datetime import datetime
+import queue
+import signal
+import sys
+import time
+from multiprocessing.queues import Queue as MPQueue
+from typing import Any, Dict, MutableMapping, Optional
+
+from spotmicroai.logger import Logger
+import spotmicroai.runtime.queues as queues
 
 try:  # Windows builds may not ship with curses
     import curses
@@ -16,6 +20,78 @@ except ImportError:  # pragma: no cover - fallback path
     curses = None  # type: ignore[assignment]
 
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
+
+log = Logger().setup_logger('Telemetry controller')
+
+
+class TelemetryController:
+    """
+    Background process that ingests telemetry events and renders them.
+    """
+
+    _render_interval = 0.2  # seconds
+
+    _telemetry_queue: MPQueue
+
+    def __init__(self, communication_queues: MutableMapping[str, MPQueue]) -> None:
+        try:
+            signal.signal(signal.SIGINT, self.exit_gracefully)
+            signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+            self._telemetry_queue = communication_queues[queues.TELEMETRY_CONTROLLER]
+            self._display = TelemetryDisplay()
+            self._display.initialize()
+
+            self._latest_payload: Dict[str, Any] = {}
+            self._last_render_ts = 0.0
+            self._is_alive = True
+
+            log.info('Telemetry controller initialized')
+        except Exception as exc:
+            self._is_alive = False
+            log.error('Telemetry controller initialization problem, module not critical, skipping: %s', exc)
+
+    def exit_gracefully(self, _signum: int, _frame: Any) -> None:
+        try:
+            if hasattr(self, '_display'):
+                self._display.shutdown()
+        finally:
+            log.info('Telemetry controller terminated')
+            sys.exit(0)
+
+    def do_process_events_from_queue(self) -> None:
+        if not getattr(self, '_is_alive', False):
+            log.error('Telemetry controller is not alive, skipping processing loop')
+            return
+
+        while True:
+            try:
+                payload = self._telemetry_queue.get(timeout=self._render_interval)
+                if isinstance(payload, dict):
+                    self._latest_payload = payload
+                else:
+                    log.debug('Telemetry controller received unexpected payload type: %s', type(payload))
+                    continue
+            except queue.Empty:
+                pass
+            except Exception as exc:
+                log.warning('Unexpected telemetry queue error: %s', exc)
+                time.sleep(self._render_interval)
+                continue
+
+            if not self._latest_payload:
+                continue
+
+            now = time.time()
+            if now - self._last_render_ts < self._render_interval:
+                continue
+
+            try:
+                self._display.update(self._latest_payload)
+                self._last_render_ts = now
+            except Exception as exc:
+                log.warning('Telemetry rendering error: %s', exc)
+                time.sleep(self._render_interval)
 
 
 class TelemetryDisplay:
@@ -32,7 +108,7 @@ class TelemetryDisplay:
     PREFERRED_WIDTH: int = 96
 
     def __init__(self) -> None:
-        self._stdscr: Optional["curses.window"] = None
+        self._stdscr: Optional[Any] = None
         self._initialized = False
         self._text_mode = curses is None
         self._timestamp_format = "%Y-%m-%d %H:%M:%S"
@@ -51,18 +127,23 @@ class TelemetryDisplay:
             self._stdscr = curses.initscr()
             curses.noecho()
             curses.cbreak()
-            self._stdscr.keypad(True)
+            stdscr = self._stdscr
+            if stdscr is None:
+                self._fallback_to_text_mode()
+                return
+
+            stdscr.keypad(True)
 
             if curses.has_colors():
                 curses.start_color()
                 curses.use_default_colors()
                 ui_utils.CursesUIHelper.init_colors(THEME.DEFAULT_THEME)
-                self._stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
+                stdscr.bkgd(" ", curses.color_pair(THEME.BACKGROUND))
             else:
-                self._stdscr.bkgd(" ", 0)
+                stdscr.bkgd(" ", 0)
 
-            self._stdscr.clear()
-            self._stdscr.refresh()
+            stdscr.clear()
+            stdscr.refresh()
 
             try:
                 curses.curs_set(0)
@@ -83,10 +164,11 @@ class TelemetryDisplay:
         if curses is None:
             return
 
-        if self._stdscr is not None:
+        stdscr = self._stdscr
+        if stdscr is not None:
             try:
                 curses.nocbreak()
-                self._stdscr.keypad(False)
+                stdscr.keypad(False)
                 curses.echo()
             except curses.error:
                 pass
@@ -176,8 +258,11 @@ class TelemetryDisplay:
 
         y = max(0, height // 2)
         x = max(0, (width - len(message)) // 2)
+        stdscr = self._stdscr
+        if stdscr is None:
+            return
         ui_utils.CursesUIHelper.draw_text(
-            self._stdscr,
+            stdscr,
             y,
             x,
             message,
@@ -197,6 +282,7 @@ class TelemetryDisplay:
         timestamp = datetime.now().strftime(self._timestamp_format)
         lines.append(("SpotMicroAI Telemetry", bold_attr))
         lines.append((f"Timestamp: {timestamp}", 0))
+        lines.append(("", 0))
         lines.append(("", 0))
 
         lines.extend(self._section_lines("System Status", self._system_status_lines(telemetry_data), bold_attr))
@@ -221,126 +307,89 @@ class TelemetryDisplay:
         return section
 
     def _system_status_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
+        activated = self._fmt_bool(telemetry_data.get("is_activated"))
+        running = self._fmt_bool(telemetry_data.get("is_running"))
+        frame = self._fmt_float(telemetry_data.get("frame_rate"), 1)
+        loop = self._fmt_float(telemetry_data.get("loop_time_ms"), 1)
+        idle = self._fmt_float(telemetry_data.get("idle_time_ms"), 1)
+
         return [
-            (
-                "  Activated: {activated:<3}  Running: {running:<3}  Frame Rate: {frame} Hz"
-            ).format(
-                activated=self._fmt_bool(telemetry_data.get("is_activated")),
-                running=self._fmt_bool(telemetry_data.get("is_running")),
-                frame=self._fmt_float(telemetry_data.get("frame_rate"), 1),
-            ),
-            (
-                "  Loop Time: {loop} ms  Idle Time: {idle} ms"
-            ).format(
-                loop=self._fmt_float(telemetry_data.get("loop_time_ms"), 1),
-                idle=self._fmt_float(telemetry_data.get("idle_time_ms"), 1),
-            ),
+            f"  Activated: {activated:<3}  Running: {running:<3}  Frame Rate: {frame} Hz",
+            f"  Loop Time: {loop} ms  Idle Time: {idle} ms",
         ]
 
     def _motion_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
+        forward = self._fmt_float(telemetry_data.get("forward_factor"), 2, signed=True)
+        rotation = self._fmt_float(telemetry_data.get("rotation_factor"), 2, signed=True)
+        speed = self._fmt_float(telemetry_data.get("walking_speed"), 1)
+        lean = self._fmt_float(telemetry_data.get("lean_factor"), 1, signed=True)
+        height = self._fmt_float(telemetry_data.get("height_factor"), 1)
+        idx = self._fmt_int(telemetry_data.get("cycle_index"))
+        ratio = self._fmt_float(telemetry_data.get("cycle_ratio"), 2)
+        elapsed = self._fmt_float(telemetry_data.get("elapsed_time"), 1)
+
         return [
-            (
-                "  Forward: {forward}  Rotation: {rotation}  Speed: {speed}"
-            ).format(
-                forward=self._fmt_float(telemetry_data.get("forward_factor"), 2, signed=True),
-                rotation=self._fmt_float(telemetry_data.get("rotation_factor"), 2, signed=True),
-                speed=self._fmt_float(telemetry_data.get("walking_speed"), 1),
-            ),
-            (
-                "  Lean: {lean}  Height: {height}"
-            ).format(
-                lean=self._fmt_float(telemetry_data.get("lean_factor"), 1, signed=True),
-                height=self._fmt_float(telemetry_data.get("height_factor"), 1),
-            ),
-            (
-                "  Cycle Index: {idx}  Ratio: {ratio}  Elapsed: {elapsed} s"
-            ).format(
-                idx=self._fmt_int(telemetry_data.get("cycle_index")),
-                ratio=self._fmt_float(telemetry_data.get("cycle_ratio"), 2),
-                elapsed=self._fmt_float(telemetry_data.get("elapsed_time"), 1),
-            ),
+            f"  Forward: {forward}  Rotation: {rotation}  Speed: {speed}",
+            f"  Lean: {lean}  Height: {height}",
+            f"  Cycle Index: {idx}  Ratio: {ratio}  Elapsed: {elapsed} s",
         ]
 
     def _controller_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
         events = telemetry_data.get("controller_events") or {}
 
+        lx = self._fmt_float(events.get("lx"), 2, signed=True)
+        ly = self._fmt_float(events.get("ly"), 2, signed=True)
+        rx = self._fmt_float(events.get("rz"), 2, signed=True)
+        ry = self._fmt_float(events.get("lz"), 2, signed=True)
+        hatx = self._fmt_int(events.get("hat0x"))
+        haty = self._fmt_int(events.get("hat0y"))
+        brake = self._fmt_float(events.get("brake"), 2)
+        gas = self._fmt_float(events.get("gas"), 2)
+        a_btn = self._fmt_bool(events.get("a"))
+        b_btn = self._fmt_bool(events.get("b"))
+        x_btn = self._fmt_bool(events.get("x"))
+        y_btn = self._fmt_bool(events.get("y"))
+        start = self._fmt_bool(events.get("start"))
+        back = self._fmt_bool(events.get("select"))
+
         return [
-            (
-                "  Left Stick  X:{lx}  Y:{ly}    Right Stick X:{rx}  Y:{ry}"
-            ).format(
-                lx=self._fmt_float(events.get("lx"), 2, signed=True),
-                ly=self._fmt_float(events.get("ly"), 2, signed=True),
-                rx=self._fmt_float(events.get("rz"), 2, signed=True),
-                ry=self._fmt_float(events.get("lz"), 2, signed=True),
-            ),
-            (
-                "  D-Pad       X:{hatx}  Y:{haty}    Triggers    L:{brake}  R:{gas}"
-            ).format(
-                hatx=self._fmt_int(events.get("hat0x")),
-                haty=self._fmt_int(events.get("hat0y")),
-                brake=self._fmt_float(events.get("brake"), 2),
-                gas=self._fmt_float(events.get("gas"), 2),
-            ),
-            (
-                "  Buttons     A:{a:<3} B:{b:<3} X:{x:<3} Y:{y:<3} START:{start:<3} BACK:{back:<3}"
-            ).format(
-                a=self._fmt_bool(events.get("a")),
-                b=self._fmt_bool(events.get("b")),
-                x=self._fmt_bool(events.get("x")),
-                y=self._fmt_bool(events.get("y")),
-                start=self._fmt_bool(events.get("start")),
-                back=self._fmt_bool(events.get("select")),
-            ),
+            f"  Left Stick  X:{lx}  Y:{ly}    Right Stick X:{rx}  Y:{ry}",
+            f"  D-Pad       X:{hatx}  Y:{haty}    Triggers    L:{brake}  R:{gas}",
+            f"  Buttons     A:{a_btn:<3} B:{b_btn:<3} X:{x_btn:<3} Y:{y_btn:<3} START:{start:<3} BACK:{back:<3}",
         ]
 
     def _leg_coordinate_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
         positions = telemetry_data.get("leg_positions") or {}
+        front_right = self._fmt_coordinate(positions.get("front_right"))
+        front_left = self._fmt_coordinate(positions.get("front_left"))
+        rear_right = self._fmt_coordinate(positions.get("rear_right"))
+        rear_left = self._fmt_coordinate(positions.get("rear_left"))
+
         return [
-            (
-                "  Front Right: {fr}    Front Left: {fl}"
-            ).format(
-                fr=self._fmt_coordinate(positions.get("front_right")),
-                fl=self._fmt_coordinate(positions.get("front_left")),
-            ),
-            (
-                "  Rear Right : {rr}    Rear Left : {rl}"
-            ).format(
-                rr=self._fmt_coordinate(positions.get("rear_right")),
-                rl=self._fmt_coordinate(positions.get("rear_left")),
-            ),
+            f"  Front Right: {front_right}    Front Left: {front_left}",
+            f"  Rear Right : {rear_right}    Rear Left : {rear_left}",
         ]
 
     def _servo_angle_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
         servo_angles = telemetry_data.get("servo_angles") or {}
+        sr = self._fmt_float(servo_angles.get("front_shoulder_right"), 1)
+        lr = self._fmt_float(servo_angles.get("front_leg_right"), 1)
+        fr = self._fmt_float(servo_angles.get("front_foot_right"), 1)
+        sl = self._fmt_float(servo_angles.get("front_shoulder_left"), 1)
+        ll = self._fmt_float(servo_angles.get("front_leg_left"), 1)
+        fl = self._fmt_float(servo_angles.get("front_foot_left"), 1)
+        srr = self._fmt_float(servo_angles.get("rear_shoulder_right"), 1)
+        lrr = self._fmt_float(servo_angles.get("rear_leg_right"), 1)
+        frr = self._fmt_float(servo_angles.get("rear_foot_right"), 1)
+        srl = self._fmt_float(servo_angles.get("rear_shoulder_left"), 1)
+        lrl = self._fmt_float(servo_angles.get("rear_leg_left"), 1)
+        frl = self._fmt_float(servo_angles.get("rear_foot_left"), 1)
+
         return [
-            (
-                "  Front Right  Shoulder: {sr}°  Leg: {lr}°  Foot: {fr}°"
-            ).format(
-                sr=self._fmt_float(servo_angles.get("front_shoulder_right"), 1),
-                lr=self._fmt_float(servo_angles.get("front_leg_right"), 1),
-                fr=self._fmt_float(servo_angles.get("front_foot_right"), 1),
-            ),
-            (
-                "  Front Left   Shoulder: {sl}°  Leg: {ll}°  Foot: {fl}°"
-            ).format(
-                sl=self._fmt_float(servo_angles.get("front_shoulder_left"), 1),
-                ll=self._fmt_float(servo_angles.get("front_leg_left"), 1),
-                fl=self._fmt_float(servo_angles.get("front_foot_left"), 1),
-            ),
-            (
-                "  Rear Right   Shoulder: {srr}°  Leg: {lrr}°  Foot: {frr}°"
-            ).format(
-                srr=self._fmt_float(servo_angles.get("rear_shoulder_right"), 1),
-                lrr=self._fmt_float(servo_angles.get("rear_leg_right"), 1),
-                frr=self._fmt_float(servo_angles.get("rear_foot_right"), 1),
-            ),
-            (
-                "  Rear Left    Shoulder: {srl}°  Leg: {lrl}°  Foot: {frl}°"
-            ).format(
-                srl=self._fmt_float(servo_angles.get("rear_shoulder_left"), 1),
-                lrl=self._fmt_float(servo_angles.get("rear_leg_left"), 1),
-                frl=self._fmt_float(servo_angles.get("rear_foot_left"), 1),
-            ),
+            f"  Front Right  Shoulder: {sr}°  Leg: {lr}°  Foot: {fr}°",
+            f"  Front Left   Shoulder: {sl}°  Leg: {ll}°  Foot: {fl}°",
+            f"  Rear Right   Shoulder: {srr}°  Leg: {lrr}°  Foot: {frr}°",
+            f"  Rear Left    Shoulder: {srl}°  Leg: {lrl}°  Foot: {frl}°",
         ]
 
     # --------------------------------------------------------------------- #

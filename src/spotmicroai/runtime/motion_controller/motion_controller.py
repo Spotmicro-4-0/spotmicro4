@@ -13,7 +13,6 @@ from spotmicroai.runtime.motion_controller.services.keyframe_service import Keyf
 from spotmicroai.runtime.motion_controller.services.pose_service import PoseService
 from spotmicroai.runtime.motion_controller.services.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.services.telemetry_service import TelemetryService
-from spotmicroai.runtime.motion_controller.telemetry_display import TelemetryDisplay
 import spotmicroai.runtime.queues as queues
 from spotmicroai.hardware.servo.pca9685 import PCA9685
 
@@ -35,8 +34,8 @@ class MotionController:
     _is_activated = False
     _is_running = False
     _keyframe_service: KeyframeService
-    _telemetry_display: TelemetryDisplay
     _telemetry_service: TelemetryService
+    _telemetry_queue = None
 
     def __init__(self, communication_queues):
         """
@@ -62,7 +61,6 @@ class MotionController:
             # self._button_manager.register_button(ControllerEvent.BACK, debounce_time=1.0)
 
             # Initialize telemetry system
-            self._telemetry_display = TelemetryDisplay()
             self._telemetry_service = TelemetryService(self)
 
             self.prev_pitch_input = None
@@ -71,6 +69,7 @@ class MotionController:
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
             self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
+            self._telemetry_queue = communication_queues.get(queues.TELEMETRY_CONTROLLER)
             self._lcd_screen_queue.put(queues.MOTION_CONTROLLER + ' OK')
 
             time.sleep(constants.DEFAULT_SLEEP)
@@ -123,10 +122,6 @@ class MotionController:
         telemetry_update_counter = 0
 
         # Initialize telemetry display
-        log.info("Initializing telemetry display...")
-        self._telemetry_display.initialize()
-        time.sleep(constants.DEFAULT_SLEEP)  # Give time for display to initialize
-
         while True:
             frame_start = time.time()
 
@@ -300,10 +295,16 @@ class MotionController:
                         cycle_ratio=cycle_ratio,
                         leg_positions=leg_positions,
                     )
-                    self._telemetry_display.update(telemetry_data)
+                    if self._telemetry_queue is not None:
+                        try:
+                            self._telemetry_queue.put_nowait(telemetry_data)
+                        except queue.Full:
+                            log.debug("Telemetry queue full, dropping oldest frame")
+                    else:
+                        log.debug("Telemetry queue not available; telemetry data dropped")
                 except Exception as e:
                     # Don't let telemetry errors crash the robot
-                    log.warning(f"Telemetry display error: {e}")
+                    log.warning(f"Telemetry dispatch error: {e}")
 
             if elapsed_time < constants.FRAME_DURATION:
                 time.sleep(constants.FRAME_DURATION - elapsed_time)

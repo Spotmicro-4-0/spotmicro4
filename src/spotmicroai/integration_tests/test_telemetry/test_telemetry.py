@@ -8,7 +8,7 @@ useful for testing without running the full robot system.
 
 import time
 import math
-from spotmicroai.runtime.motion_controller.report import TelemetryDisplay
+from spotmicroai.runtime.telemetry_controller.telemetry_controller import TelemetryDisplay
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate
 
 
