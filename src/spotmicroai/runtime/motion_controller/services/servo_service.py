@@ -63,7 +63,6 @@ class ServoService(metaclass=Singleton):
         self._front_shoulder_right.angle = self.front_shoulder_right_angle
         self._front_leg_right.angle = self.front_leg_right_angle
         self._front_foot_right.angle = self.front_foot_right_angle
-        self.clear_staged()
 
     def clear_staged(self):
         """Reset all staged servo angles to their configured rest angles."""
