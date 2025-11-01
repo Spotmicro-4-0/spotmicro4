@@ -506,9 +506,10 @@ class MotionController:
         ALPHA = 0.1  # lower = smoother, higher = quicker
 
         # --- Unified servo angle mapping (only used for motion delta) ---
+        # Using symmetric ranges so positive and negative inputs are mirror images
         ANGLE_RANGES = {
-            "leg": (70, 90),
-            "foot": (30, 40),
+            "leg": (-10, 10),  # Symmetric: ±10 degrees
+            "foot": (-5, 5),  # Symmetric: ±5 degrees
         }
 
         # --- Initialize previous value on first call to avoid startup jerk ---
