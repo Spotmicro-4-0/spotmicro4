@@ -23,9 +23,9 @@ from spotmicroai.constants import (
     SERVO_PULSE_WIDTH_MIN,
 )
 import spotmicroai.labels as LABELS
-from spotmicroai.servo import JointType
-from spotmicroai.servo._servo import Servo
-from spotmicroai.servo._servo_factory import ServoFactory
+from spotmicroai.hardware.servo import JointType
+from spotmicroai.hardware.servo._servo import Servo
+from spotmicroai.hardware.servo._servo_factory import ServoFactory
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 
 

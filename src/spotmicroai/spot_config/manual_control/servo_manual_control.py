@@ -11,7 +11,7 @@ import sys
 
 from spotmicroai.configuration._config_provider import ServoName
 from spotmicroai.constants import CALIBRATION_STEP_SIZE, POPUP_HEIGHT, POPUP_WIDTH
-from spotmicroai.servo import ServoFactory
+from spotmicroai.hardware.servo import ServoFactory
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 import spotmicroai.labels as LABELS
 

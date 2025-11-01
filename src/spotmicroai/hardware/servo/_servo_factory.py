@@ -11,8 +11,8 @@ from spotmicroai.labels import (
     ERR_SERVO_CONFIG_MIN_MAX_EQUAL,
     ERR_SERVO_CONFIG_MIN_PULSE_OUT_OF_RANGE,
 )
-from spotmicroai.servo import JOINT_ANGLE_LIMITS, JointType, Servo
-from spotmicroai.servo.pca9685 import PCA9685
+from spotmicroai.hardware.servo import JOINT_ANGLE_LIMITS, JointType, Servo
+from spotmicroai.hardware.servo.pca9685 import PCA9685
 
 
 class ServoFactory:

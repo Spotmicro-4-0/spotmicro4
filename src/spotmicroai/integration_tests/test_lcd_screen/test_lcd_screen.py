@@ -20,7 +20,7 @@ Usage:
 import time
 
 from spotmicroai.configuration import ConfigProvider
-from spotmicroai.lcd_display.lcd_16x2 import Lcd16x2
+from spotmicroai.hardware.lcd_display.lcd_16x2 import Lcd16x2
 from spotmicroai.logger import Logger
 
 # ------------------------------------------------------------------------------------------

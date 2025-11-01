@@ -4,7 +4,7 @@ import signal
 import sys
 import time
 
-from spotmicroai.buzzer.buzzer import Buzzer
+from spotmicroai.hardware.buzzer.buzzer import Buzzer
 import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.motion_controller.enums import ControllerEvent
@@ -15,7 +15,7 @@ from spotmicroai.runtime.motion_controller.services.servo_service import ServoSe
 from spotmicroai.runtime.motion_controller.services.telemetry_service import TelemetryService
 from spotmicroai.runtime.motion_controller.telemetry_display import TelemetryDisplay
 import spotmicroai.runtime.queues as queues
-from spotmicroai.servo.pca9685 import PCA9685
+from spotmicroai.hardware.servo.pca9685 import PCA9685
 
 log = Logger().setup_logger('Motion controller')
 

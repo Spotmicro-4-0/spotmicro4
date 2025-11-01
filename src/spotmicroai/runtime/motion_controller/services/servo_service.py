@@ -6,7 +6,7 @@ Provides high-level interface for setting servo angles, committing changes, and 
 from spotmicroai import Singleton
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.runtime.motion_controller.models.pose import Pose
-from spotmicroai.servo._servo_factory import ServoFactory
+from spotmicroai.hardware.servo._servo_factory import ServoFactory
 
 
 class ServoService(metaclass=Singleton):

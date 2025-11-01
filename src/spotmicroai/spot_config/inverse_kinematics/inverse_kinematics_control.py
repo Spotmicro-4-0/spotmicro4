@@ -7,7 +7,7 @@ import sys
 from spotmicroai.configuration._config_provider import ServoName
 from spotmicroai.constants import POPUP_HEIGHT, POPUP_WIDTH
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate
-from spotmicroai.servo import ServoFactory
+from spotmicroai.hardware.servo import ServoFactory
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 
 # Mapping from corner names to servo tuples (shoulder, leg, foot)

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Dict
 
-from spotmicroai.servo._joint_type import JointType
+from spotmicroai.hardware.servo._joint_type import JointType
 
 
 @dataclass

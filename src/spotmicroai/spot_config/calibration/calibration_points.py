@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from spotmicroai.servo import JointType
+from spotmicroai.hardware.servo import JointType
 
 
 @dataclass

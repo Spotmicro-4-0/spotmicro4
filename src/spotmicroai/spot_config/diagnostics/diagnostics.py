@@ -23,9 +23,9 @@ from spotmicroai.constants import (
     SWEEP_RATE_DEG_PER_FRAME,
     FRAME_DURATION,
 )
-from spotmicroai.servo import JointType
-from spotmicroai.servo._servo import Servo
-from spotmicroai.servo._servo_factory import ServoFactory
+from spotmicroai.hardware.servo import JointType
+from spotmicroai.hardware.servo._servo import Servo
+from spotmicroai.hardware.servo._servo_factory import ServoFactory
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 import spotmicroai.labels as LABELS
 
