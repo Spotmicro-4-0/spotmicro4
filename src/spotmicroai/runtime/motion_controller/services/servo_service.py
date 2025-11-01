@@ -3,7 +3,7 @@ Servo service for managing and controlling all 12 servos on the SpotMicroAI robo
 Provides high-level interface for setting servo angles, committing changes, and managing poses.
 """
 
-from spotmicroai import Singleton
+from spotmicroai.singleton import Singleton
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.runtime.motion_controller.models.pose import Pose
 from spotmicroai.hardware.servo._servo_factory import ServoFactory

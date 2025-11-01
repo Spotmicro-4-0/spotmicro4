@@ -4,7 +4,7 @@ import shutil
 import sys
 from typing import Any, Dict, List
 
-from spotmicroai import Singleton
+from spotmicroai.singleton import Singleton
 from spotmicroai.configuration._servo_config import ServoConfig
 from spotmicroai.configuration._servo_name import ServoName
 from spotmicroai.logger import Logger

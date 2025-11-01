@@ -2,7 +2,7 @@ import math
 import time
 from typing import List, Tuple
 
-from spotmicroai import Singleton
+from spotmicroai.singleton import Singleton
 from spotmicroai.configuration import ConfigProvider
 import spotmicroai.constants as constants
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate

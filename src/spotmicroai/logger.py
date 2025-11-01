@@ -5,7 +5,7 @@ This module provides logging functionality for the Spotmicro application.
 import logging
 from pathlib import Path
 
-from spotmicroai import Singleton
+from spotmicroai.singleton import Singleton
 
 SPOTMICRO = 'Spotmicro'
 
