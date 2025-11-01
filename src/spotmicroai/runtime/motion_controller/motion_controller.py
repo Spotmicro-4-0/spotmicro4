@@ -528,8 +528,8 @@ class MotionController:
         mapped_input = curved * INPUT_SCALE
 
         # --- Compute incremental motion instead of absolute centering ---
-        leg_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), (-1, 1), mapped_input)
-        foot_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), (-1, 1), mapped_input)
+        leg_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), ANGLE_RANGES["leg"], mapped_input)
+        foot_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), ANGLE_RANGES["foot"], mapped_input)
 
         # Apply small deltas to current angles (accumulative motion)
         self._servo_service.front_leg_left_angle += leg_delta
