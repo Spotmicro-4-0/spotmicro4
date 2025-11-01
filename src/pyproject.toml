@@ -29,6 +29,7 @@ ignored-modules = [
     "RPi.GPIO",
     "RPi",
     "busio",
+    "smbus",
 ]
 
 [tool.pylint."MESSAGES CONTROL"]
