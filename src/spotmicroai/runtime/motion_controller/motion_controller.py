@@ -65,6 +65,9 @@ class MotionController:
             self._telemetry_display = TelemetryDisplay()
             self._telemetry_service = TelemetryService(self)
 
+            self.prev_pitch_input = None
+            self.prev_pitch_analog = None
+
             self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
             self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
             self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
@@ -341,32 +344,38 @@ class MotionController:
         Args:
             raw_value (float): The raw input value for pitch adjustment.
         """
+        # --- Initialize on first call to avoid startup jerk ---
+        prev = getattr(self, "prev_pitch_input", None)
+        if prev is None:
+            self.prev_pitch_input = raw_value
+            return
 
-        leg_increment = 10
-        foot_increment = 15
+        # --- Smooth input ---
+        alpha = 0.1  # tuning factor (0.05 = smoother, 0.2 = quicker)
+        smoothed_value = prev + alpha * (raw_value - prev)
+        self.prev_pitch_input = smoothed_value
 
-        if raw_value < 0:
-            self._servo_service.rear_leg_left_angle -= leg_increment
-            self._servo_service.rear_foot_left_angle += foot_increment
-            self._servo_service.rear_leg_right_angle += leg_increment
-            self._servo_service.rear_foot_right_angle -= foot_increment
-            self._servo_service.front_leg_left_angle -= leg_increment
-            self._servo_service.front_foot_left_angle += foot_increment
-            self._servo_service.front_leg_right_angle += leg_increment
-            self._servo_service.front_foot_right_angle -= foot_increment
+        # --- Apply deadzone ---
+        if abs(smoothed_value) < 0.05:
+            # self._servo_service.rest_position()
+            return
 
-        elif raw_value > 0:
-            self._servo_service.rear_leg_left_angle += leg_increment
-            self._servo_service.rear_foot_left_angle -= foot_increment
-            self._servo_service.rear_leg_right_angle -= leg_increment
-            self._servo_service.rear_foot_right_angle += foot_increment
-            self._servo_service.front_leg_left_angle += leg_increment
-            self._servo_service.front_foot_left_angle -= foot_increment
-            self._servo_service.front_leg_right_angle -= leg_increment
-            self._servo_service.front_foot_right_angle += foot_increment
+        # --- Optional exponential response for fine control near center ---
+        scaled = math.copysign(abs(smoothed_value) ** 1.5, smoothed_value)
 
-        else:
-            self._servo_service.rest_position()
+        # --- Scale increments ---
+        leg_increment = 10 * scaled
+        foot_increment = 15 * scaled
+
+        # --- Apply pitch adjustments using direction directly ---
+        self._servo_service.rear_leg_left_angle += leg_increment
+        self._servo_service.rear_foot_left_angle -= foot_increment
+        self._servo_service.rear_leg_right_angle -= leg_increment
+        self._servo_service.rear_foot_right_angle += foot_increment
+        self._servo_service.front_leg_left_angle += leg_increment
+        self._servo_service.front_foot_left_angle -= foot_increment
+        self._servo_service.front_leg_right_angle -= leg_increment
+        self._servo_service.front_foot_right_angle += foot_increment
 
     def body_move_roll(self, raw_value: float):
         """
@@ -485,27 +494,55 @@ class MotionController:
     #     self.servos_configurations.front_right.leg.rest_angle = self.servos_configurations.front_right.leg.rest_angle + variation_leg - 5
     #     self.servos_configurations.front_right.foot.rest_angle = self.servos_configurations.front_right.foot.rest_angle - variation_feet + 5
 
-    def body_move_pitch_analog(self, raw_value):
+    def body_move_pitch_analog(self, raw_value: float):
         """
-        Adjusts the robot's body pitch using analog input values.
-
-        Args:
-            raw_value: The raw analog input value for pitch adjustment.
+        Smoothly adjusts the robot's body pitch based on analog input,
+        without forcing servos back to center when the stick returns to zero.
         """
-        raw_value = math.floor(raw_value * 10 / 2)
 
-        # Legs move opposite directions for pitch (front down = rear up)
-        self._servo_service.front_leg_left_angle = int(self.maprange((-5, 5), (20, 180), raw_value))
-        self._servo_service.front_foot_left_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
+        # --- Tunable parameters ---
+        INPUT_SCALE = 3.5  # smaller = less sensitive
+        RESPONSE_CURVE = 1.4  # >1.0 softens center response
+        ALPHA = 0.1  # lower = smoother, higher = quicker
 
-        self._servo_service.front_leg_right_angle = int(self.maprange((-5, 5), (20, 180), raw_value))
-        self._servo_service.front_foot_right_angle = int(self.maprange((-5, 5), (170, 130), raw_value))
+        # --- Unified servo angle mapping (only used for motion delta) ---
+        ANGLE_RANGES = {
+            "leg": (70, 90),
+            "foot": (30, 40),
+        }
 
-        self._servo_service.rear_leg_left_angle = int(self.maprange((-5, 5), (180, 20), raw_value))
-        self._servo_service.rear_foot_left_angle = int(self.maprange((-5, 5), (130, 170), raw_value))
+        # --- Initialize previous value on first call to avoid startup jerk ---
+        prev = getattr(self, "prev_pitch_analog", None)
+        if prev is None:
+            self.prev_pitch_analog = raw_value
+            return
 
-        self._servo_service.rear_leg_right_angle = int(self.maprange((-5, 5), (180, 20), raw_value))
-        self._servo_service.rear_foot_right_angle = int(self.maprange((-5, 5), (130, 170), raw_value))
+        # --- Smooth input using exponential moving average ---
+        smoothed_value = prev + ALPHA * (raw_value - prev)
+        self.prev_pitch_analog = smoothed_value
+
+        # --- Nonlinear response (for softer control near center) ---
+        curved = math.copysign(abs(smoothed_value) ** RESPONSE_CURVE, smoothed_value)
+
+        # --- Scale to motion range (-INPUT_SCALE to +INPUT_SCALE) ---
+        mapped_input = curved * INPUT_SCALE
+
+        # --- Compute incremental motion instead of absolute centering ---
+        leg_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), (-1, 1), mapped_input)
+        foot_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), (-1, 1), mapped_input)
+
+        # Apply small deltas to current angles (accumulative motion)
+        self._servo_service.front_leg_left_angle += leg_delta
+        self._servo_service.front_foot_left_angle += foot_delta
+
+        self._servo_service.front_leg_right_angle += leg_delta
+        self._servo_service.front_foot_right_angle += foot_delta
+
+        self._servo_service.rear_leg_left_angle += leg_delta
+        self._servo_service.rear_foot_left_angle += foot_delta
+
+        self._servo_service.rear_leg_right_angle += leg_delta
+        self._servo_service.rear_foot_right_angle += foot_delta
 
     def body_move_roll_analog(self, raw_value):
         """
