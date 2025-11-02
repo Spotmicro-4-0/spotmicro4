@@ -11,7 +11,7 @@ from spotmicroai.runtime.motion_controller.enums import ControllerEvent
 from spotmicroai.runtime.motion_controller.services.button_manager import ButtonManager
 from spotmicroai.runtime.motion_controller.services.keyframe_service import KeyframeService
 from spotmicroai.runtime.motion_controller.services.pose_service import PoseService
-from spotmicroai.runtime.motion_controller.services.servo_service import ServoService
+from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.services.telemetry_service import TelemetryService
 import spotmicroai.runtime.queues as queues
 from spotmicroai.hardware.servo.pca9685 import PCA9685
