@@ -13,6 +13,7 @@ import time
 from typing import Dict, Optional, Tuple
 
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 from .remote_controller_constants import (
     DEADZONE,
     AXIS_UPDATE_THRESHOLD,
@@ -61,7 +62,7 @@ class RemoteControlService:
         Returns:
             True if device was found and opened, False otherwise.
         """
-        log.info('Looking for connected devices: %s', self.device_name)
+        log.info(labels.REMOTE_LOOKING_FOR_DEVICES.format(self.device_name))
         self.is_connected = False
         self.jsdev = None
 
@@ -86,18 +87,13 @@ class RemoteControlService:
         # Attempt to open device with retries
         while True:
             try:
-                log.debug('Attempting to open %s...', device_path)
+                log.debug(labels.REMOTE_ATTEMPTING_OPEN.format(device_path))
                 self.jsdev = open(device_path, 'rb')
                 os.set_blocking(self.jsdev.fileno(), False)
-                log.info('%s opened successfully.', device_path)
+                log.info(labels.REMOTE_OPEN_SUCCESS.format(device_path))
                 break
             except Exception as e:
-                log.warning(
-                    'Unable to access %s yet. Will retry in %s seconds... (%s)',
-                    device_path,
-                    RECONNECT_RETRY_DELAY,
-                    e,
-                )
+                log.warning(labels.REMOTE_OPEN_WARNING.format(device_path, RECONNECT_RETRY_DELAY, e))
                 time.sleep(RECONNECT_RETRY_DELAY)
 
         # Initialize device mappings
@@ -106,7 +102,7 @@ class RemoteControlService:
             self.is_connected = True
             return True
         except Exception as e:
-            log.error('Failed to initialize device mappings: %s', e)
+            log.error(labels.REMOTE_INIT_MAPPING_ERROR.format(e))
             if self.jsdev:
                 self.jsdev.close()
                 self.jsdev = None
@@ -159,8 +155,8 @@ class RemoteControlService:
             self.button_map.append(btn_name)
             self.button_states[btn_name] = 0
 
-        log.info('%d axes found: %s', num_axes, ", ".join(self.axis_map))
-        log.info('%d buttons found: %s', num_buttons, ", ".join(self.button_map))
+        log.info(labels.REMOTE_AXES_FOUND.format(num_axes, ", ".join(self.axis_map)))
+        log.info(labels.REMOTE_BUTTONS_FOUND.format(num_buttons, ", ".join(self.button_map)))
 
     @staticmethod
     def _get_axis_names() -> Dict[int, str]:
@@ -291,7 +287,7 @@ class RemoteControlService:
             return True, combined
 
         except Exception as e:
-            log.error('Error reading joystick events: %s', e)
+            log.error(labels.REMOTE_READ_ERROR.format(e))
             self.is_connected = False
             if self.jsdev:
                 self.jsdev.close()  # type: ignore
@@ -313,7 +309,7 @@ class RemoteControlService:
             try:
                 self.jsdev.close()  # type: ignore
             except Exception as e:
-                log.warning('Error closing device: %s', e)
+                log.warning(labels.REMOTE_CLOSE_WARNING.format(e))
             finally:
                 self.jsdev = None
                 self.is_connected = False

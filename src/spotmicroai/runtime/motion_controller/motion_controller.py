@@ -7,6 +7,7 @@ import time
 from spotmicroai.hardware.buzzer.buzzer import Buzzer
 import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 from spotmicroai.runtime.motion_controller.enums import ControllerEvent
 from spotmicroai.runtime.motion_controller.services.button_manager import ButtonManager
 from spotmicroai.runtime.motion_controller.services.keyframe_service import KeyframeService
@@ -76,7 +77,7 @@ class MotionController:
             self._buzzer.beep()
 
         except Exception as e:
-            log.error('Motion controller initialization problem', e)
+            log.error(labels.MOTION_INIT_PROBLEM, e)
             self._lcd_screen_queue.put(queues.MOTION_CONTROLLER + ' NOK')
             try:
                 if self._pca9685_board:
@@ -88,7 +89,7 @@ class MotionController:
         """
         Handles graceful shutdown on signal reception, moving servos to rest and deactivating hardware.
         """
-        log.info("Graceful shutdown initiated...")
+        log.info(labels.MOTION_GRACEFUL_SHUTDOWN)
 
         # Move servos to neutral (rest) first
         self._servo_service.rest_position()
@@ -97,11 +98,11 @@ class MotionController:
         try:
             self._pca9685_board.deactivate_board()
         except Exception as e:
-            log.warning(f"Could not deactivate PCA9685 cleanly: {e}")
+            log.warning(labels.MOTION_PCA_DEACTIVATE_WARNING.format(e))
 
         self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
         self._is_activated = False
-        log.info("Motion controller terminated safely.")
+        log.info(labels.MOTION_TERMINATED)
         sys.exit(0)
 
     def do_process_events_from_queues(self):
@@ -141,9 +142,9 @@ class MotionController:
             if event == {}:
                 # if there is no user input, check to see if it have been long enough to warn the user
                 if (time.time() - inactivity_counter) >= constants.INACTIVITY_TIME:
-                    log.info(f'Inactivity lasted {constants.INACTIVITY_TIME} seconds. Press start to reactivate')
-                    log.info('Shutting down the servos.')
-                    log.info('Press START/OPTIONS to enable the servos')
+                    log.info(labels.MOTION_INACTIVITY_WARNING.format(constants.INACTIVITY_TIME))
+                    log.info(labels.MOTION_SHUTDOWN_SERVOS)
+                    log.info(labels.MOTION_PRESS_START_ENABLE)
                     self._deactivate()
 
                 # throttle CPU when no input but still activated
@@ -299,12 +300,12 @@ class MotionController:
                         try:
                             self._telemetry_queue.put_nowait(telemetry_data)
                         except queue.Full:
-                            log.debug("Telemetry queue full, dropping oldest frame")
+                            log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
                     else:
-                        log.debug("Telemetry queue not available; telemetry data dropped")
+                        log.debug(labels.MOTION_TELEMETRY_UNAVAILABLE)
                 except Exception as e:
                     # Don't let telemetry errors crash the robot
-                    log.warning(f"Telemetry dispatch error: {e}")
+                    log.warning(labels.MOTION_TELEMETRY_ERROR.format(e))
 
             if elapsed_time < constants.FRAME_DURATION:
                 time.sleep(constants.FRAME_DURATION - elapsed_time)
@@ -616,10 +617,10 @@ class MotionController:
         """
         Activates the robot by initializing servos, activating hardware, and setting to rest position.
 
-        Returns:
+            Returns:
             float: The current time to reset inactivity counter.
         """
-        log.info('Press START/OPTIONS to re-enable the servos')
+        log.info(labels.MOTION_REACTIVATE_SERVOS)
         self._buzzer.beep()
         self._is_activated = True
         self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ACTIVATE)

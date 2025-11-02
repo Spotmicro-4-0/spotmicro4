@@ -399,7 +399,7 @@ def main() -> None:
         result = curses.wrapper(diagnostics_wrapper)
 
         if result:
-            print("\n✓ Diagnostics completed successfully")
+            print(LABELS.DIAG_COMPLETED_SUCCESSFULLY)
         else:
             print(LABELS.DIAG_INTERRUPTED)
 

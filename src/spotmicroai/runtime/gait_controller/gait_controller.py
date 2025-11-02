@@ -9,6 +9,7 @@ import queue
 import time
 
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 from spotmicroai.runtime.gait_controller.gait_service import GaitService
 from spotmicroai.runtime.gait_controller.models import SpotMicroNodeConfig, Command
 from spotmicroai.runtime.gait_controller.inverse_kinematics_solver import InverseKinematicsSolver
@@ -45,7 +46,7 @@ class GaitController:
         self.is_running = False
         self.has_received_commands = False  # Only write to servos after receiving first command
 
-        log.info('Gait controller initialized')
+        log.info(labels.GAIT_INITIALIZED)
 
     def do_process_events_from_queue(self):
         """Main loop: process commands and step gait at fixed frequency.
@@ -53,7 +54,7 @@ class GaitController:
         Runs the gait controller at cfg.dt intervals (0.02 seconds = 50Hz) while
         continuously checking for new velocity commands from the queue.
         """
-        log.info("Gait controller started")
+        log.info(labels.GAIT_STARTED)
         self.is_running = True
 
         last_step_time = time.time()
@@ -89,7 +90,7 @@ class GaitController:
                         # })
 
                     except Exception as e:
-                        log.error(f"Error stepping gait: {e}")
+                        log.error(labels.GAIT_STEP_ERROR.format(e))
 
                     last_step_time = current_time
 
@@ -97,12 +98,12 @@ class GaitController:
                 time.sleep(0.001)
 
         except KeyboardInterrupt:
-            log.info("Gait controller interrupted")
+            log.info(labels.GAIT_INTERRUPTED)
         except Exception as e:
-            log.error(f"Gait controller error: {e}")
+            log.error(labels.GAIT_ERROR.format(e))
         finally:
             self.is_running = False
-            log.info("Gait controller stopped")
+            log.info(labels.GAIT_STOPPED)
 
     def _handle_command(self, message):
         """Process incoming command message.
@@ -120,17 +121,17 @@ class GaitController:
                     )
                     self.has_received_commands = True
                     self.controller.write_to_servos = True  # Enable servo writes
-                    log.debug(f"Updated command: {self.current_command}")
+                    log.debug(labels.GAIT_COMMAND_UPDATED.format(self.current_command))
 
                 elif message.get('action') == 'stop':
                     self.current_command = Command(0.0, 0.0, 0.0)
                     self.controller.write_to_servos = False  # Disable servo writes on stop
-                    log.info("Gait command: STOP")
+                    log.info(labels.GAIT_COMMAND_STOP)
 
                 elif message.get('action') == 'exit':
                     self.is_running = False
                     self.controller.write_to_servos = False
-                    log.info("Gait controller shutting down")
+                    log.info(labels.GAIT_SHUTTING_DOWN)
 
         except Exception as e:
-            log.error(f"Error handling gait command: {e}")
+            log.error(labels.GAIT_COMMAND_ERROR.format(e))

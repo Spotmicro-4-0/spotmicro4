@@ -4,6 +4,7 @@ import time
 
 from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 import spotmicroai.runtime.queues as queues
 from .remote_control_service import RemoteControlService
 from .remote_controller_constants import (
@@ -20,7 +21,7 @@ class RemoteControllerController:
 
     def __init__(self, communication_queues):
         try:
-            log.debug('Starting controller...')
+            log.debug(labels.REMOTE_STARTING_CONTROLLER)
 
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
@@ -37,11 +38,11 @@ class RemoteControllerController:
 
         except Exception as e:
             self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_NOK)
-            log.error('Remote controller controller initialization problem: %s', e)
+            log.error(labels.REMOTE_INIT_ERROR.format(e))
             sys.exit(1)
 
     def exit_gracefully(self, _signum, _frame):
-        log.info('Terminated')
+        log.info(labels.REMOTE_TERMINATED)
         sys.exit(0)
 
     def _notify_remote_controller_connected(self) -> None:
@@ -91,7 +92,7 @@ class RemoteControllerController:
                     time.sleep(READ_LOOP_SLEEP)
 
                 except Exception as e:
-                    log.error('Unknown problem while processing the queue of the remote controller: %s', e)
+                    log.error(labels.REMOTE_QUEUE_ERROR.format(e))
                     self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
                     remote_controller_connected_already = False
                     self._remote_control_service.disconnect()

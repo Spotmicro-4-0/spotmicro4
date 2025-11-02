@@ -8,6 +8,7 @@ from spotmicroai.singleton import Singleton
 from spotmicroai.configuration._servo_config import ServoConfig
 from spotmicroai.configuration._servo_name import ServoName
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 
 log = Logger().setup_logger('Configuration')
 
@@ -34,10 +35,10 @@ class ConfigProvider(metaclass=Singleton):
         self._raw_data: Dict[str, Any] = {}
 
         try:
-            log.debug('Loading configuration...')
+            log.debug(labels.CONFIG_LOADING)
             self.load_config()
         except Exception as e:
-            log.error('Problem while loading the configuration file: %s', e)
+            log.error(labels.CONFIG_LOAD_ERROR.format(e))
 
     def load_config(self) -> None:
         """Load configuration from JSON file"""
@@ -51,16 +52,16 @@ class ConfigProvider(metaclass=Singleton):
 
             with open(config_path, encoding='utf-8') as json_file:
                 self._raw_data = json.load(json_file)
-                log.debug('Configuration loaded from %s', config_path)
+                log.debug(labels.CONFIG_LOADED_FROM.format(config_path))
 
         except FileNotFoundError:
-            log.error("Configuration file doesn't exist, aborting.")
+            log.error(labels.CONFIG_NOT_EXIST)
             sys.exit(1)
         except json.JSONDecodeError as e:
-            log.error("Configuration file is not valid JSON: %s", e)
+            log.error(labels.CONFIG_INVALID_JSON.format(e))
             sys.exit(1)
         except Exception as e:
-            log.error("Problem loading configuration: %s", e)
+            log.error(labels.CONFIG_ERROR.format(e))
             sys.exit(1)
 
     def save_config(self):
@@ -69,9 +70,9 @@ class ConfigProvider(metaclass=Singleton):
             config_path = Path.home() / 'spotmicroai' / 'spotmicroai.json'
             with open(config_path, 'w', encoding='utf-8') as outfile:
                 json.dump(self._raw_data, outfile, indent=2)
-            log.info('Configuration saved to %s', config_path)
+            log.info(labels.CONFIG_SAVED.format(config_path))
         except Exception as e:
-            log.error("Problem saving the configuration file: %s", e)
+            log.error(labels.CONFIG_SAVE_ERROR.format(e))
 
     # Abort GPIO Port
     def get_abort_gpio_port(self) -> int:
@@ -149,7 +150,7 @@ class ConfigProvider(metaclass=Singleton):
         """Get the flattened key for a servo"""
         key = f'servo_{servo_name.value}'
         if key not in self._raw_data:
-            log.error("Servo '%s' not found in configuration", servo_name.value)
+            log.error(labels.CONFIG_SERVO_NOT_FOUND.format(servo_name.value))
             raise KeyError(f"Servo '{servo_name.value}' not found")
         return key
 
@@ -224,7 +225,7 @@ class ConfigProvider(metaclass=Singleton):
                 servo = self.get_servo_config(servo_enum)
                 servos[servo_enum] = servo
             except KeyError:
-                log.warning("Servo '%s' not found", servo_enum.value)
+                log.warning(labels.CONFIG_SERVO_MISSING.format(servo_enum.value))
         return servos
 
     # Walking Cycle
@@ -252,7 +253,7 @@ class ConfigProvider(metaclass=Singleton):
         """
         poses = self._raw_data.get('poses', {})
         if pose_name not in poses:
-            log.error("Pose '%s' not found in configuration", pose_name)
+            log.error(labels.CONFIG_POSE_NOT_FOUND.format(pose_name))
             raise KeyError(f"Pose '{pose_name}' not found")
         return poses[pose_name]
 

@@ -4,6 +4,7 @@ import multiprocessing
 import sys
 
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 from spotmicroai.runtime.abort_controller.abort_controller import AbortController
 from spotmicroai.runtime.gait_controller.gait_controller import GaitController
 from spotmicroai.runtime.lcd_screen_controller.lcd_screen_controller import LCDScreenController
@@ -53,13 +54,13 @@ def create_controllers_queues():
         'telemetry_controller': multiprocessing.Queue(10),
     }
 
-    log.info('Created the communication queues: %s', ", ".join(communication_queues.keys()))
+    log.info(labels.MAIN_QUEUES_CREATED.format(", ".join(communication_queues.keys())))
 
     return communication_queues
 
 
 def close_controllers_queues(communication_queues):
-    log.info('Closing controller queues')
+    log.info(labels.MAIN_QUEUES_CLOSING)
 
     for queue in communication_queues.items():
         queue.close()
@@ -112,23 +113,23 @@ def main():
     telemetry_controller.start()
 
     if not abort_controller.is_alive():
-        log.error("SpotMicro can't work without abort_controller")
+        log.error(labels.MAIN_ERROR_NO_ABORT)
         sys.exit(1)
 
     if not motion_controller.is_alive():
-        log.error("SpotMicro can't work without motion_controller")
+        log.error(labels.MAIN_ERROR_NO_MOTION)
         sys.exit(1)
 
     if not gait_controller.is_alive():
-        log.error("SpotMicro can't work without gait_controller")
+        log.error(labels.MAIN_ERROR_NO_GAIT)
         sys.exit(1)
 
     if not remote_controller_controller:
-        log.error("SpotMicro can't work without remote_controller_controller")
+        log.error(labels.MAIN_ERROR_NO_REMOTE)
         sys.exit(1)
 
     if not telemetry_controller.is_alive():
-        log.error("SpotMicro can't work without telemetry_controller")
+        log.error(labels.MAIN_ERROR_NO_TELEMETRY)
         sys.exit(1)
 
     # Make sure the thread/process ends
@@ -143,13 +144,13 @@ def main():
 
 
 if __name__ == '__main__':
-    log.info('Spotmicro starting...')
+    log.info(labels.MAIN_STARTING)
 
     try:
         main()
 
     except KeyboardInterrupt:
-        log.info('Terminated due Control+C was pressed')
+        log.info(labels.MAIN_TERMINATED_CTRL_C)
 
     else:
-        log.info('Normal termination')
+        log.info(labels.MAIN_TERMINATED_NORMAL)

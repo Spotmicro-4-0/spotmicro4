@@ -12,6 +12,7 @@ from multiprocessing.queues import Queue as MPQueue
 from typing import Any, Dict, MutableMapping, Optional
 
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 import spotmicroai.runtime.queues as queues
 
 try:  # Windows builds may not ship with curses
@@ -46,22 +47,22 @@ class TelemetryController:
             self._last_render_ts = 0.0
             self._is_alive = True
 
-            log.info('Telemetry controller initialized')
+            log.info(labels.TELEMETRY_INITIALIZED)
         except Exception as exc:
             self._is_alive = False
-            log.error('Telemetry controller initialization problem, module not critical, skipping: %s', exc)
+            log.error(labels.TELEMETRY_INIT_ERROR.format(exc))
 
     def exit_gracefully(self, _signum: int, _frame: Any) -> None:
         try:
             if hasattr(self, '_display'):
                 self._display.shutdown()
         finally:
-            log.info('Telemetry controller terminated')
+            log.info(labels.TELEMETRY_TERMINATED)
             sys.exit(0)
 
     def do_process_events_from_queue(self) -> None:
         if not getattr(self, '_is_alive', False):
-            log.error('Telemetry controller is not alive, skipping processing loop')
+            log.error(labels.TELEMETRY_NOT_ALIVE)
             return
 
         while True:
@@ -70,12 +71,12 @@ class TelemetryController:
                 if isinstance(payload, dict):
                     self._latest_payload = payload
                 else:
-                    log.debug('Telemetry controller received unexpected payload type: %s', type(payload))
+                    log.debug(labels.TELEMETRY_UNEXPECTED_TYPE.format(type(payload)))
                     continue
             except queue.Empty:
                 pass
             except Exception as exc:
-                log.warning('Unexpected telemetry queue error: %s', exc)
+                log.warning(labels.TELEMETRY_QUEUE_ERROR.format(exc))
                 time.sleep(self._render_interval)
                 continue
 
@@ -90,7 +91,7 @@ class TelemetryController:
                 self._display.update(self._latest_payload)
                 self._last_render_ts = now
             except Exception as exc:
-                log.warning('Telemetry rendering error: %s', exc)
+                log.warning(labels.TELEMETRY_RENDER_ERROR.format(exc))
                 time.sleep(self._render_interval)
 
 

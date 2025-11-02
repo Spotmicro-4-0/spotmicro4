@@ -9,6 +9,7 @@ import math
 import sys
 from typing import Dict, Tuple
 
+from spotmicroai import labels
 from spotmicroai.runtime.motion_controller.models.keyframe import Keyframe
 
 # --------------------------------------------------------------------------- #
@@ -135,7 +136,7 @@ class InverseKinematicsSolver:
 
             except ValueError as e:
                 # Log error but continue with default angles
-                print(f"IK error for {prefix}: {e}", file=sys.stderr)
+                print(labels.IK_ERROR_LOG.format(prefix, e), file=sys.stderr)
                 joint_angles[f"{prefix}_1"] = 0.0
                 joint_angles[f"{prefix}_2"] = 0.0
                 joint_angles[f"{prefix}_3"] = 0.0

@@ -7,6 +7,7 @@ import time
 from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.hardware.lcd_display import Lcd16x2
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('LCD Screen controller')
@@ -24,7 +25,7 @@ class LCDScreenController:
     def __init__(self, communication_queues):
         try:
 
-            log.debug('Starting controller...')
+            log.debug(labels.LCD_STARTING_CONTROLLER)
 
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
@@ -42,19 +43,19 @@ class LCDScreenController:
 
         except Exception as e:
             self.is_alive = False
-            log.error('LCD Screen controller initialization problem, module not critical, skipping: %s', e)
+            log.error(labels.LCD_INIT_ERROR.format(e))
 
     def exit_gracefully(self, _signum, _frame):
         try:
             self.turn_off()
         finally:
-            log.info('Terminated')
+            log.info(labels.LCD_TERMINATED)
             sys.exit(0)
 
     def do_process_events_from_queue(self):
 
         if not self.is_alive:
-            log.error("SpotMicro is working without LCD Screen")
+            log.error(labels.LCD_WORKING_WITHOUT)
             return
 
         try:
@@ -80,7 +81,7 @@ class LCDScreenController:
                     time.sleep(1)
 
         except Exception as e:
-            log.error('Unknown problem while processing the queue of the lcd screen controller: %s', e)
+            log.error(labels.LCD_QUEUE_ERROR.format(e))
 
     def turn_off(self):
         self.screen.lcd_clear()
@@ -183,5 +184,5 @@ class LCDScreenController:
             temp = os.popen("vcgencmd measure_temp").readline()
             return temp.replace("temp=", "")[:-5]
         except Exception as e:
-            log.error('Error reading system temperature: %s', e)
+            log.error(labels.LCD_TEMP_ERROR.format(e))
             return '000'

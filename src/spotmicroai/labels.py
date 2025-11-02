@@ -151,3 +151,115 @@ ERR_SERVO_CONFIG_MIN_MAX_EQUAL = (
 )
 ERR_SERVO_CONFIG_MIN_PULSE_OUT_OF_RANGE = "Invalid servo config for {servo_name}: min_pulse ({min_pulse}) must be between {SERVO_PULSE_WIDTH_MIN} and {SERVO_PULSE_WIDTH_MAX} microseconds"
 ERR_SERVO_CONFIG_MAX_PULSE_OUT_OF_RANGE = "Invalid servo config for {servo_name}: max_pulse ({max_pulse}) must be between {SERVO_PULSE_WIDTH_MIN} and {SERVO_PULSE_WIDTH_MAX} microseconds"
+
+# System Controller Messages
+# Abort Controller
+ABORT_STARTING_CONTROLLER = 'Starting controller...'
+ABORT_ATTEMPTING_GPIO = 'Attempting to configure GPIO pins'
+ABORT_GPIO_SUCCESS = 'GPIO pins configured successfully.'
+ABORT_GPIO_WARNING = 'GPIO pins may not be fully configured, but proceeding anyway.'
+ABORT_GPIO_ERROR = 'Unable to access GPIO pins to configure the abort controller.'
+ABORT_INIT_ERROR = 'Abort controller initialization problem'
+ABORT_TERMINATED = 'Terminated'
+ABORT_QUEUE_ERROR = 'Unknown problem while processing the queue of the abort controller'
+
+# Motion Controller
+MOTION_INIT_PROBLEM = 'Motion controller initialization problem'
+MOTION_GRACEFUL_SHUTDOWN = "Graceful shutdown initiated..."
+MOTION_PCA_DEACTIVATE_WARNING = "Could not deactivate PCA9685 cleanly: {}"
+MOTION_TERMINATED = "Motion controller terminated safely."
+MOTION_INACTIVITY_WARNING = 'Inactivity lasted {} seconds. Press start to reactivate'
+MOTION_SHUTDOWN_SERVOS = 'Shutting down the servos.'
+MOTION_PRESS_START_ENABLE = 'Press START/OPTIONS to enable the servos'
+MOTION_TELEMETRY_QUEUE_FULL = "Telemetry queue full, dropping oldest frame"
+MOTION_TELEMETRY_UNAVAILABLE = "Telemetry queue not available; telemetry data dropped"
+MOTION_TELEMETRY_ERROR = "Telemetry dispatch error: {}"
+MOTION_REACTIVATE_SERVOS = 'Press START/OPTIONS to re-enable the servos'
+
+# Main Runtime
+MAIN_QUEUES_CREATED = 'Created the communication queues: {}'
+MAIN_QUEUES_CLOSING = 'Closing controller queues'
+MAIN_ERROR_NO_ABORT = "SpotMicro can't work without abort_controller"
+MAIN_ERROR_NO_MOTION = "SpotMicro can't work without motion_controller"
+MAIN_ERROR_NO_GAIT = "SpotMicro can't work without gait_controller"
+MAIN_ERROR_NO_REMOTE = "SpotMicro can't work without remote_controller_controller"
+MAIN_ERROR_NO_TELEMETRY = "SpotMicro can't work without telemetry_controller"
+MAIN_STARTING = 'Spotmicro starting...'
+MAIN_TERMINATED_CTRL_C = 'Terminated due Control+C was pressed'
+MAIN_TERMINATED_NORMAL = 'Normal termination'
+
+# LCD Screen Controller
+LCD_STARTING_CONTROLLER = 'Starting controller...'
+LCD_INIT_ERROR = 'LCD Screen controller initialization problem, module not critical, skipping: {}'
+LCD_TERMINATED = 'Terminated'
+LCD_WORKING_WITHOUT = "SpotMicro is working without LCD Screen"
+LCD_QUEUE_ERROR = 'Unknown problem while processing the queue of the lcd screen controller: {}'
+LCD_TEMP_ERROR = 'Error reading system temperature: {}'
+
+# Remote Controller
+REMOTE_STARTING_CONTROLLER = 'Starting controller...'
+REMOTE_INIT_ERROR = 'Remote controller controller initialization problem: {}'
+REMOTE_TERMINATED = 'Terminated'
+REMOTE_QUEUE_ERROR = 'Unknown problem while processing the queue of the remote controller: {}'
+
+# Remote Control Service
+REMOTE_LOOKING_FOR_DEVICES = 'Looking for connected devices: {}'
+REMOTE_ATTEMPTING_OPEN = 'Attempting to open {}...'
+REMOTE_OPEN_SUCCESS = '{} opened successfully.'
+REMOTE_OPEN_WARNING = 'Could not open {} with non-blocking I/O, falling back to blocking: {}'
+REMOTE_INIT_MAPPING_ERROR = 'Failed to initialize device mappings: {}'
+REMOTE_CONNECTED_TO = 'Connected to device: {}'
+REMOTE_AXES_FOUND = '{} axes found: {}'
+REMOTE_BUTTONS_FOUND = '{} buttons found: {}'
+REMOTE_READ_ERROR = 'Error reading joystick events: {}'
+REMOTE_CLOSE_WARNING = 'Error closing device: {}'
+
+# Gait Controller
+GAIT_INITIALIZED = 'Gait controller initialized'
+GAIT_STARTED = "Gait controller started"
+GAIT_STEP_ERROR = "Error stepping gait: {}"
+GAIT_INTERRUPTED = "Gait controller interrupted"
+GAIT_ERROR = "Gait controller error: {}"
+GAIT_STOPPED = "Gait controller stopped"
+GAIT_COMMAND_UPDATED = "Updated command: {}"
+GAIT_COMMAND_STOP = "Gait command: STOP"
+GAIT_SHUTTING_DOWN = "Gait controller shutting down"
+GAIT_COMMAND_ERROR = "Error handling gait command: {}"
+
+# Telemetry Controller
+TELEMETRY_INITIALIZED = 'Telemetry controller initialized'
+TELEMETRY_INIT_ERROR = 'Telemetry controller initialization problem, module not critical, skipping: {}'
+TELEMETRY_TERMINATED = 'Telemetry controller terminated'
+TELEMETRY_NOT_ALIVE = 'Telemetry controller is not alive, skipping processing loop'
+TELEMETRY_UNEXPECTED_TYPE = 'Telemetry controller received unexpected payload type: {}'
+TELEMETRY_QUEUE_ERROR = 'Unexpected telemetry queue error: {}'
+TELEMETRY_RENDER_ERROR = 'Telemetry rendering error: {}'
+TELEMETRY_DISPLAY_TITLE = 'SpotMicroAI Telemetry'
+TELEMETRY_DISPLAY_TIMESTAMP = 'Timestamp: {}'
+TELEMETRY_SYSTEM_STATUS = 'System Status'
+TELEMETRY_MOTION_PARAMS = 'Motion Parameters'
+TELEMETRY_CONTROLLER_INPUT = 'Controller Input'
+TELEMETRY_LEG_COORDS = 'Leg Coordinates'
+TELEMETRY_SERVO_ANGLES = 'Servo Angles'
+TELEMETRY_FOOTER = 'Press START to disable servos | Press CTRL+C to exit'
+TELEMETRY_RESIZE_MSG = 'Resize terminal to at least {}x{} for telemetry.'
+
+# Configuration Provider
+CONFIG_LOADING = 'Loading configuration...'
+CONFIG_LOAD_ERROR = 'Problem while loading the configuration file: {}'
+CONFIG_LOADED_FROM = 'Configuration loaded from {}'
+CONFIG_NOT_EXIST = "Configuration file doesn't exist, aborting."
+CONFIG_INVALID_JSON = "Configuration file is not valid JSON: {}"
+CONFIG_ERROR = "Problem loading configuration: {}"
+CONFIG_SAVED = 'Configuration saved to {}'
+CONFIG_SAVE_ERROR = "Problem saving the configuration file: {}"
+CONFIG_SERVO_NOT_FOUND = "Servo '{}' not found in configuration"
+CONFIG_SERVO_MISSING = "Servo '{}' not found"
+CONFIG_POSE_NOT_FOUND = "Pose '{}' not found in configuration"
+
+# Coordinate/Kinematics
+IK_FALLBACK_WARNING = "IK fallback due to {} for ({})"
+IK_ERROR_LOG = "IK error for {}: {}"
+
+# Diagnostics
+DIAG_COMPLETED_SUCCESSFULLY = "✓ Diagnostics completed successfully"

@@ -6,6 +6,7 @@ import math
 
 import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 
 log = Logger().setup_logger('Motion controller')
 
@@ -83,7 +84,7 @@ class Coordinate:
         except Exception as ex:
             # Never raise — robot must stay alive
             if hasattr(self, "log"):
-                log.warning(f"IK fallback due to {ex} for ({x}, {y}, {z})")
+                log.warning(labels.IK_FALLBACK_WARNING.format(ex, f"({x}, {y}, {z})"))
             return constants.SAFE_NEUTRAL
 
     def interpolate_to(self, other: 'Coordinate', ratio: float) -> 'Coordinate':

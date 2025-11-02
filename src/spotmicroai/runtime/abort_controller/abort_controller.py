@@ -7,10 +7,11 @@ import sys
 import time
 from typing import Optional
 
-import RPi.GPIO as GPIO
+import RPi as GPIO  # type: ignore
 
 from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger
+from spotmicroai import labels
 import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('Abort controller')
@@ -26,7 +27,7 @@ class AbortController:
 
         try:
 
-            log.debug('Starting controller...')
+            log.debug(labels.ABORT_STARTING_CONTROLLER)
 
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
@@ -38,21 +39,19 @@ class AbortController:
                 # Need to check if the pi user has access to the GPIO system during boot
                 # This is an issue when running the program as a service in systemd
                 try:
-                    log.info('Attempting to configure GPIO pins')
+                    log.info(labels.ABORT_ATTEMPTING_GPIO)
                     GPIO.setmode(GPIO.BCM)
                     assert self._gpio_port is not None
                     GPIO.setup(self._gpio_port, GPIO.OUT)
-                    log.info('GPIO pins configured successfully.')
+                    log.info(labels.ABORT_GPIO_SUCCESS)
                     break
                 except Exception as e:
-                    log.warning(
-                        'An error occured while attempting to access the GPIO pins. Will retry in 2 seconds.', e
-                    )
+                    log.warning(labels.ABORT_GPIO_WARNING, e)
                     time.sleep(2)
                     retries -= 1
 
                     if retries == 0:
-                        log.error('Unable to access GPIO pins to configure the abort controller.')
+                        log.error(labels.ABORT_GPIO_ERROR)
                         try:
                             self.abort()
                         finally:
@@ -66,7 +65,7 @@ class AbortController:
             self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_ON)
 
         except Exception as e:
-            log.error('Abort controller initialization problem', e)
+            log.error(labels.ABORT_INIT_ERROR, e)
             self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_NOK)
             try:
                 self.abort()
@@ -77,7 +76,7 @@ class AbortController:
         try:
             self.abort()
         finally:
-            log.info('Terminated')
+            log.info(labels.ABORT_TERMINATED)
             sys.exit(0)
 
     def do_process_events_from_queue(self):
@@ -93,7 +92,7 @@ class AbortController:
                     self.abort()
 
         except Exception as e:
-            log.error('Unknown problem while processing the queue of the abort controller', e)
+            log.error(labels.ABORT_QUEUE_ERROR, e)
             sys.exit(1)
 
     def activate_servos(self):
