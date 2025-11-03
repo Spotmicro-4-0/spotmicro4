@@ -46,9 +46,11 @@ class ConfigProvider(metaclass=Singleton):
             config_path: Path = Path.home() / 'spotmicroai' / 'spotmicroai.json'
             default_path: Path = Path.home() / 'spotmicroai' / 'configuration' / 'spotmicroai.template'
 
-            # Copy default if config doesn't exist
-            if not config_path.exists() and default_path.exists():
-                shutil.copyfile(default_path, config_path)
+            # Copy default if config doesn't exist or is empty
+            if default_path.exists():
+                if not config_path.exists() or config_path.stat().st_size == 0:
+                    shutil.copyfile(default_path, config_path)
+                    log.info(f"Copied default configuration from {default_path} to {config_path}")
 
             with open(config_path, encoding='utf-8') as json_file:
                 self._raw_data = json.load(json_file)
