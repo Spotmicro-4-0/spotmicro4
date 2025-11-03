@@ -32,6 +32,17 @@ These rules define how GitHub Copilot should behave when assisting in this repos
 
 ---
 
+## Internationalization
+
+- All hard-coded English strings must be abstracted to the `labels.py` localization file.
+- Never inline user-facing text in source code.
+- When adding new text:
+  - Define it as a constant or entry in `labels.py` under a logically grouped namespace.
+  - Reference it in the application using that centralized label.
+- Assume the application supports future localization and must remain language-agnostic.
+
+---
+
 ## Collaboration and Output
 
 - Assume the user values correctness and high-quality code over lengthy explanations.
