@@ -19,6 +19,7 @@
       // Other
       "misiekhardcore.stl-previewer",
       "aaron-bond.better-comments",
+      "editorconfig.editorconfig",
       // Formatters
       "esbenp.prettier-vscode",
       "tamasfe.even-better-toml"
@@ -79,6 +80,9 @@
     "editor.rulers": [120],
     "editor.cursorBlinking": "expand",
     "editor.cursorSmoothCaretAnimation": "on",
+    "editor.unicodeHighlight.nonBasicASCII": false,
+    "editor.unicodeHighlight.ambiguousCharacters": false,
+    "editor.unicodeHighlight.invisibleCharacters": false,
 
     // FILE EXCLUSIONS
     "files.exclude": {
