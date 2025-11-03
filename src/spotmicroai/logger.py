@@ -31,8 +31,16 @@ class Logger(metaclass=Singleton):
         self.logging_file_handler.setFormatter(formatter)
         self.logging_stream_handler.setFormatter(formatter)
 
-    def setup_logger(self, logger_name=None):
-        """Set up a logger with the given name and return it."""
+    def setup_logger(self, logger_name=None, enable_stream_handler=False):
+        """Set up a logger with the given name and return it.
+
+        Args:
+            logger_name (str, optional): Name of the logger. Defaults to None.
+            enable_stream_handler (bool): Whether to add the stream handler for console output. Defaults to False.
+
+        Returns:
+            logging.Logger: The configured logger.
+        """
         if not logger_name:
             logger_name = SPOTMICRO
         else:
@@ -43,7 +51,9 @@ class Logger(metaclass=Singleton):
         logger.setLevel(logging.INFO)
 
         # add the handlers to logger
-        logger.addHandler(self.logging_file_handler)
-        logger.addHandler(self.logging_stream_handler)
+        if self.logging_file_handler not in logger.handlers:
+            logger.addHandler(self.logging_file_handler)
+        if enable_stream_handler and self.logging_stream_handler not in logger.handlers:
+            logger.addHandler(self.logging_stream_handler)
 
         return logger

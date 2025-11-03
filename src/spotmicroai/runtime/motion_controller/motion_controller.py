@@ -7,7 +7,6 @@ import time
 from spotmicroai import labels
 import spotmicroai.constants as constants
 from spotmicroai.hardware.buzzer.buzzer import Buzzer
-from spotmicroai.hardware.servo.pca9685 import PCA9685
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import MessageBus, MessageTopic
@@ -27,7 +26,6 @@ class MotionController:
     and responding to controller inputs for walking, standing, and other actions.
     """
 
-    _pca9685_board: PCA9685
     _servo_service: ServoService
     _pose_service: PoseService
     _buzzer: Buzzer
@@ -49,8 +47,8 @@ class MotionController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self._pca9685_board = PCA9685()
             self._buzzer = Buzzer()
+            self._servo_service = ServoService()
             self._pose_service = PoseService()
             self._keyframe_service = KeyframeService()
             self._button_manager = ButtonManager()
@@ -64,8 +62,8 @@ class MotionController:
             # Initialize telemetry system
             self._telemetry_service = TelemetryService(self)
 
-            self.prev_pitch_input = None
-            self.prev_pitch_analog = None
+            self.prev_pitch_input: float | None = None
+            self.prev_pitch_analog: float | None = None
 
             self._message_bus = message_bus
             self._message_bus.put(MessageTopic.LCD_SCREEN, queues.MOTION_CONTROLLER + ' OK')
@@ -76,11 +74,7 @@ class MotionController:
         except Exception as e:
             log.error(labels.MOTION_INIT_PROBLEM, e)
             self._message_bus.put(MessageTopic.LCD_SCREEN, queues.MOTION_CONTROLLER + ' NOK')
-            try:
-                if self._pca9685_board:
-                    self._pca9685_board.deactivate_board()
-            finally:
-                sys.exit(1)
+            sys.exit(1)
 
     def exit_gracefully(self, _signum, _frame):
         """
@@ -92,10 +86,7 @@ class MotionController:
         self._servo_service.rest_position()
         time.sleep(0.3)
 
-        try:
-            self._pca9685_board.deactivate_board()
-        except Exception as e:
-            log.warning(labels.MOTION_PCA_DEACTIVATE_WARNING.format(e))
+        self._servo_service.deactivate_servos()
 
         self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
         self._is_activated = False
@@ -604,7 +595,7 @@ class MotionController:
         self._is_running = False
         self._servo_service.rest_position()
         time.sleep(0.25)
-        self._pca9685_board.deactivate_board()
+        self._servo_service.deactivate_servos()
         self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
 
     def _activate(self):
@@ -618,8 +609,7 @@ class MotionController:
         self._buzzer.beep()
         self._is_activated = True
         self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
-        self._pca9685_board.activate_board()
-        self._servo_service = ServoService()
+        self._servo_service.activate_servos()
         time.sleep(0.25)
         self._servo_service.rest_position()
         # Reset inactivity counter on activation so timer starts now

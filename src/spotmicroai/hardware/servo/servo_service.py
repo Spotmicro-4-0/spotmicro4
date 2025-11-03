@@ -7,6 +7,10 @@ from spotmicroai.singleton import Singleton
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.runtime.motion_controller.models.pose import Pose
 from spotmicroai.hardware.servo._servo_factory import ServoFactory
+from spotmicroai.hardware.servo.pca9685 import PCA9685
+from spotmicroai.logger import Logger
+
+log = Logger().setup_logger('ServoService')
 
 
 class ServoService(metaclass=Singleton):
@@ -14,6 +18,7 @@ class ServoService(metaclass=Singleton):
 
     def __init__(self):
         self._config_provider = ConfigProvider()
+        self._pca9685_board = PCA9685()
 
         # --- Initialize physical servo objects ---
         self._rear_shoulder_left = ServoFactory.create(ServoName.REAR_SHOULDER_LEFT)
@@ -83,6 +88,17 @@ class ServoService(metaclass=Singleton):
         """Return the robot to its rest position."""
         self.clear_staged()
         self.commit()
+
+    def activate_servos(self):
+        """Activate the PCA9685 board to enable servo control."""
+        self._pca9685_board.activate_board()
+
+    def deactivate_servos(self):
+        """Deactivate the PCA9685 board to disable servo control."""
+        try:
+            self._pca9685_board.deactivate_board()
+        except Exception as e:
+            log.warning(f"Could not deactivate servos cleanly: {e}")
 
     def set_pose(self, pose: Pose):
         self.rear_shoulder_left_angle = pose.rear_left.shoulder_angle
