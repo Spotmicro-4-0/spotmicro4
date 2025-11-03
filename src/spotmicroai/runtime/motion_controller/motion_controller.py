@@ -4,18 +4,19 @@ import signal
 import sys
 import time
 
-from spotmicroai.hardware.buzzer.buzzer import Buzzer
-import spotmicroai.constants as constants
-from spotmicroai.logger import Logger
 from spotmicroai import labels
+import spotmicroai.constants as constants
+from spotmicroai.hardware.buzzer.buzzer import Buzzer
+from spotmicroai.hardware.servo.pca9685 import PCA9685
+from spotmicroai.hardware.servo.servo_service import ServoService
+from spotmicroai.logger import Logger
+from spotmicroai.runtime.messaging import MessageBus, MessageTopic
 from spotmicroai.runtime.motion_controller.enums import ControllerEvent
 from spotmicroai.runtime.motion_controller.services.button_manager import ButtonManager
 from spotmicroai.runtime.motion_controller.services.keyframe_service import KeyframeService
 from spotmicroai.runtime.motion_controller.services.pose_service import PoseService
-from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.services.telemetry_service import TelemetryService
 import spotmicroai.runtime.queues as queues
-from spotmicroai.hardware.servo.pca9685 import PCA9685
 
 log = Logger().setup_logger('Motion controller')
 
@@ -36,9 +37,8 @@ class MotionController:
     _is_running = False
     _keyframe_service: KeyframeService
     _telemetry_service: TelemetryService
-    _telemetry_queue = None
 
-    def __init__(self, communication_queues):
+    def __init__(self, message_bus: MessageBus):
         """
         Initializes the MotionController with necessary services and queues.
 
@@ -67,18 +67,15 @@ class MotionController:
             self.prev_pitch_input = None
             self.prev_pitch_analog = None
 
-            self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
-            self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
-            self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
-            self._telemetry_queue = communication_queues.get(queues.TELEMETRY_CONTROLLER)
-            self._lcd_screen_queue.put(queues.MOTION_CONTROLLER + ' OK')
+            self._message_bus = message_bus
+            self._message_bus.put(MessageTopic.LCD_SCREEN, queues.MOTION_CONTROLLER + ' OK')
 
             time.sleep(constants.DEFAULT_SLEEP)
             self._buzzer.beep()
 
         except Exception as e:
             log.error(labels.MOTION_INIT_PROBLEM, e)
-            self._lcd_screen_queue.put(queues.MOTION_CONTROLLER + ' NOK')
+            self._message_bus.put(MessageTopic.LCD_SCREEN, queues.MOTION_CONTROLLER + ' NOK')
             try:
                 if self._pca9685_board:
                     self._pca9685_board.deactivate_board()
@@ -100,7 +97,7 @@ class MotionController:
         except Exception as e:
             log.warning(labels.MOTION_PCA_DEACTIVATE_WARNING.format(e))
 
-        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
+        self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
         self._is_activated = False
         log.info(labels.MOTION_TERMINATED)
         sys.exit(0)
@@ -127,7 +124,7 @@ class MotionController:
             frame_start = time.time()
 
             try:
-                event = self._motion_queue.get(block=False)
+                event = self._message_bus.get(MessageTopic.MOTION, block=False)
             except queue.Empty:
                 event = {}
 
@@ -296,13 +293,10 @@ class MotionController:
                         cycle_ratio=cycle_ratio,
                         leg_positions=leg_positions,
                     )
-                    if self._telemetry_queue is not None:
-                        try:
-                            self._telemetry_queue.put_nowait(telemetry_data)
-                        except queue.Full:
-                            log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
-                    else:
-                        log.debug(labels.MOTION_TELEMETRY_UNAVAILABLE)
+                    try:
+                        self._message_bus.put(MessageTopic.TELEMETRY, telemetry_data, block=False)
+                    except queue.Full:
+                        log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
                 except Exception as e:
                     # Don't let telemetry errors crash the robot
                     log.warning(labels.MOTION_TELEMETRY_ERROR.format(e))
@@ -611,7 +605,7 @@ class MotionController:
         self._servo_service.rest_position()
         time.sleep(0.25)
         self._pca9685_board.deactivate_board()
-        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
+        self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
 
     def _activate(self):
         """
@@ -623,7 +617,7 @@ class MotionController:
         log.info(labels.MOTION_REACTIVATE_SERVOS)
         self._buzzer.beep()
         self._is_activated = True
-        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
+        self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
         self._pca9685_board.activate_board()
         self._servo_service = ServoService()
         time.sleep(0.25)

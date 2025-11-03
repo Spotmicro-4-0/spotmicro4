@@ -8,11 +8,13 @@ from the remote controller via queue.
 import queue
 import time
 
-from spotmicroai.logger import Logger
 from spotmicroai import labels
+from spotmicroai.logger import Logger
 from spotmicroai.runtime.gait_controller.gait_service import GaitService
-from spotmicroai.runtime.gait_controller.models import SpotMicroNodeConfig, Command
 from spotmicroai.runtime.gait_controller.inverse_kinematics_solver import InverseKinematicsSolver
+from spotmicroai.runtime.gait_controller.models import Command, SpotMicroNodeConfig
+from spotmicroai.runtime.messaging import MessageBus
+from spotmicroai.runtime.messaging._message_topic import MessageTopic
 
 log = Logger().setup_logger('Gait Controller')
 
@@ -24,13 +26,13 @@ class GaitController:
     velocity commands from other controllers via queue.
     """
 
-    def __init__(self, communication_queues):
+    def __init__(self, message_bus: MessageBus):
         """Initialize gait controller with configuration and kinematics.
 
         Args:
             communication_queues (dict): Dictionary of inter-controller queues.
         """
-        self.queues = communication_queues
+        self._message_bus = message_bus
         self.cfg = SpotMicroNodeConfig.defaults()
 
         # Initialize kinematics
@@ -48,7 +50,7 @@ class GaitController:
 
         log.info(labels.GAIT_INITIALIZED)
 
-    def do_process_events_from_queue(self):
+    def do_process_events_from_queues(self):
         """Main loop: process commands and step gait at fixed frequency.
 
         Runs the gait controller at cfg.dt intervals (0.02 seconds = 50Hz) while
@@ -63,7 +65,7 @@ class GaitController:
             while self.is_running:
                 # Non-blocking check for new commands
                 try:
-                    message = self.queues['gait_controller'].get(block=False)
+                    message = self._message_bus.get(MessageTopic.GAIT, block=False)
                     self._handle_command(message)
                 except queue.Empty:
                     # Queue is empty, continue with current command

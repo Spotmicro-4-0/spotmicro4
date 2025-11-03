@@ -8,17 +8,12 @@ import queue
 import signal
 import sys
 import time
-from multiprocessing.queues import Queue as MPQueue
-from typing import Any, Dict, MutableMapping, Optional
+from typing import Any, Dict, Optional
+import curses
 
-from spotmicroai.logger import Logger
 from spotmicroai import labels
-import spotmicroai.runtime.queues as queues
-
-try:  # Windows builds may not ship with curses
-    import curses
-except ImportError:  # pragma: no cover - fallback path
-    curses = None  # type: ignore[assignment]
+from spotmicroai.logger import Logger
+from spotmicroai.runtime.messaging import MessageBus, MessageTopic
 
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 
@@ -32,14 +27,12 @@ class TelemetryController:
 
     _render_interval = 0.2  # seconds
 
-    _telemetry_queue: MPQueue
-
-    def __init__(self, communication_queues: MutableMapping[str, MPQueue]) -> None:
+    def __init__(self, message_bus: MessageBus) -> None:
         try:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self._telemetry_queue = communication_queues[queues.TELEMETRY_CONTROLLER]
+            self._message_bus = message_bus
             self._display = TelemetryDisplay()
             self._display.initialize()
 
@@ -60,14 +53,14 @@ class TelemetryController:
             log.info(labels.TELEMETRY_TERMINATED)
             sys.exit(0)
 
-    def do_process_events_from_queue(self) -> None:
+    def do_process_events_from_queues(self) -> None:
         if not getattr(self, '_is_alive', False):
             log.error(labels.TELEMETRY_NOT_ALIVE)
             return
 
         while True:
             try:
-                payload = self._telemetry_queue.get(timeout=self._render_interval)
+                payload = self._message_bus.get(MessageTopic.TELEMETRY, timeout=self._render_interval)
                 if isinstance(payload, dict):
                     self._latest_payload = payload
                 else:

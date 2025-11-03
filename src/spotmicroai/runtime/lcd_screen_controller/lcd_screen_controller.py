@@ -4,10 +4,11 @@ import signal
 import sys
 import time
 
+from spotmicroai import labels
 from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.hardware.lcd_display import Lcd16x2
 from spotmicroai.logger import Logger
-from spotmicroai import labels
+from spotmicroai.runtime.messaging import MessageBus, MessageTopic
 import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('LCD Screen controller')
@@ -22,7 +23,7 @@ class LCDScreenController:
     remote_controller_controller = None
     motion_controller = None
 
-    def __init__(self, communication_queues):
+    def __init__(self, message_bus: MessageBus):
         try:
 
             log.debug(labels.LCD_STARTING_CONTROLLER)
@@ -34,7 +35,7 @@ class LCDScreenController:
 
             self.screen = Lcd16x2(address=i2c_address)
 
-            self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
+            self._message_bus = message_bus
             self.screen.lcd_clear()
             self.update_lcd_creen()
             self.turn_on()
@@ -52,7 +53,7 @@ class LCDScreenController:
             log.info(labels.LCD_TERMINATED)
             sys.exit(0)
 
-    def do_process_events_from_queue(self):
+    def do_process_events_from_queues(self):
 
         if not self.is_alive:
             log.error(labels.LCD_WORKING_WITHOUT)
@@ -62,7 +63,7 @@ class LCDScreenController:
             while True:
 
                 try:
-                    event = self._lcd_screen_queue.get(block=True, timeout=1)
+                    event = self._message_bus.get(MessageTopic.LCD_SCREEN, block=True, timeout=1)
 
                     if event.startswith(queues.LCD_SCREEN_CONTROLLER + ' '):
                         self.lcd_screen_controller = event[len(queues.LCD_SCREEN_CONTROLLER) + 1 :]

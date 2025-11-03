@@ -177,13 +177,9 @@ MOTION_TELEMETRY_ERROR = "Telemetry dispatch error: {}"
 MOTION_REACTIVATE_SERVOS = 'Press START/OPTIONS to re-enable the servos'
 
 # Main Runtime
-MAIN_QUEUES_CREATED = 'Created the communication queues: {}'
-MAIN_QUEUES_CLOSING = 'Closing controller queues'
-MAIN_ERROR_NO_ABORT = "SpotMicro can't work without abort_controller"
-MAIN_ERROR_NO_MOTION = "SpotMicro can't work without motion_controller"
-MAIN_ERROR_NO_GAIT = "SpotMicro can't work without gait_controller"
-MAIN_ERROR_NO_REMOTE = "SpotMicro can't work without remote_controller_controller"
-MAIN_ERROR_NO_TELEMETRY = "SpotMicro can't work without telemetry_controller"
+MAIN_MESSAGE_BUS_CREATED = 'Created the message bus'
+MAIN_MESSAGE_BUS_CLOSING = 'Closing the message bus'
+MAIN_ERROR_CONTROLLER_FAILED = "SpotmicroAI can't work without {}"
 MAIN_STARTING = 'Spotmicro starting...'
 MAIN_TERMINATED_CTRL_C = 'Terminated due Control+C was pressed'
 MAIN_TERMINATED_NORMAL = 'Normal termination'

@@ -2,16 +2,14 @@ import signal
 import sys
 import time
 
+from spotmicroai import labels
 from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.logger import Logger
-from spotmicroai import labels
+from spotmicroai.runtime.messaging import MessageBus, MessageTopic
 import spotmicroai.runtime.queues as queues
+
 from .remote_control_service import RemoteControlService
-from .remote_controller_constants import (
-    PUBLISH_RATE_HZ,
-    READ_LOOP_SLEEP,
-    DEVICE_SEARCH_INTERVAL,
-)
+from .remote_controller_constants import DEVICE_SEARCH_INTERVAL, PUBLISH_RATE_HZ, READ_LOOP_SLEEP
 
 log = Logger().setup_logger('Remote controller')
 
@@ -19,7 +17,7 @@ log = Logger().setup_logger('Remote controller')
 class RemoteControllerController:
     _config_provider = ConfigProvider()
 
-    def __init__(self, communication_queues):
+    def __init__(self, message_bus: MessageBus):
         try:
             log.debug(labels.REMOTE_STARTING_CONTROLLER)
 
@@ -32,12 +30,10 @@ class RemoteControllerController:
             # Initialize the remote control service
             self._remote_control_service = RemoteControlService(device_name)
 
-            self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
-            self._motion_queue = communication_queues[queues.MOTION_CONTROLLER]
-            self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
+            self._message_bus = message_bus
 
         except Exception as e:
-            self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_NOK)
+            self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_NOK)
             log.error(labels.REMOTE_INIT_ERROR.format(e))
             sys.exit(1)
 
@@ -47,13 +43,13 @@ class RemoteControllerController:
 
     def _notify_remote_controller_connected(self) -> None:
         """Notify LCD screen that remote controller has been connected."""
-        self._lcd_screen_queue.put(queues.LCD_SCREEN_CONTROLLER_ACTION_ON)
-        self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_OK)
+        self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_CONTROLLER_ACTION_ON)
+        self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_OK)
 
     def _notify_searching_for_device(self) -> None:
         """Notify about device search and abort current motion."""
-        self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
-        self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_SEARCHING)
+        self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
+        self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_SHOW_REMOTE_CONTROLLER_CONTROLLER_SEARCHING)
         self._remote_control_service.check_for_connected_devices()
 
     def do_process_events_from_queues(self):
@@ -86,14 +82,14 @@ class RemoteControllerController:
                     if now - last_publish_time >= 1.0 / PUBLISH_RATE_HZ:
                         # Get current state and publish
                         current_state = self._remote_control_service.get_current_state()
-                        self._motion_queue.put(current_state)
+                        self._message_bus.put(MessageTopic.MOTION, current_state)
                         last_publish_time = now
 
                     time.sleep(READ_LOOP_SLEEP)
 
                 except Exception as e:
                     log.error(labels.REMOTE_QUEUE_ERROR.format(e))
-                    self._abort_queue.put(queues.ABORT_CONTROLLER_ACTION_ABORT)
+                    self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
                     remote_controller_connected_already = False
                     self._remote_control_service.disconnect()
                     break

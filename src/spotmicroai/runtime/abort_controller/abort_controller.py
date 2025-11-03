@@ -9,9 +9,10 @@ from typing import Optional
 
 import RPi.GPIO as GPIO  # type: ignore
 
+from spotmicroai import labels
 from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger
-from spotmicroai import labels
+from spotmicroai.runtime.messaging import MessageBus, MessageTopic
 import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('Abort controller')
@@ -23,7 +24,7 @@ class AbortController:
     _gpio_port: Optional[int] = None
     _config_provider: ConfigProvider = ConfigProvider()
 
-    def __init__(self, communication_queues):
+    def __init__(self, message_bus: MessageBus):
 
         try:
 
@@ -57,16 +58,13 @@ class AbortController:
                         finally:
                             sys.exit(1)
 
-            self._abort_queue = communication_queues[queues.ABORT_CONTROLLER]
-            self._lcd_screen_queue = communication_queues[queues.LCD_SCREEN_CONTROLLER]
-
+            self._message_bus = message_bus
             self.abort()
-
-            self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_ON)
+            self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_ON)
 
         except Exception as e:
             log.error(labels.ABORT_INIT_ERROR, e)
-            self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_NOK)
+            self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_NOK)
             try:
                 self.abort()
             finally:
@@ -79,11 +77,11 @@ class AbortController:
             log.info(labels.ABORT_TERMINATED)
             sys.exit(0)
 
-    def do_process_events_from_queue(self):
+    def do_process_events_from_queues(self):
 
         try:
             while True:
-                event = self._abort_queue.get()
+                event = self._message_bus.get(MessageTopic.ABORT)
 
                 if event == queues.ABORT_CONTROLLER_ACTION_ACTIVATE:
                     self.activate_servos()
@@ -97,10 +95,10 @@ class AbortController:
 
     def activate_servos(self):
         assert self._gpio_port is not None
-        self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_ON)
+        self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_ON)
         GPIO.output(self._gpio_port, GPIO.LOW)
 
     def abort(self):
         assert self._gpio_port is not None
-        self._lcd_screen_queue.put(queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_OFF)
+        self._message_bus.put(MessageTopic.LCD_SCREEN, queues.LCD_SCREEN_SHOW_ABORT_CONTROLLER_OK_OFF)
         GPIO.output(self._gpio_port, GPIO.HIGH)
