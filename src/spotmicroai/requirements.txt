@@ -1,5 +1,6 @@
 adafruit-circuitpython-motor
 adafruit-circuitpython-pca9685
 smbus
+smbus2
 RPi.GPIO
 pick
