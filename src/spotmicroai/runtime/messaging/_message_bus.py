@@ -2,9 +2,10 @@ import multiprocessing
 from typing import Any, Dict, Optional
 
 from spotmicroai.runtime.messaging._message_topic import MessageTopic
+from spotmicroai.singleton import Singleton
 
 
-class MessageBus:
+class MessageBus(metaclass=Singleton):
     """Centralized holder for all inter-controller communication queues."""
 
     def __init__(self) -> None:
