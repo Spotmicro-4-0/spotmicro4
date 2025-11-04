@@ -82,3 +82,9 @@ SERVO_PULSE_WIDTH_MAX = 2500  # microseconds
 # Servo Manual Control Constants
 # ===============================
 ANGLE_STEP_SIZE = 1  # degrees per adjustment
+
+# ===============================
+# Remote Controller Constants
+# ===============================
+# Size of the joystick event buffer to read from /dev/input (in bytes)
+JSDEV_READ_SIZE = 8

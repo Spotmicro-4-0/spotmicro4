@@ -14,7 +14,7 @@ from typing import Dict, Optional, Tuple
 
 from spotmicroai.logger import Logger
 from spotmicroai import labels
-from .remote_controller_constants import (
+from spotmicroai.constants import (
     DEADZONE,
     AXIS_UPDATE_THRESHOLD,
     RECONNECT_RETRY_DELAY,

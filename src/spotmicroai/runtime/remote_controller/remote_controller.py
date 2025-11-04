@@ -4,12 +4,12 @@ import time
 
 from spotmicroai import labels
 from spotmicroai.configuration._config_provider import ConfigProvider
+from spotmicroai.constants import DEVICE_SEARCH_INTERVAL, PUBLISH_RATE_HZ, READ_LOOP_SLEEP
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import MessageBus, MessageTopic
 import spotmicroai.runtime.queues as queues
 
 from .remote_control_service import RemoteControlService
-from .remote_controller_constants import DEVICE_SEARCH_INTERVAL, PUBLISH_RATE_HZ, READ_LOOP_SLEEP
 
 log = Logger().setup_logger('Remote controller')
 
