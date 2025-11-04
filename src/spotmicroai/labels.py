@@ -210,18 +210,6 @@ REMOTE_BUTTONS_FOUND = '{} buttons found: {}'
 REMOTE_READ_ERROR = 'Error reading joystick events: {}'
 REMOTE_CLOSE_WARNING = 'Error closing device: {}'
 
-# Gait Controller
-GAIT_INITIALIZED = 'Gait controller initialized'
-GAIT_STARTED = "Gait controller started"
-GAIT_STEP_ERROR = "Error stepping gait: {}"
-GAIT_INTERRUPTED = "Gait controller interrupted"
-GAIT_ERROR = "Gait controller error: {}"
-GAIT_STOPPED = "Gait controller stopped"
-GAIT_COMMAND_UPDATED = "Updated command: {}"
-GAIT_COMMAND_STOP = "Gait command: STOP"
-GAIT_SHUTTING_DOWN = "Gait controller shutting down"
-GAIT_COMMAND_ERROR = "Error handling gait command: {}"
-
 # Telemetry Controller
 TELEMETRY_INITIALIZED = 'Telemetry controller initialized'
 TELEMETRY_INIT_ERROR = 'Telemetry controller initialization problem, module not critical, skipping: {}'

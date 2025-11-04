@@ -92,7 +92,7 @@ This is the code that runs on the robot. The Connect Tool deploys this entire fo
 Highlights:
 
 - `runtime/` — the main entry (`runtime/main.py`) and controllers:
-  - `abort_controller/`, `gait_controller/`, `lcd_screen_controller/`, `motion_controller/`, `remote_controller/`, `telemetry_controller/`.
+  - `abort_controller/`, `lcd_screen_controller/`, `motion_controller/`, `remote_controller/`, `telemetry_controller/`.
 - `hardware/` — hardware drivers and adapters:
   - `servo/` (joint types, angle limits), `lcd_display/` (I2C LCD), `buzzer/`.
 - `spot_config/` — the interactive configuration app (TUI) and UI assets.

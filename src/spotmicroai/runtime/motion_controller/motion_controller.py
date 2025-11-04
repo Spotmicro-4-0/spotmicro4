@@ -154,10 +154,8 @@ class MotionController:
                 if self._is_running:
                     # Right Trigger
                     # if self.check_event(ControllerEvent.RIGHT_TRIGGER, event, prev_event):
-                    #     self._current_gait_type = 0
                     # Left Trigger
                     # if self.check_event(ControllerEvent.LEFT_TRIGGER, event, prev_event):
-                    #     self._current_gait_type = 0
 
                     if self._button_manager.check_edge(ControllerEventKey.Y, event):
                         pass

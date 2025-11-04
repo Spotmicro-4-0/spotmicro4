@@ -12,7 +12,6 @@ class MessageBus(metaclass=Singleton):
         self._queues: Dict[MessageTopic, multiprocessing.Queue] = {
             MessageTopic.ABORT: multiprocessing.Queue(10),
             MessageTopic.MOTION: multiprocessing.Queue(1),
-            MessageTopic.GAIT: multiprocessing.Queue(10),
             MessageTopic.LCD_SCREEN: multiprocessing.Queue(10),
             MessageTopic.TELEMETRY: multiprocessing.Queue(10),
         }
