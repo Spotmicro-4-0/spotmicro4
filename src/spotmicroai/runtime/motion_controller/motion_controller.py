@@ -6,7 +6,6 @@ import time
 
 from spotmicroai import labels
 import spotmicroai.constants as constants
-from spotmicroai.hardware.buzzer.buzzer import Buzzer
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import MessageBus, MessageTopic
@@ -28,7 +27,6 @@ class MotionController:
 
     _servo_service: ServoService
     _pose_service: PoseService
-    _buzzer: Buzzer
     _button_manager: ButtonManager
 
     _is_activated = False
@@ -47,7 +45,6 @@ class MotionController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self._buzzer = Buzzer()
             self._servo_service = ServoService()
             self._pose_service = PoseService()
             self._keyframe_service = KeyframeService()
@@ -69,7 +66,6 @@ class MotionController:
             self._message_bus.put(MessageTopic.LCD_SCREEN, queues.MOTION_CONTROLLER + ' OK')
 
             time.sleep(constants.DEFAULT_SLEEP)
-            self._buzzer.beep()
 
         except Exception as e:
             log.error(labels.MOTION_INIT_PROBLEM, e)
@@ -590,7 +586,6 @@ class MotionController:
         """
         Deactivates the robot by stopping movement, resting servos, and deactivating hardware.
         """
-        self._buzzer.beep()
         self._is_activated = False
         self._is_running = False
         self._servo_service.rest_position()
@@ -606,7 +601,6 @@ class MotionController:
             float: The current time to reset inactivity counter.
         """
         log.info(labels.MOTION_REACTIVATE_SERVOS)
-        self._buzzer.beep()
         self._is_activated = True
         self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
         self._servo_service.activate_servos()
