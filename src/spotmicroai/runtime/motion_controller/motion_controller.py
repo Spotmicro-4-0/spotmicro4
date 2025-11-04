@@ -8,10 +8,18 @@ from spotmicroai import labels
 import spotmicroai.constants as constants
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
-from spotmicroai.runtime.messaging import MessageBus, MessageTopic
+from spotmicroai.runtime.messaging import (
+    AbortMessagePayload,
+    LcdScreenMessagePayload,
+    MessageAbortCommand,
+    MessageBus,
+    MessageControllerStatus,
+    MessageTopic,
+    MotionMessagePayload,
+    TelemetryMessagePayload,
+)
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
 from spotmicroai.runtime.motion_controller.services import ButtonManager, KeyframeService, PoseService, TelemetryService
-import spotmicroai.runtime.queues as queues
 
 log = Logger().setup_logger('Motion controller')
 
@@ -60,13 +68,17 @@ class MotionController:
             self.prev_pitch_analog: float | None = None
 
             self._message_bus = message_bus
-            self._message_bus.put(MessageTopic.LCD_SCREEN, queues.MOTION_CONTROLLER + ' OK')
+            self._message_bus.put(
+                MessageTopic.LCD_SCREEN, LcdScreenMessagePayload(MessageTopic.MOTION, MessageControllerStatus.OK)
+            )
 
             time.sleep(constants.DEFAULT_SLEEP)
 
         except Exception as e:
             log.error(labels.MOTION_INIT_PROBLEM, e)
-            self._message_bus.put(MessageTopic.LCD_SCREEN, queues.MOTION_CONTROLLER + ' NOK')
+            self._message_bus.put(
+                MessageTopic.LCD_SCREEN, LcdScreenMessagePayload(MessageTopic.MOTION, MessageControllerStatus.OK)
+            )
             sys.exit(1)
 
     def exit_gracefully(self, _signum, _frame):
@@ -81,7 +93,7 @@ class MotionController:
 
         self._servo_service.deactivate_servos()
 
-        self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
+        self._message_bus.put(MessageTopic.ABORT, AbortMessagePayload(MessageAbortCommand.ABORT))
         self._is_activated = False
         log.info(labels.MOTION_TERMINATED)
         sys.exit(0)
@@ -95,7 +107,7 @@ class MotionController:
         # State Variables
         inactivity_counter = time.time()
 
-        event = {}
+        event = MotionMessagePayload()
 
         # Telemetry variables
         cycle_index = None
@@ -110,17 +122,17 @@ class MotionController:
             try:
                 event = self._message_bus.get(MessageTopic.MOTION, block=False)
             except queue.Empty:
-                event = {}
+                event = MotionMessagePayload()
 
             # Handle START button with debouncing
-            if self._button_manager.check_edge(ControllerEventKey.START, event):
+            if self._button_manager.check_edge(ControllerEventKey.START, event.state):
                 inactivity_counter = self._handle_start_button_toggle(inactivity_counter)
 
             if not self._is_activated:
                 time.sleep(0.1)
                 continue
 
-            if event == {}:
+            if event.state == {}:
                 # if there is no user input, check to see if it have been long enough to warn the user
                 if (time.time() - inactivity_counter) >= constants.INACTIVITY_TIME:
                     log.info(labels.MOTION_INACTIVITY_WARNING.format(constants.INACTIVITY_TIME))
@@ -146,7 +158,7 @@ class MotionController:
                     cycle_ratio = None
                     leg_positions = None
 
-                if event[ControllerEventKey.A]:
+                if event.state[ControllerEventKey.A]:
                     self._is_running = False
                     self._servo_service.rest_position()
 
@@ -157,78 +169,78 @@ class MotionController:
                     # Left Trigger
                     # if self.check_event(ControllerEvent.LEFT_TRIGGER, event, prev_event):
 
-                    if self._button_manager.check_edge(ControllerEventKey.Y, event):
+                    if self._button_manager.check_edge(ControllerEventKey.Y, event.state):
                         pass
 
-                    if self._button_manager.check_edge(ControllerEventKey.B, event):
+                    if self._button_manager.check_edge(ControllerEventKey.B, event.state):
                         pass
 
-                    if self._button_manager.check_edge(ControllerEventKey.X, event):
+                    if self._button_manager.check_edge(ControllerEventKey.X, event.state):
                         pass
 
                     # D-Pad Left/Right
-                    if self._button_manager.check_edge(ControllerEventKey.DPAD_HORIZONTAL, event):
+                    if self._button_manager.check_edge(ControllerEventKey.DPAD_HORIZONTAL, event.state):
                         pass
                     # D-Pad Up/Down
-                    if self._button_manager.check_edge(ControllerEventKey.DPAD_VERTICAL, event):
-                        if event[ControllerEventKey.DPAD_VERTICAL] > 0:
+                    if self._button_manager.check_edge(ControllerEventKey.DPAD_VERTICAL, event.state):
+                        if event.state[ControllerEventKey.DPAD_VERTICAL] > 0:
                             self._keyframe_service.adjust_walking_speed(-1)
                         else:
                             self._keyframe_service.adjust_walking_speed(1)
 
                     # Left Thumbstick Up/Down
-                    if event[ControllerEventKey.LEFT_STICK_Y]:
-                        self._keyframe_service.set_forward_factor(event[ControllerEventKey.LEFT_STICK_Y])
+                    if event.state[ControllerEventKey.LEFT_STICK_Y]:
+                        self._keyframe_service.set_forward_factor(event.state[ControllerEventKey.LEFT_STICK_Y])
 
                     # Left Thumbstick Left/Right
-                    if event[ControllerEventKey.LEFT_STICK_X]:
-                        self._keyframe_service.set_rotation_factor(event[ControllerEventKey.LEFT_STICK_X])
+                    if event.state[ControllerEventKey.LEFT_STICK_X]:
+                        self._keyframe_service.set_rotation_factor(event.state[ControllerEventKey.LEFT_STICK_X])
 
                     # Left Thumbstick Click
-                    if event[ControllerEventKey.LEFT_STICK_CLICK]:
+                    if event.state[ControllerEventKey.LEFT_STICK_CLICK]:
                         self._keyframe_service.reset_movement()
 
                     # Right Thumbstick Up/Down
-                    if event[ControllerEventKey.RIGHT_STICK_Y]:
-                        self._keyframe_service.set_lean(event[ControllerEventKey.RIGHT_STICK_Y])
+                    if event.state[ControllerEventKey.RIGHT_STICK_Y]:
+                        self._keyframe_service.set_lean(event.state[ControllerEventKey.RIGHT_STICK_Y])
                     # Right Thumbstick Left/Right
-                    if event[ControllerEventKey.RIGHT_STICK_X]:
-                        self._keyframe_service.set_height_offset(event[ControllerEventKey.RIGHT_STICK_X])
+                    if event.state[ControllerEventKey.RIGHT_STICK_X]:
+                        self._keyframe_service.set_height_offset(event.state[ControllerEventKey.RIGHT_STICK_X])
                         # self.set_lean(event[ControllerEvent.RIGHT_STICK_X])
                     # Right Thumbstick Click
-                    if event[ControllerEventKey.RIGHT_STICK_CLICK]:
+                    if event.state[ControllerEventKey.RIGHT_STICK_CLICK]:
                         self._keyframe_service.reset_body_adjustments()
                 else:
                     # Right Bumper
-                    if self._button_manager.check_edge(ControllerEventKey.RIGHT_BUMPER, event):
+                    if self._button_manager.check_edge(ControllerEventKey.RIGHT_BUMPER, event.state):
                         # Next Pose
                         time.sleep(0.5)
                         next_pose = self._pose_service.next()
                         self._servo_service.set_pose(next_pose)
                     # Left Bumper
-                    if self._button_manager.check_edge(ControllerEventKey.LEFT_BUMPER, event):
+                    if self._button_manager.check_edge(ControllerEventKey.LEFT_BUMPER, event.state):
                         # Prev Pose
                         time.sleep(0.5)
                         prev_pose = self._pose_service.previous()
                         self._servo_service.set_pose(prev_pose)
 
-                    if event[ControllerEventKey.DPAD_VERTICAL]:
-                        self.body_move_pitch(event[ControllerEventKey.DPAD_VERTICAL])
+                    if event.state[ControllerEventKey.DPAD_VERTICAL]:
+                        self.body_move_pitch(event.state[ControllerEventKey.DPAD_VERTICAL])
 
-                    if event[ControllerEventKey.DPAD_HORIZONTAL]:
-                        self.body_move_roll(event[ControllerEventKey.DPAD_HORIZONTAL])
+                    if event.state[ControllerEventKey.DPAD_HORIZONTAL]:
+                        self.body_move_roll(event.state[ControllerEventKey.DPAD_HORIZONTAL])
 
-                    if event[ControllerEventKey.LEFT_STICK_Y]:
-                        self.body_move_pitch_analog(event[ControllerEventKey.LEFT_STICK_Y])
+                    if event.state[ControllerEventKey.LEFT_STICK_Y]:
+                        self.body_move_pitch_analog(event.state[ControllerEventKey.LEFT_STICK_Y])
 
-                    if event[ControllerEventKey.LEFT_STICK_X]:
-                        self.body_move_roll_analog(event[ControllerEventKey.LEFT_STICK_X])
+                    if event.state[ControllerEventKey.LEFT_STICK_X]:
+                        self.body_move_roll_analog(event.state[ControllerEventKey.LEFT_STICK_X])
 
-                    if event[ControllerEventKey.RIGHT_STICK_Y]:
-                        self.body_move_yaw_analog(event[ControllerEventKey.RIGHT_STICK_Y])
+                    if event.state[ControllerEventKey.RIGHT_STICK_Y]:
+                        self.body_move_yaw_analog(event.state[ControllerEventKey.RIGHT_STICK_Y])
 
-                    if event[ControllerEventKey.RIGHT_STICK_X]:
-                        self.body_move_height_analog(event[ControllerEventKey.RIGHT_STICK_X])
+                    if event.state[ControllerEventKey.RIGHT_STICK_X]:
+                        self.body_move_height_analog(event.state[ControllerEventKey.RIGHT_STICK_X])
 
                     # if event[ControllerEvent.Y]:
                     #     self.standing_position()
@@ -243,7 +255,7 @@ class MotionController:
                     #     self.handle_instinct(self._instincts['sleep'])
 
                 # Handle BACK button (walking toggle) with debouncing
-                if self._button_manager.check_edge(ControllerEventKey.BACK, event):
+                if self._button_manager.check_edge(ControllerEventKey.BACK, event.state):
                     self._is_running = not self._is_running
                     if self._is_running:
                         # Reset walking state when starting to walk
@@ -268,7 +280,7 @@ class MotionController:
                 telemetry_update_counter = 0
                 try:
                     telemetry_data = self._telemetry_service.collect(
-                        event=event,
+                        event=event.state,
                         loop_time_ms=loop_time_ms,
                         idle_time_ms=idle_time_ms,
                         cycle_index=cycle_index,
@@ -276,7 +288,9 @@ class MotionController:
                         leg_positions=leg_positions,
                     )
                     try:
-                        self._message_bus.put(MessageTopic.TELEMETRY, telemetry_data, block=False)
+                        self._message_bus.put(
+                            MessageTopic.TELEMETRY, TelemetryMessagePayload(telemetry_data), block=False
+                        )
                     except queue.Full:
                         log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
                 except Exception as e:
@@ -586,7 +600,7 @@ class MotionController:
         self._servo_service.rest_position()
         time.sleep(0.25)
         self._servo_service.deactivate_servos()
-        self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ABORT)
+        self._message_bus.put(MessageTopic.ABORT, AbortMessagePayload(MessageAbortCommand.ABORT))
 
     def _activate(self):
         """
@@ -597,7 +611,7 @@ class MotionController:
         """
         log.info(labels.MOTION_REACTIVATE_SERVOS)
         self._is_activated = True
-        self._message_bus.put(MessageTopic.ABORT, queues.ABORT_CONTROLLER_ACTION_ACTIVATE)
+        self._message_bus.put(MessageTopic.ABORT, AbortMessagePayload(MessageAbortCommand.ACTIVATE))
         self._servo_service.activate_servos()
         time.sleep(0.25)
         self._servo_service.rest_position()

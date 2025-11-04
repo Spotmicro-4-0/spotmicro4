@@ -1,7 +1,15 @@
 import multiprocessing
-from typing import Any, Dict, Optional
+from typing import Dict, Literal, Optional, overload
 
-from spotmicroai.runtime.messaging._message_topic import MessageTopic
+# Import your actual concrete payload types
+from spotmicroai.runtime.messaging._message import (
+    AbortMessagePayload,
+    LcdScreenMessagePayload,
+    MessagePayload,
+    MessageTopic,
+    MotionMessagePayload,
+    TelemetryMessagePayload,
+)
 from spotmicroai.singleton import Singleton
 
 
@@ -19,18 +27,61 @@ class MessageBus(metaclass=Singleton):
     def put(
         self,
         topic: MessageTopic,
-        payload: Any,
+        payload: MessagePayload,
         block: bool = True,
         timeout: Optional[float] = None,
     ) -> None:
         self._queues[topic].put(payload, block=block, timeout=timeout)
 
+    @overload
+    def get(
+        self,
+        topic: Literal[MessageTopic.ABORT],
+        *,
+        block: bool = True,
+        timeout: Optional[float] = None,
+    ) -> AbortMessagePayload: ...
+    @overload
+    def get(
+        self,
+        topic: Literal[MessageTopic.MOTION],
+        *,
+        block: bool = True,
+        timeout: Optional[float] = None,
+    ) -> MotionMessagePayload: ...
+    @overload
+    def get(
+        self,
+        topic: Literal[MessageTopic.LCD_SCREEN],
+        *,
+        block: bool = True,
+        timeout: Optional[float] = None,
+    ) -> LcdScreenMessagePayload: ...
+    @overload
+    def get(
+        self,
+        topic: Literal[MessageTopic.TELEMETRY],
+        *,
+        block: bool = True,
+        timeout: Optional[float] = None,
+    ) -> TelemetryMessagePayload: ...
+    @overload
     def get(
         self,
         topic: MessageTopic,
+        *,
         block: bool = True,
         timeout: Optional[float] = None,
-    ) -> Any:
+    ) -> MessagePayload: ...
+
+    def get(
+        self,
+        topic: MessageTopic,
+        *,
+        block: bool = True,
+        timeout: Optional[float] = None,
+    ) -> MessagePayload:
+        """Get a message from the queue for the given topic."""
         return self._queues[topic].get(block=block, timeout=timeout)
 
     def close(self) -> None:

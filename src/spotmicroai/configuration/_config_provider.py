@@ -4,11 +4,11 @@ import shutil
 import sys
 from typing import Any, Dict, List
 
-from spotmicroai.singleton import Singleton
+from spotmicroai import labels
 from spotmicroai.configuration._servo_config import ServoConfig
 from spotmicroai.configuration._servo_name import ServoName
 from spotmicroai.logger import Logger
-from spotmicroai import labels
+from spotmicroai.singleton import Singleton
 
 log = Logger().setup_logger('Configuration')
 
@@ -86,11 +86,11 @@ class ConfigProvider(metaclass=Singleton):
         self._raw_data['abort_gpio_port'] = port
 
     # LCD Screen Address
-    def get_lcd_screen_address(self) -> str:
+    def get_lcd_screen_address(self) -> int:
         """Get the I2C address for LCD screen"""
-        return self._raw_data.get('lcd_screen_address', '0x27')
+        return int(self._raw_data.get('lcd_screen_address', '0x27'), 0)
 
-    def set_lcd_screen_address(self, address: str) -> None:
+    def set_lcd_screen_address(self, address: int) -> None:
         """Set the I2C address for LCD screen"""
         self._raw_data['lcd_screen_address'] = address
 

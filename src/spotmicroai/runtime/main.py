@@ -7,7 +7,7 @@ from time import sleep
 from spotmicroai import labels
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.abort_controller.abort_controller import AbortController
-from spotmicroai.runtime.lcd_screen_controller.lcd_screen_controller import LCDScreenController
+from spotmicroai.runtime.lcd_screen_controller.lcd_screen_controller import LcdScreenController
 from spotmicroai.runtime.messaging import MessageBus
 from spotmicroai.runtime.motion_controller.motion_controller import MotionController
 from spotmicroai.runtime.remote_controller.remote_controller import RemoteControllerController
@@ -29,7 +29,7 @@ def main():
         AbortController,
         MotionController,
         RemoteControllerController,
-        LCDScreenController,
+        LcdScreenController,
         TelemetryController,
     ]
 

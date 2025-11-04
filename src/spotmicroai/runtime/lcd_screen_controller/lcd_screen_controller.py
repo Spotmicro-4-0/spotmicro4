@@ -3,25 +3,23 @@ import queue
 import signal
 import sys
 import time
-
 from spotmicroai import labels
 from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.hardware.lcd_display import Lcd16x2
 from spotmicroai.logger import Logger
-from spotmicroai.runtime.messaging import MessageBus, MessageTopic
-import spotmicroai.runtime.queues as queues
+from spotmicroai.runtime.messaging import MessageBus, MessageTopic, LcdScreenMessagePayload, MessageControllerStatus
 
 log = Logger().setup_logger('LCD Screen controller')
 
 
-class LCDScreenController:
+class LcdScreenController:
     is_alive = False
     _config_provider = ConfigProvider()
 
-    lcd_screen_controller = None
-    abort_controller = None
-    remote_controller_controller = None
-    motion_controller = None
+    lcd_screen_controller: MessageControllerStatus | None = None
+    abort_controller: MessageControllerStatus | None = None
+    remote_controller_controller: MessageControllerStatus | None = None
+    motion_controller: MessageControllerStatus | None = None
 
     def __init__(self, message_bus: MessageBus):
         try:
@@ -31,7 +29,7 @@ class LCDScreenController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            i2c_address = int(self._config_provider.get_lcd_screen_address(), 0)
+            i2c_address = self._config_provider.get_lcd_screen_address()
 
             self.screen = Lcd16x2(address=i2c_address)
 
@@ -53,7 +51,7 @@ class LCDScreenController:
             log.info(labels.LCD_TERMINATED)
             sys.exit(0)
 
-    def do_process_events_from_queues(self):
+    def do_process_events_from_queues(self) -> None:
 
         if not self.is_alive:
             log.error(labels.LCD_WORKING_WITHOUT)
@@ -63,19 +61,21 @@ class LCDScreenController:
             while True:
 
                 try:
-                    event = self._message_bus.get(MessageTopic.LCD_SCREEN, block=True, timeout=1)
+                    event: LcdScreenMessagePayload = self._message_bus.get(
+                        MessageTopic.LCD_SCREEN, block=True, timeout=1
+                    )
 
-                    if event.startswith(queues.LCD_SCREEN_CONTROLLER + ' '):
-                        self.lcd_screen_controller = event[len(queues.LCD_SCREEN_CONTROLLER) + 1 :]
+                    if event.name == MessageTopic.LCD_SCREEN:
+                        self.lcd_screen_controller = event.status
 
-                    if event.startswith(queues.ABORT_CONTROLLER + ''):
-                        self.abort_controller = event[len(queues.ABORT_CONTROLLER) + 1 :]
+                    elif event.name == MessageTopic.ABORT:
+                        self.abort_controller = event.status
 
-                    if event.startswith(queues.REMOTE_CONTROLLER_CONTROLLER + ' '):
-                        self.remote_controller_controller = event[len(queues.REMOTE_CONTROLLER_CONTROLLER + ' ') :]
+                    elif event.name == MessageTopic.REMOTE:
+                        self.remote_controller_controller = event.status
 
-                    if event.startswith(queues.MOTION_CONTROLLER + ' '):
-                        self.motion_controller = event[len(queues.MOTION_CONTROLLER + ' ') :]
+                    elif event.name == MessageTopic.MOTION:
+                        self.motion_controller = event.status
 
                 except queue.Empty:
                     self.update_lcd_creen()
@@ -94,9 +94,9 @@ class LCDScreenController:
 
     def update_lcd_creen(self):  # https://www.quinapalus.com/hd44780udg.html
 
-        if self.lcd_screen_controller == 'ON':
+        if self.lcd_screen_controller == MessageControllerStatus.ON:
             self.turn_on()
-        elif self.lcd_screen_controller == 'OFF':
+        elif self.lcd_screen_controller == MessageControllerStatus.OFF:
             self.turn_off()
 
         temperature = self.temperature()
@@ -126,7 +126,7 @@ class LCDScreenController:
 
         self.screen.lcd_write(0x80)  # First line
 
-        for char in 'SpotMicro':
+        for char in 'SpotmicroAI':
             self.screen.lcd_write(ord(char), 0b00000001)
 
         self.screen.lcd_write_char(0)
@@ -157,25 +157,25 @@ class LCDScreenController:
 
         self.screen.lcd_write_char(0)
 
-        if self.remote_controller_controller == 'OK':
+        if self.remote_controller_controller == MessageControllerStatus.OK:
             self.screen.lcd_write_char(1)
-        elif self.remote_controller_controller == 'SEARCHING':
+        elif self.remote_controller_controller == MessageControllerStatus.SEARCHING:
             self.screen.lcd_write_char(7)
         else:
             self.screen.lcd_write_char(6)
 
         self.screen.lcd_write_char(0)
 
-        if self.abort_controller == 'OK ON':
+        if self.abort_controller == MessageControllerStatus.ON:
             self.screen.lcd_write_char(1)
-        elif self.abort_controller == 'OK OFF':
+        elif self.abort_controller == MessageControllerStatus.OFF:
             self.screen.lcd_write_char(7)
         else:
             self.screen.lcd_write_char(6)
 
         self.screen.lcd_write_char(0)
 
-        if self.motion_controller == 'OK':
+        if self.motion_controller == MessageControllerStatus.OK:
             self.screen.lcd_write_char(1)
         else:
             self.screen.lcd_write_char(6)
