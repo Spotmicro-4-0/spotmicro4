@@ -1,5 +1,4 @@
 from ._config_provider import ConfigProvider
-from ._servo_config import ServoConfig
-from ._servo_name import ServoName
+from ._system_parameters import SystemParameters
 
-__all__ = ["ServoName", "ServoConfig", "ConfigProvider"]
+__all__ = ["ConfigProvider", "SystemParameters"]
