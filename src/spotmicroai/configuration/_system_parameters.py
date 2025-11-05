@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import json
 import os
+from pathlib import Path
 from typing import Dict, List
 
 from spotmicroai.singleton import Singleton
@@ -8,7 +9,7 @@ from spotmicroai.singleton import Singleton
 
 @dataclass
 class SystemParameters(metaclass=Singleton):
-    """Configuration parameters for the Spot Micro motion controller."""
+    """Configuration parameters for the robotic system."""
 
     # Robot dimensions
     hip_link_length: float
@@ -78,8 +79,9 @@ class SystemParameters(metaclass=Singleton):
     lidar_z_pos: float = 0.0
     lidar_yaw_angle: float = 0.0
 
-    def __init__(self, json_path: str):
-        """Initialize SystemParameters by loading from JSON file."""
+    def __init__(self):
+        """Initialize RemoteControllerBindings by loading from JSON file."""
+        json_path: Path = Path.home() / 'spotmicroai' / 'configuration' / 'system_parameters.json'
         if not os.path.exists(json_path):
             raise FileNotFoundError(f"System Parameters file not found: {json_path}")
 
