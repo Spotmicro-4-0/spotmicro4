@@ -35,7 +35,6 @@ class MotionController:
     _pose_service: PoseService
     _button_manager: ButtonManager
     _command: Command
-    _state: BaseState
 
     _is_activated = False
     _is_running = False
