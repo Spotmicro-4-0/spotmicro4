@@ -13,13 +13,14 @@ from typing import Any, Dict, Optional
 
 from spotmicroai import labels
 from spotmicroai.logger import Logger
-from spotmicroai.runtime.messaging import MessageBus, MessageTopic
+from spotmicroai.runtime.messaging import MessageBus
+from spotmicroai.singleton import Singleton
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 
 log = Logger().setup_logger('Telemetry controller')
 
 
-class TelemetryController:
+class TelemetryController(metaclass=Singleton):
     """
     Background process that ingests telemetry events and renders them.
     """

@@ -12,11 +12,12 @@ from spotmicroai.motion.command import Command
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
 from spotmicroai.runtime.motion_controller.services import ButtonManager, KeyframeService, PoseService, TelemetryService
+from spotmicroai.singleton import Singleton
 
 log = Logger().setup_logger('Motion controller')
 
 
-class MotionController:
+class MotionController(metaclass=Singleton):
     """
     Controls the motion of the SpotMicro robot, handling servo movements, pose adjustments,
     and responding to controller inputs for walking, standing, and other actions.

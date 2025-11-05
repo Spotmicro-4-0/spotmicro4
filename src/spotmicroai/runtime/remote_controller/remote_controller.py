@@ -7,13 +7,14 @@ from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.constants import DEVICE_SEARCH_INTERVAL, PUBLISH_RATE_HZ, READ_LOOP_SLEEP
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
+from spotmicroai.singleton import Singleton
 
 from .remote_control_service import RemoteControlService
 
 log = Logger().setup_logger('Remote controller')
 
 
-class RemoteControllerController:
+class RemoteControllerController(metaclass=Singleton):
     _config_provider = ConfigProvider()
 
     def __init__(self, message_bus: MessageBus):

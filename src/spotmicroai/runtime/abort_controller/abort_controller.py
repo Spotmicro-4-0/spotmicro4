@@ -13,11 +13,12 @@ from spotmicroai import labels
 from spotmicroai.configuration import ConfigProvider
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
+from spotmicroai.singleton import Singleton
 
 log = Logger().setup_logger('Abort controller')
 
 
-class AbortController:
+class AbortController(metaclass=Singleton):
     """Handles abort signals and GPIO for graceful shutdown."""
 
     _gpio_port: Optional[int] = None

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from spotmicroai.singleton import Singleton
 
-SPOTMICRO = 'Spotmicro'
+SPOTMICRO = 'spotmicro'
 
 
 class Logger(metaclass=Singleton):
