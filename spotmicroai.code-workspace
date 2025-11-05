@@ -45,7 +45,8 @@
       "source.organizeImports": "explicit"
     },
     "[python]": {
-      "editor.defaultFormatter": "ms-python.black-formatter"
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSaveMode": "modifications"
     },
     "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
