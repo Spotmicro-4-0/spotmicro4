@@ -1,94 +1,51 @@
 import multiprocessing
-from typing import Dict, Literal, Optional, overload
 
-# Import your actual concrete payload types
-from spotmicroai.runtime.messaging._message import (
-    AbortMessagePayload,
-    LcdScreenMessagePayload,
-    MessagePayload,
-    MessageTopic,
-    MotionMessagePayload,
-    TelemetryMessagePayload,
-)
 from spotmicroai.singleton import Singleton
 
 
 class MessageBus(metaclass=Singleton):
     """Centralized holder for all inter-controller communication queues."""
 
+    _abort: multiprocessing.Queue
+    _motion: multiprocessing.Queue
+    _lcd: multiprocessing.Queue
+    _telemetry: multiprocessing.Queue
+
     def __init__(self) -> None:
-        self._queues: Dict[MessageTopic, multiprocessing.Queue] = {
-            MessageTopic.ABORT: multiprocessing.Queue(10),
-            MessageTopic.MOTION: multiprocessing.Queue(1),
-            MessageTopic.LCD_SCREEN: multiprocessing.Queue(10),
-            MessageTopic.TELEMETRY: multiprocessing.Queue(10),
-        }
+        self._abort = multiprocessing.Queue(10)
+        self._motion = multiprocessing.Queue(1)
+        self._lcd = multiprocessing.Queue(10)
+        self._telemetry = multiprocessing.Queue(10)
 
-    def put(
-        self,
-        topic: MessageTopic,
-        payload: MessagePayload,
-        block: bool = True,
-        timeout: Optional[float] = None,
-    ) -> None:
-        self._queues[topic].put(payload, block=block, timeout=timeout)
+    @property
+    def abort(self):
+        return self._abort
 
-    @overload
-    def get(
-        self,
-        topic: Literal[MessageTopic.ABORT],
-        *,
-        block: bool = True,
-        timeout: Optional[float] = None,
-    ) -> AbortMessagePayload: ...
-    @overload
-    def get(
-        self,
-        topic: Literal[MessageTopic.MOTION],
-        *,
-        block: bool = True,
-        timeout: Optional[float] = None,
-    ) -> MotionMessagePayload: ...
-    @overload
-    def get(
-        self,
-        topic: Literal[MessageTopic.LCD_SCREEN],
-        *,
-        block: bool = True,
-        timeout: Optional[float] = None,
-    ) -> LcdScreenMessagePayload: ...
-    @overload
-    def get(
-        self,
-        topic: Literal[MessageTopic.TELEMETRY],
-        *,
-        block: bool = True,
-        timeout: Optional[float] = None,
-    ) -> TelemetryMessagePayload: ...
-    @overload
-    def get(
-        self,
-        topic: MessageTopic,
-        *,
-        block: bool = True,
-        timeout: Optional[float] = None,
-    ) -> MessagePayload: ...
+    @property
+    def motion(self):
+        return self._motion
 
-    def get(
-        self,
-        topic: MessageTopic,
-        *,
-        block: bool = True,
-        timeout: Optional[float] = None,
-    ) -> MessagePayload:
-        """Get a message from the queue for the given topic."""
-        return self._queues[topic].get(block=block, timeout=timeout)
+    @property
+    def lcd(self):
+        return self._lcd
+
+    @property
+    def telemetry(self):
+        return self._telemetry
 
     def close(self) -> None:
         """Clean up all queues by closing them and joining their threads."""
-        for queue in self._queues.values():
-            queue.close()
-            queue.join_thread()
+        self._abort.close()
+        self._abort.join_thread()
+
+        self._motion.close()
+        self._motion.join_thread()
+
+        self._lcd.close()
+        self._lcd.join_thread()
+
+        self._telemetry.close()
+        self._telemetry.join_thread()
 
     def __del__(self) -> None:
         self.close()

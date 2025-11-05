@@ -3,18 +3,17 @@ Telemetry controller responsible for rendering runtime metrics.
 """
 
 import atexit
+import curses
 from datetime import datetime
 import queue
 import signal
 import sys
 import time
 from typing import Any, Dict, Optional
-import curses
 
 from spotmicroai import labels
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import MessageBus, MessageTopic
-
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 
 log = Logger().setup_logger('Telemetry controller')
@@ -32,7 +31,7 @@ class TelemetryController:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-            self._message_bus = message_bus
+            self._telemetry_topic = message_bus.telemetry
             self._display = TelemetryDisplay()
             self._display.initialize()
 
@@ -60,7 +59,7 @@ class TelemetryController:
 
         while True:
             try:
-                payload = self._message_bus.get(MessageTopic.TELEMETRY, timeout=self._render_interval)
+                payload = self._telemetry_topic.get(timeout=self._render_interval)
                 if isinstance(payload, dict):
                     self._latest_payload = payload
                 else:
