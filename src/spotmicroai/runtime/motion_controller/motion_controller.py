@@ -8,6 +8,7 @@ from spotmicroai import labels
 import spotmicroai.constants as constants
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
+from spotmicroai.motion.command import Command
 from spotmicroai.runtime.messaging import (
     AbortMessagePayload,
     LcdScreenMessagePayload,
@@ -33,6 +34,8 @@ class MotionController:
     _servo_service: ServoService
     _pose_service: PoseService
     _button_manager: ButtonManager
+    _command: Command
+    _state: BaseState
 
     _is_activated = False
     _is_running = False

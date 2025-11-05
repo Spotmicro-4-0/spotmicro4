@@ -4,3 +4,4 @@ smbus
 smbus2
 RPi.GPIO
 pick
+numpy

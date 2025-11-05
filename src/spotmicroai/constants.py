@@ -88,3 +88,42 @@ ANGLE_STEP_SIZE = 1  # degrees per adjustment
 # ===============================
 # Size of the joystick event buffer to read from /dev/input (in bytes)
 JSDEV_READ_SIZE = 8
+
+# ===============================
+# Control Parameters
+# ===============================
+# Transition state filter time constant (seconds)
+TRANSIT_TAU = 0.3
+# Body motion rate limit (m/s) during transition state
+TRANSIT_RL = 0.06
+# Body motion angular rate limit (rad/s) during transition state
+TRANSIT_ANGLE_RL = 0.35
+# Maximum forward velocity (m/s)
+MAX_FWD_VELOCITY = 0.4
+# Maximum side velocity (m/s)
+MAX_SIDE_VELOCITY = 0.4
+# Maximum yaw rate (rad/s)
+MAX_YAW_RATE = 0.35
+# Loop time of main loop, seconds (0.02 s is 50 hz)
+DT = 0.02
+
+# ===============================
+# Robot Wireframe Size Parameters
+# ===============================
+# Lengths representing a wireframe model of the robot. All lengths joint to joint
+HIP_LINK_LENGTH = 0.055  # Straight line distance of the hip link (horizontal leg link)
+UPPER_LEG_LINK_LENGTH = 0.1075  # Straight line distance of the upper leg link, joint to joint
+LOWER_LEG_LINK_LENGTH = 0.130  # Straight line distance of the lower leg link, joint to joint
+BODY_WIDTH = 0.078  # Horizontal width between hip joints
+BODY_LENGTH = 0.186  # Length between shoulder joints
+
+# ===============================
+# Stance Parameters
+# ===============================
+DEFAULT_STAND_HEIGHT = 0.155  # Height of robot body center when standing
+STAND_FRONT_X_OFFSET = 0.015  # Fwd/back offset of front two legs from default stance
+STAND_BACK_X_OFFSET = -0.000  # Fwd/back offset of back two legs from default stance
+# STAND_FRONT_X_OFFSET = -0.010  # Offset better tuned for trot gait
+# STAND_BACK_X_OFFSET = -0.010  # Offset better tuned for trot gait
+LIE_DOWN_HEIGHT = 0.083  # Height of body center when sitting
+LIE_DOWN_FOOT_X_OFFSET = 0.065  # Fwd/back offset of all(?) feet from default stance when sitting
