@@ -1,3 +1,4 @@
+from multiprocessing import Queue
 import os
 import queue
 import signal
@@ -6,21 +7,38 @@ import time
 
 from spotmicroai import labels
 from spotmicroai.configuration._config_provider import ConfigProvider
+from spotmicroai.constants import (
+    CUSTOM_ICONS,
+    ICON_EMPTY,
+    ICON_GPIO,
+    ICON_PCA9685,
+    ICON_PROBLEM,
+    ICON_REMOTE_CONTROLLER,
+    ICON_SUCCESS,
+    ICON_SUCCESS_REVERSE,
+    ICON_TEMPERATURE,
+    LCD_CURSOR_BEGIN_LINE_2,
+    LCD_CURSOR_BEING_LINE_1,
+    LCD_DECIMAL_WRITE_MODE,
+)
 from spotmicroai.hardware.lcd_display import Lcd16x2
 from spotmicroai.logger import Logger
-from spotmicroai.runtime.messaging import LcdMessage, MessageBus, MessageTopic, MessageTopicStatus
+from spotmicroai.runtime.messaging import MessageBus, MessageTopic, MessageTopicStatus
+from spotmicroai.singleton import Singleton
 
-log = Logger().setup_logger('LCD Screen controller')
+log = Logger().setup_logger('LcdScreenController')
 
 
-class LcdScreenController:
-    is_alive = False
-    _config_provider = ConfigProvider()
+class LcdScreenController(metaclass=Singleton):
+    _is_alive: bool
+    _config_provider: ConfigProvider = ConfigProvider()
 
-    lcd_screen_controller: MessageTopicStatus | None = None
-    abort_controller: MessageTopicStatus | None = None
-    remote_controller_controller: MessageTopicStatus | None = None
-    motion_controller: MessageTopicStatus | None = None
+    _lcd_status: MessageTopicStatus | None
+    _abort_status: MessageTopicStatus | None
+    _remote_controller_status: MessageTopicStatus | None
+    _motion_status: MessageTopicStatus | None
+    _screen: Lcd16x2
+    _lcd_topic: Queue
 
     def __init__(self, message_bus: MessageBus):
         try:
@@ -35,6 +53,10 @@ class LcdScreenController:
             self.screen = Lcd16x2(address=i2c_address)
 
             self._lcd_topic = message_bus.lcd
+            self._lcd_status = None
+            self._abort_status = None
+            self._remote_controller_status = None
+            self._motion_status = None
             self.screen.lcd_clear()
             self.update_lcd_creen()
             self.turn_on()
@@ -62,19 +84,19 @@ class LcdScreenController:
             while True:
 
                 try:
-                    event: LcdMessage = self._lcd_topic.get(block=True, timeout=1)
+                    [controller_name, status] = self._lcd_topic.get()
 
-                    if event.name == MessageTopic.LCD_SCREEN:
-                        self.lcd_screen_controller = event.status
+                    if controller_name == MessageTopic.LCD:
+                        self._lcd_status = status
 
-                    elif event.name == MessageTopic.ABORT:
-                        self.abort_controller = event.status
+                    elif controller_name == MessageTopic.ABORT:
+                        self._abort_status = status
 
-                    elif event.name == MessageTopic.REMOTE:
-                        self.remote_controller_controller = event.status
+                    elif controller_name == MessageTopic.REMOTE:
+                        self._remote_controller_status = status
 
-                    elif event.name == MessageTopic.MOTION:
-                        self.motion_controller = event.status
+                    elif controller_name == MessageTopic.MOTION:
+                        self._motion_status = status
 
                 except queue.Empty:
                     self.update_lcd_creen()
@@ -91,98 +113,69 @@ class LcdScreenController:
     def turn_on(self):
         self.screen.backlight(1)
 
-    def update_lcd_creen(self):  # https://www.quinapalus.com/hd44780udg.html
+    def update_lcd_creen(self):
 
-        if self.lcd_screen_controller == MessageTopicStatus.ON:
+        self._toggle_lcd()
+        self.screen.lcd_load_custom_chars(CUSTOM_ICONS.values())
+        self._write_first_line()
+        self._write_second_line()
+
+    def _toggle_lcd(self) -> None:
+        if self._lcd_status == MessageTopicStatus.ON:
             self.turn_on()
-        elif self.lcd_screen_controller == MessageTopicStatus.OFF:
+        elif self._lcd_status == MessageTopicStatus.OFF:
             self.turn_off()
 
-        temperature = self.temperature()
-
-        custom_icons = []
-
-        icon_empty = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
-        icon_success = [0x0, 0x1, 0x3, 0x16, 0x1C, 0x8, 0x0, 0x0]
-        icon_pca9685 = [0x1F, 0x11, 0x15, 0x15, 0x15, 0x15, 0x11, 0x1F]
-        icon_gpio = [0x4, 0x4, 0x1F, 0x0, 0x0, 0xE, 0x4, 0x4]
-        icon_remote_controller = [0x11, 0xA, 0xE, 0xA, 0xA, 0xE, 0xA, 0x11]
-        icon_temperature = [0x18, 0x18, 0x3, 0x4, 0x4, 0x4, 0x3, 0x0]
-        icon_problem = [0x0, 0x1B, 0xE, 0x4, 0xE, 0x1B, 0x0, 0x0]
-        icon_success_reverse = [0x1F, 0x1E, 0x1C, 0x9, 0x3, 0x17, 0x1F]
-
-        # There is only memory for 7 in the lcd screen controller
-        custom_icons.insert(0, icon_empty)
-        custom_icons.insert(1, icon_success)
-        custom_icons.insert(2, icon_pca9685)
-        custom_icons.insert(3, icon_gpio)
-        custom_icons.insert(4, icon_remote_controller)
-        custom_icons.insert(5, icon_temperature)
-        custom_icons.insert(6, icon_problem)
-        custom_icons.insert(7, icon_success_reverse)
-
-        self.screen.lcd_load_custom_chars(custom_icons)
-
-        self.screen.lcd_write(0x80)  # First line
-
-        for char in 'SpotmicroAI':
-            self.screen.lcd_write(ord(char), 0b00000001)
-
-        self.screen.lcd_write_char(0)
-        self.screen.lcd_write_char(4)
-        self.screen.lcd_write_char(0)
-        self.screen.lcd_write_char(3)
-        self.screen.lcd_write_char(0)
-        self.screen.lcd_write_char(2)
-        self.screen.lcd_write_char(2)
-
-        # Write next three chars to row 2 directly
-        self.screen.lcd_write(0xC0)  # Second line
-        self.screen.lcd_write_char(0)
-        self.screen.lcd_write_char(0)
-        self.screen.lcd_write_char(0)
-        self.screen.lcd_write_char(0)
-        self.screen.lcd_write_char(0)
-
-        if temperature:
-            for char in temperature.rjust(3, ' '):
-                self.screen.lcd_write(ord(char), 0b00000001)
-            self.screen.lcd_write_char(5)
+    def _write_status_icon(self, status: MessageTopicStatus | None) -> None:
+        if status == MessageTopicStatus.OK or status == MessageTopicStatus.ON:
+            char = ICON_SUCCESS
+        elif status == MessageTopicStatus.SEARCHING:
+            char = ICON_SUCCESS_REVERSE
         else:
-            self.screen.lcd_write_char(0)
-            self.screen.lcd_write_char(0)
-            self.screen.lcd_write_char(0)
-            self.screen.lcd_write_char(0)
+            char = ICON_PROBLEM
+        self.screen.lcd_write_char(char)
 
-        self.screen.lcd_write_char(0)
-
-        if self.remote_controller_controller == MessageTopicStatus.OK:
-            self.screen.lcd_write_char(1)
-        elif self.remote_controller_controller == MessageTopicStatus.SEARCHING:
-            self.screen.lcd_write_char(7)
-        else:
-            self.screen.lcd_write_char(6)
-
-        self.screen.lcd_write_char(0)
-
-        if self.abort_controller == MessageTopicStatus.ON:
-            self.screen.lcd_write_char(1)
-        elif self.abort_controller == MessageTopicStatus.OFF:
-            self.screen.lcd_write_char(7)
-        else:
-            self.screen.lcd_write_char(6)
-
-        self.screen.lcd_write_char(0)
-
-        if self.motion_controller == MessageTopicStatus.OK:
-            self.screen.lcd_write_char(1)
-        else:
-            self.screen.lcd_write_char(6)
-
-    def temperature(self):
+    def get_system_temprature(self) -> str:
         try:
             temp = os.popen("vcgencmd measure_temp").readline()
             return temp.replace("temp=", "")[:-5]
         except Exception as e:
             log.error(labels.LCD_TEMP_ERROR.format(e))
             return '000'
+
+    def _write_first_line(self) -> None:
+        self.screen.lcd_write(LCD_CURSOR_BEING_LINE_1)
+        for char in 'SpotmicroAI':
+            self.screen.lcd_write(ord(char), LCD_DECIMAL_WRITE_MODE)
+        self.screen.lcd_write_char(ICON_EMPTY)
+        self.screen.lcd_write_char(ICON_REMOTE_CONTROLLER)
+        self.screen.lcd_write_char(ICON_EMPTY)
+        self.screen.lcd_write_char(ICON_GPIO)
+        self.screen.lcd_write_char(ICON_EMPTY)
+        self.screen.lcd_write_char(ICON_PCA9685)
+        self.screen.lcd_write_char(ICON_PCA9685)
+
+    def _write_second_line(self) -> None:
+        self.screen.lcd_write(LCD_CURSOR_BEGIN_LINE_2)
+        self.screen.lcd_write_char(ICON_EMPTY)
+        self.screen.lcd_write_char(ICON_EMPTY)
+
+        self._write_temperature()
+
+        self._write_status_icon(self._remote_controller_status)
+        self.screen.lcd_write_char(ICON_EMPTY)
+        self._write_status_icon(self._abort_status)
+        self.screen.lcd_write_char(ICON_EMPTY)
+        self._write_status_icon(self._motion_status)
+
+    def _write_temperature(self) -> None:
+        temperature = self.get_system_temprature()
+        if temperature:
+            for char in temperature.rjust(3, ' '):
+                self.screen.lcd_write(ord(char), LCD_DECIMAL_WRITE_MODE)
+            self.screen.lcd_write_char(ICON_TEMPERATURE)
+        else:
+            self.screen.lcd_write_char(ICON_EMPTY)
+            self.screen.lcd_write_char(ICON_EMPTY)
+            self.screen.lcd_write_char(ICON_EMPTY)
+            self.screen.lcd_write_char(ICON_EMPTY)

@@ -4,7 +4,7 @@ from enum import Enum
 class MessageTopic(Enum):
     ABORT = "abort"
     MOTION = "motion"
-    LCD_SCREEN = "lcd_screen"
+    LCD = "lcd_screen"
     REMOTE = "remote"
     TELEMETRY = "telemetry"
 

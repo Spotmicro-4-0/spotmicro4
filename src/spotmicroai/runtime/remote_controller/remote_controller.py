@@ -44,7 +44,7 @@ class RemoteControllerController:
 
     def _notify_remote_controller_connected(self) -> None:
         """Notify LCD screen that remote controller has been connected."""
-        self._lcd_topic.put(LcdMessage(MessageTopic.LCD_SCREEN, MessageTopicStatus.OK))
+        self._lcd_topic.put(LcdMessage(MessageTopic.LCD, MessageTopicStatus.OK))
         self._lcd_topic.put(LcdMessage(MessageTopic.REMOTE, MessageTopicStatus.OK))
 
     def _notify_searching_for_device(self) -> None:
