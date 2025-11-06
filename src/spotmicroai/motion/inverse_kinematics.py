@@ -14,7 +14,7 @@ from spotmicroai.motion.models import (
 @dataclass
 class InverseKinematicsLeg:
     """
-    Solve forward and inverse kinematics for a single leg
+    Solves inverse kinematics for a single leg.
     """
 
     def __init__(self, is_rear: bool = False, is_left: bool = False):
@@ -38,7 +38,7 @@ class InverseKinematicsLeg:
 
     def update_angles(self, foot_position: Position, body_transform: np.ndarray):
         """
-        Solves inverse kinematics to reach the target foot position in body frame.
+        Solves inverse kinematics to reach the target foot position in global coordinates.
         Updates angles to achieve the desired position.
         """
         foot_position_leg = self._convert_position_from_body_to_leg(foot_position, body_transform)
@@ -46,34 +46,34 @@ class InverseKinematicsLeg:
 
     def _convert_position_from_body_to_leg(self, foot_position: Position, body_transform: np.ndarray) -> Position:
         """
-        Converts foot position from global to local
+        Converts foot position from global to local coordinates.
 
         Returns:
-            Point with (x, y, z) global coordinates.
+            Position with (x, y, z) in local coordinates.
         """
-        # Compute combined transform from body to leg frame
-        body_to_leg_transform = body_transform @ self._leg_transform
+        # Compute combined transform from global to local
+        global_to_local_transform = body_transform @ self._leg_transform
 
         # Build homogeneous vector for point
         vector = np.array([[foot_position.x], [foot_position.y], [foot_position.z], [1.0]])
 
-        # Transform body-frame position to leg frame
-        body_to_leg_inverse_transform = inverse(body_to_leg_transform)
-        foot_position_leg = body_to_leg_inverse_transform @ vector
+        # Transform global position to local
+        global_to_local_inverse_transform = inverse(global_to_local_transform)
+        foot_position_local = global_to_local_inverse_transform @ vector
 
-        # Extract coordinates in leg frame
-        x = float(foot_position_leg[0, 0])
-        y = float(foot_position_leg[1, 0])
-        z = float(foot_position_leg[2, 0])
+        # Extract coordinates in local
+        x = float(foot_position_local[0, 0])
+        y = float(foot_position_local[1, 0])
+        z = float(foot_position_local[2, 0])
 
         return Position(x, y, z)
 
     def _solve_joint_angles(self, foot_position_leg: Position):
         """
-        Compute joint angles using inverse kinematics.
+        Computes joint angles using inverse kinematics.
 
         Args:
-            foot_position_leg: Target foot position in leg frame coordinates.
+            foot_position_leg: Target foot position in local coordinates.
         """
         l1, l2, l3 = self._l1, self._l2, self._l3
         x, y, z = foot_position_leg.x, foot_position_leg.y, foot_position_leg.z
@@ -97,63 +97,13 @@ class InverseKinematicsLeg:
         self._theta2 = theta2
         self._theta3 = theta3
 
-    # -----------------------------------------------------------------------
-    # Forward Kinematics
-    # -----------------------------------------------------------------------
-    def get_foot_position(self, body_transform: np.ndarray) -> Position:
-        """
-        Computes foot position in body frame coordinates using forward kinematics.
-        """
-        # Compute combined transform from body to leg frame
-        body_to_leg_transform = body_transform @ self._leg_transform
-
-        leg_to_foot_transform = (
-            self._get_body_to_hip_transform() @ self._get_hip_to_knee_transform() @ self._get_knee_to_foot_transform()
-        )
-        transform = body_to_leg_transform @ leg_to_foot_transform
-
-        # Foot position is last column (translation)
-        x = transform[0, 3]
-        y = transform[1, 3]
-        z = transform[2, 3]
-
-        return Position(float(x), float(y), float(z))
-
-    def _get_body_to_hip_transform(self) -> np.ndarray:
-        """Returns the homogeneous transform from body to hip."""
-        transform = rotate_xyz(0.0, 0.0, self._theta1)
-        transform[0, 3] = -self._l1 * np.cos(self._theta1)
-        transform[1, 3] = -self._l1 * np.sin(self._theta1)
-        return transform
-
-    def _get_hip_to_knee_transform(self) -> np.ndarray:
-        """
-        Returns the combined transform from hip to knee.
-        """
-        hip_to_hip_transform = np.array(
-            [[0.0, 0.0, -1.0, 0.0], [-1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
-        )
-
-        transform = rotate_xyz(0.0, 0.0, self._theta2)
-        transform[0, 3] = self._l2 * np.cos(self._theta2)
-        transform[1, 3] = self._l2 * np.sin(self._theta2)
-
-        return hip_to_hip_transform @ transform
-
-    def _get_knee_to_foot_transform(self) -> np.ndarray:
-        """Returns the homogeneous transform from knee to foot."""
-        transform = rotate_xyz(0.0, 0.0, self._theta3)
-        transform[0, 3] = self._l3 * np.cos(self._theta3)
-        transform[1, 3] = self._l3 * np.sin(self._theta3)
-        return transform
-
     def get_angles(self) -> LegAngles:
-        """Returns the current joint angles as a JointAngles object."""
+        """Returns the current joint angles."""
         return LegAngles(self._theta1, self._theta2, self._theta3)
 
     def _get_leg_transform(self) -> np.ndarray:
         """
-        Compute homogeneous transform from body center to this leg's frame.
+        Computes homogeneous transform from global to local coordinates.
         Infers rotation and translation signs based on is_rear and is_left flags.
         """
         # Y rotation: left legs rotate -pi/2, right legs rotate pi/2
@@ -190,17 +140,19 @@ class InverseKinematicsSolver:
         self._phi = 0.0
         self._psi = 0.0
 
+        self.feet_positions = FeetPositions()
+
         self._rear_right_leg = InverseKinematicsLeg(is_rear=True, is_left=False)
         self._front_right_leg = InverseKinematicsLeg(is_rear=False, is_left=False)
         self._front_left_leg = InverseKinematicsLeg(is_rear=False, is_left=True)
         self._rear_left_leg = InverseKinematicsLeg(is_rear=True, is_left=True)
 
     def _get_body_transform(self) -> np.ndarray:
-        """Compute the homogeneous transform for the body position and orientation."""
+        """Computes the homogeneous transform for the body position and orientation."""
         return translate_xyz(self._x, self._y, self._z) @ rotate_xyz(self._omega, self._phi, self._psi)
 
     def _update_leg_angles(self, feet_positions: FeetPositions):
-        """Update the angles for each leg."""
+        """Updates the joint angles for each leg."""
         body_transform = self._get_body_transform()
 
         self._front_left_leg.update_angles(feet_positions.front_left, body_transform)
@@ -210,10 +162,10 @@ class InverseKinematicsSolver:
 
     def update(self, body_state: BodyState):
         """
-        Update the solver with new body state and solve for leg angles.
+        Updates the solver with new body state and solves for leg angles.
 
         Args:
-            body_state: The desired body state including position, orientation, and foot positions.
+            body_state: Desired body state including position, orientation, and feet positions in global coordinates.
         """
         self._x = body_state.body_position.x
         self._y = body_state.body_position.y
@@ -223,36 +175,21 @@ class InverseKinematicsSolver:
         self._phi = body_state.phi
         self._psi = body_state.psi
 
+        self.feet_positions = body_state.feet_positions
         self._update_leg_angles(body_state.feet_positions)
 
     def query(self) -> LegAnglesSet:
         """
-        Get the current angles for all legs.
+        Gets the current joint angles for all legs.
 
         Returns:
-            LegAnglesSet containing the angles for each leg.
+            LegAnglesSet containing the joint angles for each leg.
         """
         return LegAnglesSet(
             front_left=self._front_left_leg.get_angles(),
             front_right=self._front_right_leg.get_angles(),
             rear_left=self._rear_left_leg.get_angles(),
             rear_right=self._rear_right_leg.get_angles(),
-        )
-
-    def get_feet_positions(self) -> FeetPositions:
-        """
-        Get the current feet positions using forward kinematics.
-
-        Returns:
-            FeetPositions containing the foot positions in global coordinates.
-        """
-        body_transform = self._get_body_transform()
-
-        return FeetPositions(
-            front_left=self._front_left_leg.get_foot_position(body_transform),
-            front_right=self._front_right_leg.get_foot_position(body_transform),
-            rear_left=self._rear_left_leg.get_foot_position(body_transform),
-            rear_right=self._rear_right_leg.get_foot_position(body_transform),
         )
 
 
