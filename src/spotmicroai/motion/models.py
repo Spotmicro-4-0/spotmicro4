@@ -1,15 +1,28 @@
 from dataclasses import dataclass, field
 
+
 @dataclass
-class Point:
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
+class Position:
+    """A coordinate in 3D space."""
+
+    x: float = 0.0  # Forward/Backward
+    y: float = 0.0  # Upward/Downward
+    z: float = 0.0  # Right/Left
 
 
 @dataclass
-class JointAngles:
-    """Joint angles (radians) for one leg."""
+class FeetPositions:
+    """Positions for all four feet."""
+
+    front_left: Position = field(default_factory=Position)
+    front_right: Position = field(default_factory=Position)
+    rear_left: Position = field(default_factory=Position)
+    rear_right: Position = field(default_factory=Position)
+
+
+@dataclass
+class LegAngles:
+    """Angles in radians for one leg."""
 
     theta1: float  # Hip yaw
     theta2: float  # Hip pitch
@@ -17,25 +30,22 @@ class JointAngles:
 
 
 @dataclass
-class LegsFootPositions:
-    right_back: Point = field(default_factory=Point)
-    right_front: Point = field(default_factory=Point)
-    left_front: Point = field(default_factory=Point)
-    left_back: Point = field(default_factory=Point)
+class LegAnglesSet:
+    """Joint angles for all four legs."""
 
-
-@dataclass
-class LegsJointAngles:
-    rear_right: JointAngles
-    front_right: JointAngles
-    front_left: JointAngles
-    rear_left: JointAngles
+    front_left: LegAngles
+    front_right: LegAngles
+    rear_left: LegAngles
+    rear_right: LegAngles
 
 
 @dataclass
 class BodyState:
-    phi: float = 0.0
-    theta: float = 0.0
-    psi: float = 0.0
-    position: Point = field(default_factory=Point)
-    legs_foot_positions: LegsFootPositions = field(default_factory=LegsFootPositions)
+    """State of the robot body including position, orientation, and foot placements."""
+
+    omega: float = 0.0  # ω (roll) – rotation about the body X-axis
+    phi: float = 0.0  # φ (yaw) – rotation about the body Y-axis
+    psi: float = 0.0  # ψ (pitch) – rotation about the body Z-axis
+    body_position: Position = field(default_factory=Position)
+    # These are the positions of every foot expressed in global coordinates
+    feet_positions: FeetPositions = field(default_factory=FeetPositions)
