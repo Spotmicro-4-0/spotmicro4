@@ -109,7 +109,6 @@ class MotionController(metaclass=Singleton):
         leg_positions = None
         telemetry_update_counter = 0
 
-        # Initialize telemetry display
         while True:
             frame_start = time.time()
 

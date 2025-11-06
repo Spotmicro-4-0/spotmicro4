@@ -8,8 +8,8 @@ from spotmicroai.singleton import Singleton
 
 
 @dataclass
-class SystemParameters(metaclass=Singleton):
-    """Configuration parameters for the robotic system."""
+class ParametersProvider(metaclass=Singleton):
+    """Parameters Provider for the robotic system."""
 
     # Robot dimensions
     hip_link_length: float
