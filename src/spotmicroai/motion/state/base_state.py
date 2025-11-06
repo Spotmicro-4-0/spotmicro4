@@ -41,7 +41,7 @@ class BaseState(ABC):
     # -----------------------------------------------------------------
     def init_body_state_filters(self, dt, tau, rl, rl_ang, body_state: BodyState, body_state_filters: BodyStateFilters):
         """Initialize a set of filters controlling body state values."""
-        legs = body_state.leg_feet_positions
+        legs = body_state.legs_foot_positions
 
         body_state_filters.leg_right_front = XyzFilters(
             x=RateLimitedFirstOrderFilter(dt, tau, legs.right_front.x, rl),
@@ -81,7 +81,7 @@ class BaseState(ABC):
     # -----------------------------------------------------------------
     def set_body_state_filter_commands(self, body_state: BodyState, body_state_filters: BodyStateFilters):
         """Set commands for all filters."""
-        legs = body_state.leg_feet_positions
+        legs = body_state.legs_foot_positions
 
         # Right Front leg
         if body_state_filters.leg_right_front.x:
@@ -171,7 +171,7 @@ class BaseState(ABC):
             angs.psi = body_state_filters.body_angs.z.get_output()
 
         # Legs
-        legs = body_state.leg_feet_positions
+        legs = body_state.legs_foot_positions
         for leg_name in ["right_back", "right_front", "left_front", "left_back"]:
             leg = getattr(legs, leg_name)
             f = getattr(body_state_filters, f"leg_{leg_name}")
@@ -193,8 +193,8 @@ class BaseState(ABC):
 
         # Check all leg positions
         for leg_name in ["right_back", "right_front", "left_front", "left_back"]:
-            leg1 = getattr(bs1.leg_feet_positions, leg_name)
-            leg2 = getattr(bs2.leg_feet_positions, leg_name)
+            leg1 = getattr(bs1.legs_foot_positions, leg_name)
+            leg2 = getattr(bs2.legs_foot_positions, leg_name)
             if not (close(leg1.x, leg2.x) and close(leg1.y, leg2.y) and close(leg1.z, leg2.z)):
                 return False
 

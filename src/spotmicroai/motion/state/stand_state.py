@@ -62,7 +62,7 @@ class StandState(BaseState):
 
             body_state_cmd.xyz_positions = self.cmd_state_.xyz_positions
 
-            body_state_cmd.leg_feet_positions = self.cmd_state_.leg_feet_positions
+            body_state_cmd.legs_foot_positions = self.cmd_state_.legs_foot_positions
 
             # Set and publish command
             motion_controller.set_servo_command_message_data()
@@ -78,7 +78,7 @@ class StandState(BaseState):
             smmc: Motion command controller
         """
         # Set default stance
-        self.cmd_state_.leg_feet_positions = motion_controller.get_neutral_stance()
+        self.cmd_state_.legs_foot_positions = motion_controller.get_neutral_stance()
 
         # End body state position and angles
         self.cmd_state_.euler_angles.phi = 0.0

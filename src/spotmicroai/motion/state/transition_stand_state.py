@@ -49,7 +49,7 @@ class TransitionStandState(BaseState):
 
         # Create end state
         # Create end state feet positions, a default foot stance
-        self.end_body_state_.leg_feet_positions = motion_controller.get_neutral_stance()
+        self.end_body_state_.legs_foot_positions = motion_controller.get_neutral_stance()
 
         # End body state position and angles
         self.end_body_state_.euler_angles.phi = 0.0
