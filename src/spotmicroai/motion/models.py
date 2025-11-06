@@ -3,27 +3,6 @@ from dataclasses import dataclass, field
 import numpy as np
 
 
-@dataclass
-class RobotDimensions:
-    """Robot's dimensions."""
-
-    hip_link_length: float
-    upper_leg_link_length: float
-    lower_leg_link_length: float
-    body_width: float
-    body_length: float
-
-
-@dataclass
-class LinkLengths:
-    """Physical link lengths of a single leg (meters)."""
-
-    l1: float
-    l2: float
-    l3: float
-
-
-@dataclass
 class EulerAngles:
     phi: float = 0.0
     theta: float = 0.0

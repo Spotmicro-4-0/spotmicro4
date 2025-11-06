@@ -12,9 +12,9 @@ class ParametersProvider(metaclass=Singleton):
     """Parameters Provider for the robotic system."""
 
     # Robot dimensions
-    hip_link_length: float
-    upper_leg_link_length: float
-    lower_leg_link_length: float
+    hip_length: float
+    upper_leg_length: float
+    lower_leg_length: float
     body_width: float
     body_length: float
 
@@ -72,12 +72,6 @@ class ParametersProvider(metaclass=Singleton):
 
     # Odometry
     publish_odom: bool = False
-
-    # Lidar position
-    lidar_x_pos: float = 0.0
-    lidar_y_pos: float = 0.0
-    lidar_z_pos: float = 0.0
-    lidar_yaw_angle: float = 0.0
 
     def __init__(self):
         """Initialize RemoteControllerBindings by loading from JSON file."""
