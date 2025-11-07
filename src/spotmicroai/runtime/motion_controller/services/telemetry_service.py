@@ -59,10 +59,13 @@ class TelemetryService:
         # Collect servo service data
         servo_service = getattr(mc, '_servo_service', None)
 
+        # Get state machine
+        state_machine = getattr(mc, '_state_machine', None)
+
         telemetry = {
             # System status
-            'is_activated': mc._is_activated,
-            'is_running': mc._is_running,
+            'current_state': state_machine.current_state.value if state_machine else 'unknown',
+            'is_idle': state_machine.is_idle() if state_machine else True,
             'frame_rate': 50.0,  # Fixed at 50Hz
             'loop_time_ms': loop_time_ms,
             'idle_time_ms': idle_time_ms,
