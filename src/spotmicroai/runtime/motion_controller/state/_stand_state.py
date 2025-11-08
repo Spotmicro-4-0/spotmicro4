@@ -1,4 +1,5 @@
 import math
+import sys
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
 from spotmicroai.runtime.motion_controller.models import ControllerEvent
@@ -19,7 +20,12 @@ class StandState(BaseRobotState):
         self._log.debug('Entering STAND state')
 
     def update(self) -> None:
-        pass
+        import time
+
+        start_time = time.time()
+        # Currently no update logic in stand state
+        duration = (time.time() - start_time) * 1000
+        self._log.debug(f"StandState.update took {duration:.2f}ms")
 
     def handle_event(self, event: ControllerEvent) -> RobotStateName | None:
         if not event:
@@ -54,15 +60,35 @@ class StandState(BaseRobotState):
             self._body_move_roll(event.dpad_horizontal)
 
         if event.left_stick_y:
+            print(
+                f"      [StandState] left_stick_y={event.left_stick_y:.3f}, calling _body_move_pitch_analog",
+                file=sys.stderr,
+                flush=True,
+            )
             self._body_move_pitch_analog(event.left_stick_y)
 
         if event.left_stick_x:
+            print(
+                f"      [StandState] left_stick_x={event.left_stick_x:.3f}, calling _body_move_roll_analog",
+                file=sys.stderr,
+                flush=True,
+            )
             self._body_move_roll_analog(event.left_stick_x)
 
         if event.right_stick_y:
+            print(
+                f"      [StandState] right_stick_y={event.right_stick_y:.3f}, calling _body_move_yaw_analog",
+                file=sys.stderr,
+                flush=True,
+            )
             self._body_move_yaw_analog(event.right_stick_y)
 
         if event.right_stick_x:
+            print(
+                f"      [StandState] right_stick_x={event.right_stick_x:.3f}, calling _body_move_height_analog",
+                file=sys.stderr,
+                flush=True,
+            )
             self._body_move_height_analog(event.right_stick_x)
 
         if event.a:

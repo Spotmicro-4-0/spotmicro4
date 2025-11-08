@@ -7,7 +7,8 @@ import smbus  # type: ignore
 from spotmicroai.singleton import Singleton
 
 # Delay between I2C transactions (in seconds)
-I2C_TRANSACTION_DELAY = 0.0001  # 100 microseconds
+# I2C_TRANSACTION_DELAY = 0.0001  # 100 microseconds
+I2C_TRANSACTION_DELAY = 0.002  # 2ms microseconds to ensure it works on a 400KHz I2C bus Fast Mode
 
 
 class I2cDevice(metaclass=Singleton):

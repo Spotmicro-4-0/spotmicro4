@@ -34,6 +34,7 @@ class Buzzer(metaclass=Singleton):
 
     def beep(self):
         """Plays a beep sound by activating the buzzer for the configured beep duration."""
-        GPIO.output(self._port, True)
-        time.sleep(constants.BEEP_DURATION)
-        GPIO.output(self._port, False)
+        # GPIO.output(self._port, True)
+        # time.sleep(constants.BEEP_DURATION)
+        # GPIO.output(self._port, False)
+        pass

@@ -17,9 +17,21 @@ class WalkState(BaseRobotState):
         self._keyframe_service.reset_walking_state()
 
     def update(self) -> None:
-        keyframe = self._keyframe_service.update_keyframes()
-        pose = keyframe.to_pose()
+        import time
 
+        start_time = time.time()
+
+        keyframe_start = time.time()
+        keyframe = self._keyframe_service.update_keyframes()
+        keyframe_end = time.time()
+        self._log.debug(f"Keyframe update took {(keyframe_end - keyframe_start)*1000:.2f}ms")
+
+        pose_start = time.time()
+        pose = keyframe.to_pose()
+        pose_end = time.time()
+        self._log.debug(f"Keyframe to_pose took {(pose_end - pose_start)*1000:.2f}ms")
+
+        servo_start = time.time()
         self._servo_service.set_front_right_servos(
             pose.front_right.foot_angle, pose.front_right.leg_angle, pose.front_right.shoulder_angle
         )
@@ -35,6 +47,11 @@ class WalkState(BaseRobotState):
         self._servo_service.set_rear_right_servos(
             pose.rear_right.foot_angle, pose.rear_right.leg_angle, pose.rear_right.shoulder_angle
         )
+        servo_end = time.time()
+        self._log.debug(f"Servo position setting took {(servo_end - servo_start)*1000:.2f}ms")
+
+        total_duration = (time.time() - start_time) * 1000
+        self._log.debug(f"WalkState.update total: {total_duration:.2f}ms")
 
     def handle_event(self, event: ControllerEvent) -> RobotStateName | None:
         if not event:

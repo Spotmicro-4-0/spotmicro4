@@ -280,6 +280,7 @@ class TelemetryDisplay:
         lines.append(("", 0))
 
         lines.extend(self._section_lines("System Status", self._system_status_lines(telemetry_data), bold_attr))
+        lines.extend(self._section_lines("Message Bus", self._queue_stats_lines(telemetry_data), bold_attr))
         lines.extend(self._section_lines("Motion Parameters", self._motion_lines(telemetry_data), bold_attr))
         lines.extend(self._section_lines("Controller Input", self._controller_lines(telemetry_data), bold_attr))
         lines.extend(self._section_lines("Leg Coordinates", self._leg_coordinate_lines(telemetry_data), bold_attr))
@@ -310,6 +311,17 @@ class TelemetryDisplay:
         return [
             f"  Activated: {activated:<3}  Running: {running:<3}  Frame Rate: {frame} Hz",
             f"  Loop Time: {loop} ms  Idle Time: {idle} ms",
+        ]
+
+    def _queue_stats_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
+        queue_stats = telemetry_data.get("queue_stats") or {}
+        abort = queue_stats.get("abort", 0)
+        motion = queue_stats.get("motion", 0)
+        lcd = queue_stats.get("lcd", 0)
+        telemetry = queue_stats.get("telemetry", 0)
+
+        return [
+            f"  Abort: {abort}  Motion: {motion}  LCD: {lcd}  Telemetry: {telemetry}",
         ]
 
     def _motion_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:

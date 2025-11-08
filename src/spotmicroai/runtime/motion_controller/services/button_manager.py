@@ -3,11 +3,12 @@ from typing import Callable, Optional
 from spotmicroai.runtime.motion_controller.debounced_button import DebouncedButton
 from spotmicroai.runtime.motion_controller.models import ControllerEvent, ControllerEventKey
 from spotmicroai.logger import Logger
+from spotmicroai.singleton import Singleton
 
 log = Logger().setup_logger('ButtonManager')
 
 
-class ButtonManager:
+class ButtonManager(metaclass=Singleton):
     """
     Manages multiple debounced buttons and provides edge detection for events.
 
@@ -124,24 +125,37 @@ class ButtonManager:
         bool
             True if the key transitioned from 0 to non-zero
         """
+        import time
+        import sys
+
+        start_time = time.time()
+
         # Get the attribute name from the key
         attr_name = self._KEY_TO_ATTR.get(key)
         if attr_name is None:
-            log.debug(f"check_edge: Key {key} not found in mapping")
             return False
 
         # Get current and previous values
+        getattr_start = time.time()
         current_value = getattr(event, attr_name, 0)
-        previous_value = self._previous_event.get(key, 0)
+        getattr_duration = (time.time() - getattr_start) * 1000
 
-        log.debug(f"check_edge: key={key}, attr={attr_name}, current={current_value}, prev={previous_value}")
+        previous_value = self._previous_event.get(key, 0)
 
         # Update previous event state
         self._previous_event[key] = current_value
 
         edge_detected = current_value != 0 and previous_value == 0
-        if edge_detected:
-            log.debug(f"check_edge: EDGE DETECTED for {key}")
+
+        total_duration = (time.time() - start_time) * 1000
+
+        # Only log if slow or if edge detected
+        if total_duration > 10 or edge_detected:
+            print(
+                f"        [ButtonManager] check_edge({key.value}): {total_duration:.2f}ms, edge={edge_detected} (getattr: {getattr_duration:.2f}ms)",
+                file=sys.stderr,
+                flush=True,
+            )
 
         return edge_detected
 

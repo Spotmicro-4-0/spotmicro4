@@ -46,7 +46,7 @@ class ServoService(metaclass=Singleton):
         self.rest_position()
 
     def commit(self):
-        """Apply all staged servo angles to their respective servo objects using batched I²C write."""
+        """Apply all staged servo angles to their respective servo objects by committing each servo individually."""
         if not self._is_dirty:
             # No changes since last commit, skip I²C transaction
             return
@@ -56,38 +56,30 @@ class ServoService(metaclass=Singleton):
             log.debug("Skipping commit: PCA9685 board not activated")
             return
 
-        # Build array of 16 pulse widths (one per PCA9685 channel)
-        # Initialize all channels to neutral (1500µs) for unused channels
-        pulse_widths = [1500.0] * 16
-
-        # Collect all servos
-        servos = [
-            self._rear_shoulder_right,
-            self._rear_leg_right,
-            self._rear_foot_right,
-            self._rear_shoulder_left,
-            self._rear_leg_left,
-            self._rear_foot_left,
-            self._front_shoulder_left,
-            self._front_leg_left,
-            self._front_foot_left,
-            self._front_shoulder_right,
-            self._front_leg_right,
-            self._front_foot_right,
+        # Collect all servos with names for logging
+        servos_with_names = [
+            ("rear_shoulder_right", self._rear_shoulder_right),
+            ("rear_leg_right", self._rear_leg_right),
+            ("rear_foot_right", self._rear_foot_right),
+            ("rear_shoulder_left", self._rear_shoulder_left),
+            ("rear_leg_left", self._rear_leg_left),
+            ("rear_foot_left", self._rear_foot_left),
+            ("front_shoulder_left", self._front_shoulder_left),
+            ("front_leg_left", self._front_leg_left),
+            ("front_foot_left", self._front_foot_left),
+            ("front_shoulder_right", self._front_shoulder_right),
+            ("front_leg_right", self._front_leg_right),
+            ("front_foot_right", self._front_foot_right),
         ]
 
-        # Collect pulse widths by channel from staged values
-        for servo_obj in servos:
+        log.debug("Committing servos one at a time")
+        # Commit each servo individually
+        for name, servo_obj in servos_with_names:
+            staged_pulse = servo_obj.get_staged_pulse_us()
             channel_idx = servo_obj.channel_index
-            if channel_idx is not None:
-                pulse_widths[channel_idx] = servo_obj.get_staged_pulse_us()
+            log.info(f"Committing {name} (ch{channel_idx}): {staged_pulse:.2f}µs")
+            servo_obj.commit_staged()
 
-        # Execute single batched I²C write for all 16 channels
-        self._pca9685_board.write_all_channels(pulse_widths)
-
-        # Clear staged values and dirty flag after successful commit
-        for servo_obj in servos:
-            servo_obj.clear_staged()
         self._is_dirty = False
 
     def clear_staged(self):

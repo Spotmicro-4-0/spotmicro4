@@ -42,6 +42,7 @@ class TelemetryService(metaclass=Singleton):
         cycle_index: Optional[int] = None,
         cycle_ratio: Optional[float] = None,
         leg_positions: Optional[Dict] = None,
+        queue_stats: Optional[Dict[str, int]] = None,
     ) -> None:
         """Collect and publish telemetry data from all sources.
 
@@ -59,6 +60,8 @@ class TelemetryService(metaclass=Singleton):
             Current walking cycle interpolation ratio.
         leg_positions : Optional[Dict]
             Current interpolated leg positions.
+        queue_stats : Optional[Dict[str, int]]
+            Current message counts for each message bus queue.
         """
         self._update_counter = (self._update_counter + 1) % constants.TELEMETRY_UPDATE_INTERVAL
         if self._update_counter != 0:
@@ -75,6 +78,7 @@ class TelemetryService(metaclass=Singleton):
                 cycle_index=cycle_index,
                 cycle_ratio=cycle_ratio,
                 leg_positions=leg_positions,
+                queue_stats=queue_stats,
             )
 
             try:
@@ -92,6 +96,7 @@ class TelemetryService(metaclass=Singleton):
         cycle_index: Optional[int],
         cycle_ratio: Optional[float],
         leg_positions: Optional[Dict],
+        queue_stats: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
         """Collect telemetry data from all sources.
 
@@ -119,6 +124,8 @@ class TelemetryService(metaclass=Singleton):
             'frame_rate': 50.0,  # Fixed at 50Hz
             'loop_time_ms': loop_time_ms,
             'idle_time_ms': idle_time_ms,
+            # Message bus queue stats
+            'queue_stats': queue_stats or {},
             # Motion parameters from keyframe service
             'forward_factor': kf_service.forward_factor if kf_service else None,
             'rotation_factor': kf_service.rotation_factor if kf_service else None,

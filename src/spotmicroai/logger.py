@@ -43,6 +43,7 @@ class Logger(metaclass=Singleton):
         """
         logger_name = SPOTMICRO if not logger_name else f"{SPOTMICRO} {logger_name}"
         logger = logging.getLogger(f"{logger_name:<32}")
+        # logger.setLevel(logging.DEBUG)
 
         # add the handlers to logger
         if self.logging_file_handler not in logger.handlers:

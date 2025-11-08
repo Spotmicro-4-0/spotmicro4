@@ -20,6 +20,7 @@ class MotionController(metaclass=Singleton):
 
     _servo_service: ServoService
     _telemetry_service: TelemetryService
+    _message_bus: MessageBus
 
     _state_machine: StateMachine
     _inactivity_counter: float
@@ -31,6 +32,7 @@ class MotionController(metaclass=Singleton):
 
             self._servo_service = ServoService()
             self._telemetry_service = TelemetryService(self, message_bus)
+            self._message_bus = message_bus
 
             self._motion_topic = message_bus.motion
             self._abort_topic = message_bus.abort
@@ -89,8 +91,14 @@ class MotionController(metaclass=Singleton):
             self._state_machine.update()
             t4 = time.time()
 
+            commit_start = time.time()
+            log.debug(f"Need to commit Servos")
             self._servo_service.commit()
-            t5 = time.time()
+            commit_end = time.time()
+            t5 = commit_end
+
+            commit_duration = (commit_end - commit_start) * 1000
+            log.debug(f"Servo commit took {commit_duration:.2f}ms")
 
             elapsed_time = time.time() - frame_start
             idle_time = frame_duration - elapsed_time
@@ -124,6 +132,7 @@ class MotionController(metaclass=Singleton):
                     f"  update:        {(t4-t3)*1000:.2f}ms\n"
                     f"  commit:        {(t5-t4)*1000:.2f}ms\n"
                     f"  TOTAL:         {elapsed_time*1000:.2f}ms (target: {frame_duration*1000:.2f}ms)\n"
+                    f"  OVER BY:       {(elapsed_time - frame_duration)*1000:.2f}ms\n"
                     f"{'='*60}"
                 )
                 print(breakdown, file=sys.stderr, flush=True)
@@ -137,16 +146,23 @@ class MotionController(metaclass=Singleton):
             self._sleep_until_next_frame(idle_time)
 
     def _get_controller_event(self) -> ControllerEvent:
+        start_time = time.time()
         try:
             event = self._motion_topic.get(block=False)
-            log.debug(f"Controller event received: START={event.start}, BACK={event.back}, A={event.a}, B={event.b}")
+            duration = (time.time() - start_time) * 1000
+            log.debug(
+                f"Controller event received: START={event.start}, BACK={event.back}, A={event.a}, B={event.b} (took {duration:.2f}ms)"
+            )
             return event
         except queue.Empty:
+            duration = (time.time() - start_time) * 1000
+            log.debug(f"No controller event available (took {duration:.2f}ms)")
             return ControllerEvent({})
 
     def _publish_telemetry(self, event: ControllerEvent, elapsed_time: float, idle_time: float) -> None:
         loop_time_ms = elapsed_time * 1000
         idle_time_ms = idle_time * 1000
+        queue_stats = self._message_bus.get_queue_stats()
 
         self._telemetry_service.publish(
             event=event,
@@ -155,6 +171,7 @@ class MotionController(metaclass=Singleton):
             cycle_index=None,
             cycle_ratio=None,
             leg_positions=None,
+            queue_stats=queue_stats,
         )
 
     def _sleep_until_next_frame(self, idle_time: float) -> None:
