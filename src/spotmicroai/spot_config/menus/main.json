@@ -9,6 +9,12 @@
         "command": "./runtime.sh"
       },
       {
+        "label": "Start Spotmicro Runtime (without telemetry)",
+        "description": "Starts the robot's runtime but disabled the telemetry screen",
+        "action": "run",
+        "command": "./runtime.sh --telemetry-off"
+      },
+      {
         "label": "Configuration Editor",
         "description": "Edit configuration values such as GPIO ports and I2C addresses",
         "action": "submenu",

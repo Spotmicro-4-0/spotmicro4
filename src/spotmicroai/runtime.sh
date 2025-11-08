@@ -19,4 +19,4 @@ source "$HOME/.venv/bin/activate"
 export PYTHONPATH="${HOME}:${PYTHONPATH:-}"
 
 # Run main
-python3 "$HOME/spotmicroai/runtime/main.py"
+python3 "$HOME/spotmicroai/runtime/main.py" "$@"

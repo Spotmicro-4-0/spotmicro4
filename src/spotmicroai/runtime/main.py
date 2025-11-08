@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import multiprocessing
 import sys
 from time import sleep
@@ -21,7 +22,7 @@ def process_controller(controller_class: type, message_bus: MessageBus) -> None:
     controller.do_process_events_from_queues()
 
 
-def main():
+def main(telemetry_enabled: bool = True):
     message_bus = MessageBus()
     log.info(labels.MAIN_MESSAGE_BUS_CREATED)
 
@@ -30,8 +31,10 @@ def main():
         MotionController,
         RemoteControllerController,
         LcdScreenController,
-        TelemetryController,
     ]
+
+    if telemetry_enabled:
+        controller_types.append(TelemetryController)
 
     processes = []
     for controller_class in controller_types:
@@ -52,10 +55,14 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='SpotmicroAI Runtime')
+    parser.add_argument('--telemetry-off', action='store_true', help='Disable telemetry controller')
+    args = parser.parse_args()
+
     log.info(labels.MAIN_STARTING)
 
     try:
-        main()
+        main(telemetry_enabled=not args.telemetry_off)
 
     except KeyboardInterrupt:
         log.info(labels.MAIN_TERMINATED_CTRL_C)

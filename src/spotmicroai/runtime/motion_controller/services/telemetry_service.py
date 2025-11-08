@@ -4,23 +4,36 @@ Telemetry Service Module for SpotMicroAI Motion Controller
 This module provides the TelemetryService class for collecting telemetry data.
 """
 
+import queue
 from typing import Any, Dict, Optional
 
+from spotmicroai import labels
+import spotmicroai.constants as constants
+from spotmicroai.logger import Logger
+from spotmicroai.runtime.messaging import MessageBus
+from spotmicroai.singleton import Singleton
 
-class TelemetryService:
+log = Logger().setup_logger('Telemetry Service')
+
+
+class TelemetryService(metaclass=Singleton):
     """Collects telemetry data from motion controller components."""
 
-    def __init__(self, motion_controller):
+    def __init__(self, motion_controller, message_bus: MessageBus):
         """Initialize with reference to motion controller.
 
         Parameters
         ----------
         motion_controller : MotionController
             The motion controller instance to collect data from.
+        message_bus : MessageBus
+            The message bus for publishing telemetry data.
         """
         self._motion_controller = motion_controller
+        self._telemetry_topic = getattr(message_bus, 'telemetry', None)
+        self._update_counter = 0
 
-    def collect(
+    def publish(
         self,
         event: Dict,
         loop_time_ms: float,
@@ -28,8 +41,8 @@ class TelemetryService:
         cycle_index: Optional[int] = None,
         cycle_ratio: Optional[float] = None,
         leg_positions: Optional[Dict] = None,
-    ) -> Dict[str, Any]:
-        """Collect current telemetry data from all sources.
+    ) -> None:
+        """Collect and publish telemetry data from all sources.
 
         Parameters
         ----------
@@ -45,12 +58,48 @@ class TelemetryService:
             Current walking cycle interpolation ratio.
         leg_positions : Optional[Dict]
             Current interpolated leg positions.
+        """
+        self._update_counter = (self._update_counter + 1) % constants.TELEMETRY_UPDATE_INTERVAL
+        if self._update_counter != 0:
+            return
+
+        if self._telemetry_topic is None:
+            return
+
+        try:
+            telemetry_data = self._collect(
+                event=event,
+                loop_time_ms=loop_time_ms,
+                idle_time_ms=idle_time_ms,
+                cycle_index=cycle_index,
+                cycle_ratio=cycle_ratio,
+                leg_positions=leg_positions,
+            )
+
+            try:
+                self._telemetry_topic.put(telemetry_data, block=False)
+            except queue.Full:
+                log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
+        except Exception as e:
+            log.warning(labels.MOTION_TELEMETRY_ERROR.format(e))
+
+    def _collect(
+        self,
+        event: Dict,
+        loop_time_ms: float,
+        idle_time_ms: float,
+        cycle_index: Optional[int],
+        cycle_ratio: Optional[float],
+        leg_positions: Optional[Dict],
+    ) -> Dict[str, Any]:
+        """Collect telemetry data from all sources.
 
         Returns
         -------
         Dict[str, Any]
             Dictionary containing all collected telemetry data.
         """
+
         mc = self._motion_controller
 
         # Collect keyframe service data

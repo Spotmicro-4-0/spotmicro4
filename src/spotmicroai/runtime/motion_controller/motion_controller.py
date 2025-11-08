@@ -5,6 +5,7 @@ import time
 
 from spotmicroai import labels
 import spotmicroai.constants as constants
+from spotmicroai.hardware.buzzer.buzzer import Buzzer
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
@@ -29,7 +30,7 @@ class MotionController(metaclass=Singleton):
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
             self._servo_service = ServoService()
-            self._telemetry_service = TelemetryService(self)
+            self._telemetry_service = TelemetryService(self, message_bus)
 
             self._motion_topic = message_bus.motion
             self._abort_topic = message_bus.abort
@@ -66,23 +67,70 @@ class MotionController(metaclass=Singleton):
         sys.exit(0)
 
     def do_process_events_from_queues(self) -> None:
-        telemetry_update_counter = 0
+        frame_count = 0
+        total_get_event = 0.0
+        total_handle_event = 0.0
+        total_update = 0.0
+        total_commit = 0.0
 
         while True:
             frame_start = time.time()
 
+            t1 = time.time()
             event = self._get_controller_event()
+            t2 = time.time()
 
             self._state_machine.handle_event(event)
+            t3 = time.time()
+
             self._state_machine.update()
+            t4 = time.time()
 
             self._servo_service.commit()
+            t5 = time.time()
 
             elapsed_time = time.time() - frame_start
-            self._update_telemetry(telemetry_update_counter, event, elapsed_time)
-            telemetry_update_counter = (telemetry_update_counter + 1) % constants.TELEMETRY_UPDATE_INTERVAL
+            idle_time = constants.FRAME_DURATION - elapsed_time
 
-            self._sleep_until_next_frame(frame_start)
+            # Accumulate timing stats
+            frame_count += 1
+            total_get_event += t2 - t1
+            total_handle_event += t3 - t2
+            total_update += t4 - t3
+            total_commit += t5 - t4
+
+            # Print stats every 50 frames
+            if frame_count % 50 == 0:
+                avg_stats = (
+                    f"[Frame {frame_count}] Avg timing (ms): "
+                    f"get={total_get_event/frame_count*1000:.2f} "
+                    f"handle={total_handle_event/frame_count*1000:.2f} "
+                    f"update={total_update/frame_count*1000:.2f} "
+                    f"commit={total_commit/frame_count*1000:.2f} "
+                    f"total={(total_get_event+total_handle_event+total_update+total_commit)/frame_count*1000:.2f}"
+                )
+                print(avg_stats, flush=True)
+
+            if elapsed_time > constants.FRAME_DURATION:
+                Buzzer().stop()
+                breakdown = (
+                    f"\n{'='*60}\n"
+                    f"Frame timing breakdown:\n"
+                    f"  get_event:     {(t2-t1)*1000:.2f}ms\n"
+                    f"  handle_event:  {(t3-t2)*1000:.2f}ms\n"
+                    f"  update:        {(t4-t3)*1000:.2f}ms\n"
+                    f"  commit:        {(t5-t4)*1000:.2f}ms\n"
+                    f"  TOTAL:         {elapsed_time*1000:.2f}ms (target: {constants.FRAME_DURATION*1000:.2f}ms)\n"
+                    f"{'='*60}"
+                )
+                print(breakdown, file=sys.stderr, flush=True)
+                log.error(breakdown)
+                raise RuntimeError(
+                    f"Frame execution exceeded duration: {elapsed_time:.4f}s > {constants.FRAME_DURATION}s"
+                )
+
+            self._publish_telemetry(event, elapsed_time, idle_time)
+            self._sleep_until_next_frame(idle_time)
 
     def _get_controller_event(self) -> dict:
         try:
@@ -90,30 +138,18 @@ class MotionController(metaclass=Singleton):
         except queue.Empty:
             return {}
 
-    def _update_telemetry(self, counter: int, event: dict, elapsed_time: float) -> None:
-        if counter != 0:
-            return
-
+    def _publish_telemetry(self, event: dict, elapsed_time: float, idle_time: float) -> None:
         loop_time_ms = elapsed_time * 1000
-        idle_time_ms = max((constants.FRAME_DURATION - elapsed_time) * 1000, 0)
+        idle_time_ms = idle_time * 1000
 
-        try:
-            telemetry_data = self._telemetry_service.collect(
-                event=event,
-                loop_time_ms=loop_time_ms,
-                idle_time_ms=idle_time_ms,
-                cycle_index=None,
-                cycle_ratio=None,
-                leg_positions=None,
-            )
-            try:
-                self._telemetry_topic.put(telemetry_data, block=False)
-            except queue.Full:
-                log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
-        except Exception as e:
-            log.warning(labels.MOTION_TELEMETRY_ERROR.format(e))
+        self._telemetry_service.publish(
+            event=event,
+            loop_time_ms=loop_time_ms,
+            idle_time_ms=idle_time_ms,
+            cycle_index=None,
+            cycle_ratio=None,
+            leg_positions=None,
+        )
 
-    def _sleep_until_next_frame(self, frame_start: float) -> None:
-        elapsed = time.time() - frame_start
-        if elapsed < constants.FRAME_DURATION:
-            time.sleep(constants.FRAME_DURATION - elapsed)
+    def _sleep_until_next_frame(self, idle_time: float) -> None:
+        time.sleep(idle_time)
