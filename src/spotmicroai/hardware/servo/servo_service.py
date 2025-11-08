@@ -39,52 +39,72 @@ class ServoService(metaclass=Singleton):
         self._front_leg_right = ServoFactory.create(ServoName.FRONT_LEG_RIGHT)
         self._front_foot_right = ServoFactory.create(ServoName.FRONT_FOOT_RIGHT)
 
-        # Initialize staged angles to rest positions
-        self.rear_shoulder_left_angle = self._rear_shoulder_left.rest_angle
-        self.rear_leg_left_angle = self._rear_leg_left.rest_angle
-        self.rear_foot_left_angle = self._rear_foot_left.rest_angle
-        self.rear_shoulder_right_angle = self._rear_shoulder_right.rest_angle
-        self.rear_leg_right_angle = self._rear_leg_right.rest_angle
-        self.rear_foot_right_angle = self._rear_foot_right.rest_angle
-        self.front_shoulder_left_angle = self._front_shoulder_left.rest_angle
-        self.front_leg_left_angle = self._front_leg_left.rest_angle
-        self.front_foot_left_angle = self._front_foot_left.rest_angle
-        self.front_shoulder_right_angle = self._front_shoulder_right.rest_angle
-        self.front_leg_right_angle = self._front_leg_right.rest_angle
-        self.front_foot_right_angle = self._front_foot_right.rest_angle
+        # Track if servos have been modified since last commit (dirty flag)
+        self._is_dirty = False
 
-        # Initialize staged angles
-        self.clear_staged()
+        # Initialize all servos to rest position
+        self.rest_position()
 
     def commit(self):
-        """Apply all staged servo angles to their respective servo objects."""
-        self._rear_shoulder_left.angle = self.rear_shoulder_left_angle
-        self._rear_leg_left.angle = self.rear_leg_left_angle
-        self._rear_foot_left.angle = self.rear_foot_left_angle
-        self._rear_shoulder_right.angle = self.rear_shoulder_right_angle
-        self._rear_leg_right.angle = self.rear_leg_right_angle
-        self._rear_foot_right.angle = self.rear_foot_right_angle
-        self._front_shoulder_left.angle = self.front_shoulder_left_angle
-        self._front_leg_left.angle = self.front_leg_left_angle
-        self._front_foot_left.angle = self.front_foot_left_angle
-        self._front_shoulder_right.angle = self.front_shoulder_right_angle
-        self._front_leg_right.angle = self.front_leg_right_angle
-        self._front_foot_right.angle = self.front_foot_right_angle
+        """Apply all staged servo angles to their respective servo objects using batched I²C write."""
+        if not self._is_dirty:
+            # No changes since last commit, skip I²C transaction
+            return
+
+        # Skip if PCA9685 board is not activated (e.g., in IDLE state)
+        if not self._pca9685_board.is_active():
+            log.debug("Skipping commit: PCA9685 board not activated")
+            return
+
+        # Build array of 16 pulse widths (one per PCA9685 channel)
+        # Initialize all channels to neutral (1500µs) for unused channels
+        pulse_widths = [1500.0] * 16
+
+        # Collect all servos
+        servos = [
+            self._rear_shoulder_right,
+            self._rear_leg_right,
+            self._rear_foot_right,
+            self._rear_shoulder_left,
+            self._rear_leg_left,
+            self._rear_foot_left,
+            self._front_shoulder_left,
+            self._front_leg_left,
+            self._front_foot_left,
+            self._front_shoulder_right,
+            self._front_leg_right,
+            self._front_foot_right,
+        ]
+
+        # Collect pulse widths by channel from staged values
+        for servo_obj in servos:
+            channel_idx = servo_obj.channel_index
+            if channel_idx is not None:
+                pulse_widths[channel_idx] = servo_obj.get_staged_pulse_us()
+
+        # Execute single batched I²C write for all 16 channels
+        self._pca9685_board.write_all_channels(pulse_widths)
+
+        # Clear staged values and dirty flag after successful commit
+        for servo_obj in servos:
+            servo_obj.clear_staged()
+        self._is_dirty = False
 
     def clear_staged(self):
         """Reset all staged servo angles to their configured rest angles."""
-        self.rear_shoulder_left_angle = self._rear_shoulder_left.rest_angle
-        self.rear_leg_left_angle = self._rear_leg_left.rest_angle
-        self.rear_foot_left_angle = self._rear_foot_left.rest_angle
-        self.rear_shoulder_right_angle = self._rear_shoulder_right.rest_angle
-        self.rear_leg_right_angle = self._rear_leg_right.rest_angle
-        self.rear_foot_right_angle = self._rear_foot_right.rest_angle
-        self.front_shoulder_left_angle = self._front_shoulder_left.rest_angle
-        self.front_leg_left_angle = self._front_leg_left.rest_angle
-        self.front_foot_left_angle = self._front_foot_left.rest_angle
-        self.front_shoulder_right_angle = self._front_shoulder_right.rest_angle
-        self.front_leg_right_angle = self._front_leg_right.rest_angle
-        self.front_foot_right_angle = self._front_foot_right.rest_angle
+        self._rear_shoulder_left.stage_angle(self._rear_shoulder_left.rest_angle)
+        self._rear_leg_left.stage_angle(self._rear_leg_left.rest_angle)
+        self._rear_foot_left.stage_angle(self._rear_foot_left.rest_angle)
+        self._rear_shoulder_right.stage_angle(self._rear_shoulder_right.rest_angle)
+        self._rear_leg_right.stage_angle(self._rear_leg_right.rest_angle)
+        self._rear_foot_right.stage_angle(self._rear_foot_right.rest_angle)
+        self._front_shoulder_left.stage_angle(self._front_shoulder_left.rest_angle)
+        self._front_leg_left.stage_angle(self._front_leg_left.rest_angle)
+        self._front_foot_left.stage_angle(self._front_foot_left.rest_angle)
+        self._front_shoulder_right.stage_angle(self._front_shoulder_right.rest_angle)
+        self._front_leg_right.stage_angle(self._front_leg_right.rest_angle)
+        self._front_foot_right.stage_angle(self._front_foot_right.rest_angle)
+        self._is_dirty = True
 
     def rest_position(self):
         """Return the robot to its rest position."""
@@ -105,21 +125,23 @@ class ServoService(metaclass=Singleton):
         self._buzzer.beep()
 
     def set_pose(self, pose: Pose):
-        self.rear_shoulder_left_angle = pose.rear_left.shoulder_angle
-        self.rear_leg_left_angle = pose.rear_left.leg_angle
-        self.rear_foot_left_angle = pose.rear_left.foot_angle
+        self._rear_shoulder_left.stage_angle(pose.rear_left.shoulder_angle)
+        self._rear_leg_left.stage_angle(pose.rear_left.leg_angle)
+        self._rear_foot_left.stage_angle(pose.rear_left.foot_angle)
 
-        self.rear_shoulder_right_angle = pose.rear_right.shoulder_angle
-        self.rear_leg_right_angle = pose.rear_right.leg_angle
-        self.rear_foot_right_angle = pose.rear_right.foot_angle
+        self._rear_shoulder_right.stage_angle(pose.rear_right.shoulder_angle)
+        self._rear_leg_right.stage_angle(pose.rear_right.leg_angle)
+        self._rear_foot_right.stage_angle(pose.rear_right.foot_angle)
 
-        self.front_shoulder_left_angle = pose.front_left.shoulder_angle
-        self.front_leg_left_angle = pose.front_left.leg_angle
-        self.front_foot_left_angle = pose.front_left.foot_angle
+        self._front_shoulder_left.stage_angle(pose.front_left.shoulder_angle)
+        self._front_leg_left.stage_angle(pose.front_left.leg_angle)
+        self._front_foot_left.stage_angle(pose.front_left.foot_angle)
 
-        self.front_shoulder_right_angle = pose.front_right.shoulder_angle
-        self.front_leg_right_angle = pose.front_right.leg_angle
-        self.front_foot_right_angle = pose.front_right.foot_angle
+        self._front_shoulder_right.stage_angle(pose.front_right.shoulder_angle)
+        self._front_leg_right.stage_angle(pose.front_right.leg_angle)
+        self._front_foot_right.stage_angle(pose.front_right.foot_angle)
+
+        self._is_dirty = True
 
     def set_front_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the front right leg.
@@ -133,9 +155,10 @@ class ServoService(metaclass=Singleton):
         shoulder_angle : float
             Servo angle for shoulder in degrees.
         """
-        self.front_shoulder_right_angle = shoulder_angle
-        self.front_leg_right_angle = leg_angle
-        self.front_foot_right_angle = foot_angle
+        self._front_shoulder_right.stage_angle(shoulder_angle)
+        self._front_leg_right.stage_angle(leg_angle)
+        self._front_foot_right.stage_angle(foot_angle)
+        self._is_dirty = True
 
     def set_front_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the front left leg.
@@ -149,9 +172,10 @@ class ServoService(metaclass=Singleton):
         shoulder_angle : float
             Servo angle for shoulder in degrees.
         """
-        self.front_shoulder_left_angle = shoulder_angle
-        self.front_leg_left_angle = leg_angle
-        self.front_foot_left_angle = foot_angle
+        self._front_shoulder_left.stage_angle(shoulder_angle)
+        self._front_leg_left.stage_angle(leg_angle)
+        self._front_foot_left.stage_angle(foot_angle)
+        self._is_dirty = True
 
     def set_rear_right_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the back right leg.
@@ -165,9 +189,10 @@ class ServoService(metaclass=Singleton):
         shoulder_angle : float
             Servo angle for shoulder in degrees.
         """
-        self.rear_shoulder_right_angle = shoulder_angle
-        self.rear_leg_right_angle = leg_angle
-        self.rear_foot_right_angle = foot_angle
+        self._rear_shoulder_right.stage_angle(shoulder_angle)
+        self._rear_leg_right.stage_angle(leg_angle)
+        self._rear_foot_right.stage_angle(foot_angle)
+        self._is_dirty = True
 
     def set_rear_left_servos(self, foot_angle: float, leg_angle: float, shoulder_angle: float):
         """Helper function for setting servo angles for the back left leg.
@@ -181,6 +206,115 @@ class ServoService(metaclass=Singleton):
         shoulder_angle : float
             Servo angle for shoulder in degrees.
         """
-        self.rear_shoulder_left_angle = shoulder_angle
-        self.rear_leg_left_angle = leg_angle
-        self.rear_foot_left_angle = foot_angle
+        self._rear_shoulder_left.stage_angle(shoulder_angle)
+        self._rear_leg_left.stage_angle(leg_angle)
+        self._rear_foot_left.stage_angle(foot_angle)
+        self._is_dirty = True
+
+    @property
+    def rear_shoulder_left(self) -> float:
+        return self._rear_shoulder_left.angle
+
+    @rear_shoulder_left.setter
+    def rear_shoulder_left(self, value: float):
+        self._rear_shoulder_left.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def rear_leg_left(self) -> float:
+        return self._rear_leg_left.angle
+
+    @rear_leg_left.setter
+    def rear_leg_left(self, value: float):
+        self._rear_leg_left.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def rear_foot_left(self) -> float:
+        return self._rear_foot_left.angle
+
+    @rear_foot_left.setter
+    def rear_foot_left(self, value: float):
+        self._rear_foot_left.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def rear_shoulder_right(self) -> float:
+        return self._rear_shoulder_right.angle
+
+    @rear_shoulder_right.setter
+    def rear_shoulder_right(self, value: float):
+        self._rear_shoulder_right.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def rear_leg_right(self) -> float:
+        return self._rear_leg_right.angle
+
+    @rear_leg_right.setter
+    def rear_leg_right(self, value: float):
+        self._rear_leg_right.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def rear_foot_right(self) -> float:
+        return self._rear_foot_right.angle
+
+    @rear_foot_right.setter
+    def rear_foot_right(self, value: float):
+        self._rear_foot_right.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def front_shoulder_left(self) -> float:
+        return self._front_shoulder_left.angle
+
+    @front_shoulder_left.setter
+    def front_shoulder_left(self, value: float):
+        self._front_shoulder_left.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def front_leg_left(self) -> float:
+        return self._front_leg_left.angle
+
+    @front_leg_left.setter
+    def front_leg_left(self, value: float):
+        self._front_leg_left.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def front_foot_left(self) -> float:
+        return self._front_foot_left.angle
+
+    @front_foot_left.setter
+    def front_foot_left(self, value: float):
+        self._front_foot_left.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def front_shoulder_right(self) -> float:
+        return self._front_shoulder_right.angle
+
+    @front_shoulder_right.setter
+    def front_shoulder_right(self, value: float):
+        self._front_shoulder_right.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def front_leg_right(self) -> float:
+        return self._front_leg_right.angle
+
+    @front_leg_right.setter
+    def front_leg_right(self, value: float):
+        self._front_leg_right.stage_angle(value)
+        self._is_dirty = True
+
+    @property
+    def front_foot_right(self) -> float:
+        return self._front_foot_right.angle
+
+    @front_foot_right.setter
+    def front_foot_right(self, value: float):
+        self._front_foot_right.stage_angle(value)
+        self._is_dirty = True

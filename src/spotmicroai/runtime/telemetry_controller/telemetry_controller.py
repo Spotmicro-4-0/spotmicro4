@@ -331,20 +331,37 @@ class TelemetryDisplay:
     def _controller_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
         events = telemetry_data.get("controller_events") or {}
 
-        lx = self._fmt_float(events.get("lx"), 2, signed=True)
-        ly = self._fmt_float(events.get("ly"), 2, signed=True)
-        rx = self._fmt_float(events.get("rz"), 2, signed=True)
-        ry = self._fmt_float(events.get("lz"), 2, signed=True)
-        hatx = self._fmt_int(events.get("hat0x"))
-        haty = self._fmt_int(events.get("hat0y"))
-        brake = self._fmt_float(events.get("brake"), 2)
-        gas = self._fmt_float(events.get("gas"), 2)
-        a_btn = self._fmt_bool(events.get("a"))
-        b_btn = self._fmt_bool(events.get("b"))
-        x_btn = self._fmt_bool(events.get("x"))
-        y_btn = self._fmt_bool(events.get("y"))
-        start = self._fmt_bool(events.get("start"))
-        back = self._fmt_bool(events.get("select"))
+        # Handle both ControllerEvent object and dict formats
+        # if hasattr(events, 'left_stick_x'):  # ControllerEvent object
+        lx = self._fmt_float(events.left_stick_x, 2, signed=True)
+        ly = self._fmt_float(events.left_stick_y, 2, signed=True)
+        rx = self._fmt_float(events.right_stick_x, 2, signed=True)
+        ry = self._fmt_float(events.right_stick_y, 2, signed=True)
+        hatx = self._fmt_int(events.dpad_horizontal)
+        haty = self._fmt_int(events.dpad_vertical)
+        brake = self._fmt_float(events.left_trigger, 2)
+        gas = self._fmt_float(events.right_trigger, 2)
+        a_btn = self._fmt_bool(events.a)
+        b_btn = self._fmt_bool(events.b)
+        x_btn = self._fmt_bool(events.x)
+        y_btn = self._fmt_bool(events.y)
+        start = self._fmt_bool(events.start)
+        back = self._fmt_bool(events.back)
+        # else:  # Fallback to dict access
+        #     lx = self._fmt_float(events.get("lx"), 2, signed=True)
+        #     ly = self._fmt_float(events.get("ly"), 2, signed=True)
+        #     rx = self._fmt_float(events.get("rz"), 2, signed=True)
+        #     ry = self._fmt_float(events.get("lz"), 2, signed=True)
+        #     hatx = self._fmt_int(events.get("hat0x"))
+        #     haty = self._fmt_int(events.get("hat0y"))
+        #     brake = self._fmt_float(events.get("brake"), 2)
+        #     gas = self._fmt_float(events.get("gas"), 2)
+        #     a_btn = self._fmt_bool(events.get("a"))
+        #     b_btn = self._fmt_bool(events.get("b"))
+        #     x_btn = self._fmt_bool(events.get("x"))
+        #     y_btn = self._fmt_bool(events.get("y"))
+        #     start = self._fmt_bool(events.get("start"))
+        #     back = self._fmt_bool(events.get("select"))
 
         return [
             f"  Left Stick  X:{lx}  Y:{ly}    Right Stick X:{rx}  Y:{ry}",

@@ -129,29 +129,29 @@ class TelemetryService(metaclass=Singleton):
             'cycle_index': cycle_index,
             'cycle_ratio': cycle_ratio,
             # Controller events
-            'controller_events': event if event else {},
+            'controller_events': event if event else ControllerEvent({}),
             # Leg positions (coordinates)
             'leg_positions': leg_positions if leg_positions else {},
             # Servo angles
-            'servo_angles': {},
+            'servos_angle': {},
         }
 
         # Collect servo angles if servo service is available
         if servo_service:
             try:
-                telemetry['servo_angles'] = {
-                    'front_shoulder_right': servo_service.front_shoulder_right_angle,
-                    'front_leg_right': servo_service.front_leg_right_angle,
-                    'front_foot_right': servo_service.front_foot_right_angle,
-                    'front_shoulder_left': servo_service.front_shoulder_left_angle,
-                    'front_leg_left': servo_service.front_leg_left_angle,
-                    'front_foot_left': servo_service.front_foot_left_angle,
-                    'rear_shoulder_right': servo_service.rear_shoulder_right_angle,
-                    'rear_leg_right': servo_service.rear_leg_right_angle,
-                    'rear_foot_right': servo_service.rear_foot_right_angle,
-                    'rear_shoulder_left': servo_service.rear_shoulder_left_angle,
-                    'rear_leg_left': servo_service.rear_leg_left_angle,
-                    'rear_foot_left': servo_service.rear_foot_left_angle,
+                telemetry['servos_angle'] = {
+                    'front_shoulder_right': servo_service.front_shoulder_right,
+                    'front_leg_right': servo_service.front_leg_right,
+                    'front_foot_right': servo_service.front_foot_right,
+                    'front_shoulder_left': servo_service.front_shoulder_left,
+                    'front_leg_left': servo_service.front_leg_left,
+                    'front_foot_left': servo_service.front_foot_left,
+                    'rear_shoulder_right': servo_service.rear_shoulder_right,
+                    'rear_leg_right': servo_service.rear_leg_right,
+                    'rear_foot_right': servo_service.rear_foot_right,
+                    'rear_shoulder_left': servo_service.rear_shoulder_left,
+                    'rear_leg_left': servo_service.rear_leg_left,
+                    'rear_foot_left': servo_service.rear_foot_left,
                 }
             except AttributeError:
                 # Servo service not fully initialized yet

@@ -61,6 +61,9 @@ class Servo:
         self._angle_range = abs(max_angle - min_angle)
         self._channel_index = getattr(pwm_channel, "_channel", None)
 
+        # Track staged pulse value (in microseconds) for batched writes
+        self._staged_pulse_us: float | None = None
+
         # Initialize Adafruit servo with absolute values for range
         self._servo = adafruit_servo.Servo(
             pwm_channel,
@@ -95,6 +98,16 @@ class Servo:
         pulse = self._angle_to_pulse(clamped_angle)
         # Set the pulse
         self.pulse = pulse
+
+    def stage_angle(self, value: float) -> None:
+        """
+        Stage a servo angle for batched commit without writing to hardware.
+
+        Args:
+            value: Target angle in degrees
+        """
+        clamped_angle = max(self._min_angle, min(self._max_angle, value))
+        self._staged_pulse_us = self._angle_to_pulse(clamped_angle)
 
     @property
     def pulse(self) -> float:
@@ -226,3 +239,31 @@ class Servo:
     def is_inverted(self) -> bool:
         """Get whether the servo is inverted or not."""
         return self._is_inverted
+
+    @property
+    def channel_index(self) -> int | None:
+        """Get the PCA9685 channel index for this servo."""
+        return self._channel_index
+
+    def get_staged_pulse_us(self) -> float:
+        """
+        Get the currently staged pulse width in microseconds.
+
+        Returns the staged value if set, otherwise falls back to current hardware pulse.
+
+        Returns:
+            Pulse width in microseconds
+        """
+        if self._staged_pulse_us is not None:
+            return self._staged_pulse_us
+        return self.pulse
+
+    def commit_staged(self) -> None:
+        """Write the staged pulse value to hardware and clear staging."""
+        if self._staged_pulse_us is not None:
+            self.pulse = self._staged_pulse_us
+            self._staged_pulse_us = None
+
+    def clear_staged(self) -> None:
+        """Clear the staged pulse value without writing to hardware."""
+        self._staged_pulse_us = None

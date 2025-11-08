@@ -5,7 +5,6 @@ import time
 
 from spotmicroai import labels
 import spotmicroai.constants as constants
-from spotmicroai.hardware.buzzer.buzzer import Buzzer
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
@@ -77,6 +76,9 @@ class MotionController(metaclass=Singleton):
         while True:
             frame_start = time.time()
 
+            # Get the frame duration for the current state
+            frame_duration = self._state_machine.get_frame_duration()
+
             t1 = time.time()
             event = self._get_controller_event()
             t2 = time.time()
@@ -91,7 +93,7 @@ class MotionController(metaclass=Singleton):
             t5 = time.time()
 
             elapsed_time = time.time() - frame_start
-            idle_time = constants.FRAME_DURATION - elapsed_time
+            idle_time = frame_duration - elapsed_time
 
             # Accumulate timing stats
             frame_count += 1
@@ -110,24 +112,25 @@ class MotionController(metaclass=Singleton):
                     f"commit={total_commit/frame_count*1000:.2f} "
                     f"total={(total_get_event+total_handle_event+total_update+total_commit)/frame_count*1000:.2f}"
                 )
-                print(avg_stats, flush=True)
+                log.debug(avg_stats)
 
-            if elapsed_time > constants.FRAME_DURATION:
-                Buzzer().stop()
+            if elapsed_time > frame_duration:
+                current_state = self._state_machine.current_state
                 breakdown = (
                     f"\n{'='*60}\n"
-                    f"Frame timing breakdown:\n"
+                    f"Frame timing breakdown (state: {current_state.value}):\n"
                     f"  get_event:     {(t2-t1)*1000:.2f}ms\n"
                     f"  handle_event:  {(t3-t2)*1000:.2f}ms\n"
                     f"  update:        {(t4-t3)*1000:.2f}ms\n"
                     f"  commit:        {(t5-t4)*1000:.2f}ms\n"
-                    f"  TOTAL:         {elapsed_time*1000:.2f}ms (target: {constants.FRAME_DURATION*1000:.2f}ms)\n"
+                    f"  TOTAL:         {elapsed_time*1000:.2f}ms (target: {frame_duration*1000:.2f}ms)\n"
                     f"{'='*60}"
                 )
                 print(breakdown, file=sys.stderr, flush=True)
                 log.error(breakdown)
                 raise RuntimeError(
-                    f"Frame execution exceeded duration: {elapsed_time:.4f}s > {constants.FRAME_DURATION}s"
+                    f"Frame execution exceeded duration in state {current_state.value}: "
+                    f"{elapsed_time:.4f}s > {frame_duration}s"
                 )
 
             self._publish_telemetry(event, elapsed_time, idle_time)
@@ -135,7 +138,9 @@ class MotionController(metaclass=Singleton):
 
     def _get_controller_event(self) -> ControllerEvent:
         try:
-            return self._motion_topic.get(block=False)
+            event = self._motion_topic.get(block=False)
+            log.debug(f"Controller event received: START={event.start}, BACK={event.back}, A={event.a}, B={event.b}")
+            return event
         except queue.Empty:
             return ControllerEvent({})
 

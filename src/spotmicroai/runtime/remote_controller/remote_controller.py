@@ -7,6 +7,7 @@ from spotmicroai.configuration._config_provider import ConfigProvider
 from spotmicroai.constants import DEVICE_SEARCH_INTERVAL, PUBLISH_RATE_HZ, READ_LOOP_SLEEP
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.singleton import Singleton
 
 from .remote_control_service import RemoteControlService
@@ -84,7 +85,7 @@ class RemoteControllerController(metaclass=Singleton):
                     if now - last_publish_time >= 1.0 / PUBLISH_RATE_HZ:
                         # Get current state and publish
                         current_state = self._remote_control_service.get_current_state()
-                        self._motion_topic.put(current_state)
+                        self._motion_topic.put(ControllerEvent(current_state))
                         last_publish_time = now
 
                     time.sleep(READ_LOOP_SLEEP)

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from spotmicroai import constants
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.motion_controller.models import ControllerEvent
 
@@ -15,6 +16,11 @@ class RobotStateName(Enum):
 
 class BaseRobotState(ABC):
     _log = Logger().setup_logger('BaseRobotState')
+
+    @property
+    def frame_duration(self) -> float:
+        """Return the frame duration for this state in seconds. Override in subclasses if different from default."""
+        return constants.FRAME_DURATION
 
     @abstractmethod
     def enter(self) -> None:

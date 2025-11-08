@@ -53,6 +53,16 @@ class PCA9685(metaclass=Singleton):
             self._pca9685.deinit()
             self._pca9685 = None
 
+    def is_active(self) -> bool:
+        """Check if the PCA9685 board is activated.
+
+        Returns
+        -------
+        bool
+            True if board is activated, False otherwise
+        """
+        return self._pca9685 is not None
+
     def get_channel(self, channel_index):
         """Get a PWM channel by index.
 
@@ -64,3 +74,56 @@ class PCA9685(metaclass=Singleton):
         if self._pca9685 is None:
             raise RuntimeError('PCA9685 board not activated')
         return self._pca9685.channels[channel_index]
+
+    def write_all_channels(self, pulse_widths_us: list[float]) -> None:
+        """Write all 16 channels in a single batched I²C transaction.
+
+        Uses the PCA9685 auto-increment feature to write all channel registers
+        (LED0_ON_L through LED15_OFF_H) in one contiguous write starting at
+        register 0x06. This reduces I²C overhead from 12-16 transactions to 1.
+
+        Parameters
+        ----------
+        pulse_widths_us : list[float]
+            List of 16 pulse widths in microseconds (one per channel).
+            Channels not in use should have neutral values (typically 1500µs).
+
+        Raises
+        ------
+        RuntimeError
+            If PCA9685 board not activated or invalid pulse count
+        """
+        if self._pca9685 is None:
+            raise RuntimeError('PCA9685 board not activated')
+
+        if len(pulse_widths_us) != 16:
+            raise ValueError(f'Expected 16 pulse widths, got {len(pulse_widths_us)}')
+
+        # Build 64-byte payload: 4 bytes per channel × 16 channels
+        # Each channel has: ON_L, ON_H, OFF_L, OFF_H
+        buffer = bytearray(64)
+
+        for channel_idx, pulse_us in enumerate(pulse_widths_us):
+            # Convert pulse width to 12-bit PWM count (0-4095)
+            # Standard servo frame = 20ms = 20000µs at 50Hz
+            # 12-bit range: 4096 steps
+            pwm_count = int((pulse_us / 20000.0) * 4095)
+
+            # Clamp to valid 12-bit range
+            pwm_count = max(0, min(4095, pwm_count))
+
+            # Standard servo timing: ON at count 0, OFF at calculated count
+            on_value = 0
+            off_value = pwm_count
+
+            # Pack into buffer: ON_L, ON_H, OFF_L, OFF_H
+            base_idx = channel_idx * 4
+            buffer[base_idx] = on_value & 0xFF
+            buffer[base_idx + 1] = (on_value >> 8) & 0xFF
+            buffer[base_idx + 2] = off_value & 0xFF
+            buffer[base_idx + 3] = (off_value >> 8) & 0xFF
+
+        # Write to register 0x06 (LED0_ON_L) with auto-increment
+        # The PCA9685 will auto-increment through all 64 registers
+        LED0_ON_L_REGISTER = 0x06
+        self._i2c.writeto(self._address, bytes([LED0_ON_L_REGISTER]) + buffer)

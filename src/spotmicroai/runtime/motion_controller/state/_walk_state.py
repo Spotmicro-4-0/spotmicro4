@@ -40,13 +40,18 @@ class WalkState(BaseRobotState):
         if not event:
             return None
 
+        self._log.debug(f"WalkState: event.start={event.start}, event.back={event.back}")
+
         if self._button_manager.check_edge(ControllerEventKey.START, event):
+            self._log.debug("WalkState: START pressed, transitioning to IDLE")
             return RobotStateName.IDLE
 
         if self._button_manager.check_edge(ControllerEventKey.BACK, event):
+            self._log.debug("WalkState: BACK pressed, transitioning to STAND")
             return RobotStateName.STAND
 
         if self._button_manager.check_edge(ControllerEventKey.DPAD_VERTICAL, event):
+            self._log.debug(f"WalkState: DPAD_VERTICAL pressed, value={event.dpad_vertical}")
             if event.dpad_vertical > 0:
                 self._keyframe_service.adjust_walking_speed(-1)
             else:

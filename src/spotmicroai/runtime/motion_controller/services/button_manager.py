@@ -2,6 +2,9 @@ from typing import Callable, Optional
 
 from spotmicroai.runtime.motion_controller.debounced_button import DebouncedButton
 from spotmicroai.runtime.motion_controller.models import ControllerEvent, ControllerEventKey
+from spotmicroai.logger import Logger
+
+log = Logger().setup_logger('ButtonManager')
 
 
 class ButtonManager:
@@ -124,16 +127,23 @@ class ButtonManager:
         # Get the attribute name from the key
         attr_name = self._KEY_TO_ATTR.get(key)
         if attr_name is None:
+            log.debug(f"check_edge: Key {key} not found in mapping")
             return False
 
         # Get current and previous values
         current_value = getattr(event, attr_name, 0)
         previous_value = self._previous_event.get(key, 0)
 
+        log.debug(f"check_edge: key={key}, attr={attr_name}, current={current_value}, prev={previous_value}")
+
         # Update previous event state
         self._previous_event[key] = current_value
 
-        return current_value != 0 and previous_value == 0
+        edge_detected = current_value != 0 and previous_value == 0
+        if edge_detected:
+            log.debug(f"check_edge: EDGE DETECTED for {key}")
+
+        return edge_detected
 
     def reset(self):
         """Reset all button states and previous event tracking."""

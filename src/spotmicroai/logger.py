@@ -31,7 +31,7 @@ class Logger(metaclass=Singleton):
         self.logging_file_handler.setFormatter(formatter)
         self.logging_stream_handler.setFormatter(formatter)
 
-    def setup_logger(self, logger_name=None, enable_stream_handler=False):
+    def setup_logger(self, logger_name=None, enable_stream_handler=True):
         """Set up a logger with the given name and return it.
 
         Args:

@@ -25,39 +25,47 @@ class StandState(BaseRobotState):
         if not event:
             return None
 
+        self._log.debug(
+            f"StandState: event.start={event.start}, event.back={event.back}, event.left_bumper={event.left_bumper}, event.right_bumper={event.right_bumper}"
+        )
+
         if self._button_manager.check_edge(ControllerEventKey.START, event):
+            self._log.debug("StandState: START pressed, transitioning to IDLE")
             return RobotStateName.IDLE
 
         if self._button_manager.check_edge(ControllerEventKey.BACK, event):
+            self._log.debug("StandState: BACK pressed, transitioning to WALK")
             return RobotStateName.WALK
 
         if self._button_manager.check_edge(ControllerEventKey.RIGHT_BUMPER, event):
+            self._log.debug("StandState: RIGHT_BUMPER pressed, next pose")
             next_pose = self._pose_service.next()
             self._servo_service.set_pose(next_pose)
 
         if self._button_manager.check_edge(ControllerEventKey.LEFT_BUMPER, event):
+            self._log.debug("StandState: LEFT_BUMPER pressed, previous pose")
             prev_pose = self._pose_service.previous()
             self._servo_service.set_pose(prev_pose)
 
-        if event.get(ControllerEventKey.DPAD_VERTICAL):
+        if event.dpad_vertical:
             self._body_move_pitch(event.dpad_vertical)
 
-        if event.get(ControllerEventKey.DPAD_HORIZONTAL):
+        if event.dpad_horizontal:
             self._body_move_roll(event.dpad_horizontal)
 
-        if event.get(ControllerEventKey.LEFT_STICK_Y):
+        if event.left_stick_y:
             self._body_move_pitch_analog(event.left_stick_y)
 
-        if event.get(ControllerEventKey.LEFT_STICK_X):
+        if event.left_stick_x:
             self._body_move_roll_analog(event.left_stick_x)
 
-        if event.get(ControllerEventKey.RIGHT_STICK_Y):
+        if event.right_stick_y:
             self._body_move_yaw_analog(event.right_stick_y)
 
-        if event.get(ControllerEventKey.RIGHT_STICK_X):
+        if event.right_stick_x:
             self._body_move_height_analog(event.right_stick_x)
 
-        if event.get(ControllerEventKey.A):
+        if event.a:
             self._servo_service.rest_position()
 
         return None
@@ -83,45 +91,29 @@ class StandState(BaseRobotState):
         leg_increment = 10 * scaled
         foot_increment = 15 * scaled
 
-        self._servo_service.rear_leg_left_angle += leg_increment
-        self._servo_service.rear_foot_left_angle -= foot_increment
-        self._servo_service.rear_leg_right_angle -= leg_increment
-        self._servo_service.rear_foot_right_angle += foot_increment
-        self._servo_service.front_leg_left_angle += leg_increment
-        self._servo_service.front_foot_left_angle -= foot_increment
-        self._servo_service.front_leg_right_angle -= leg_increment
-        self._servo_service.front_foot_right_angle += foot_increment
+        self._servo_service.rear_leg_left += leg_increment
+        self._servo_service.rear_foot_left -= foot_increment
+        self._servo_service.rear_leg_right -= leg_increment
+        self._servo_service.rear_foot_right += foot_increment
+        self._servo_service.front_leg_left += leg_increment
+        self._servo_service.front_foot_left -= foot_increment
+        self._servo_service.front_leg_right -= leg_increment
+        self._servo_service.front_foot_right += foot_increment
 
     def _body_move_roll(self, raw_value: float):
         increment = 1
 
         if raw_value < 0:
-            self._servo_service.rear_shoulder_left_angle = max(
-                self._servo_service.rear_shoulder_left_angle - increment, 0
-            )
-            self._servo_service.rear_shoulder_right_angle = max(
-                self._servo_service.rear_shoulder_right_angle - increment, 0
-            )
-            self._servo_service.front_shoulder_left_angle = min(
-                self._servo_service.front_shoulder_left_angle + increment, 180
-            )
-            self._servo_service.front_shoulder_right_angle = min(
-                self._servo_service.front_shoulder_right_angle + increment, 180
-            )
+            self._servo_service.rear_shoulder_left = max(self._servo_service.rear_shoulder_left - increment, 0)
+            self._servo_service.rear_shoulder_right = max(self._servo_service.rear_shoulder_right - increment, 0)
+            self._servo_service.front_shoulder_left = min(self._servo_service.front_shoulder_left + increment, 180)
+            self._servo_service.front_shoulder_right = min(self._servo_service.front_shoulder_right + increment, 180)
 
         elif raw_value > 0:
-            self._servo_service.rear_shoulder_left_angle = min(
-                self._servo_service.rear_shoulder_left_angle + increment, 180
-            )
-            self._servo_service.rear_shoulder_right_angle = min(
-                self._servo_service.rear_shoulder_right_angle + increment, 180
-            )
-            self._servo_service.front_shoulder_left_angle = max(
-                self._servo_service.front_shoulder_left_angle - increment, 0
-            )
-            self._servo_service.front_shoulder_right_angle = max(
-                self._servo_service.front_shoulder_right_angle - increment, 0
-            )
+            self._servo_service.rear_shoulder_left = min(self._servo_service.rear_shoulder_left + increment, 180)
+            self._servo_service.rear_shoulder_right = min(self._servo_service.rear_shoulder_right + increment, 180)
+            self._servo_service.front_shoulder_left = max(self._servo_service.front_shoulder_left - increment, 0)
+            self._servo_service.front_shoulder_right = max(self._servo_service.front_shoulder_right - increment, 0)
 
         else:
             self._servo_service.rest_position()
@@ -151,47 +143,47 @@ class StandState(BaseRobotState):
         leg_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), ANGLE_RANGES["leg"], mapped_input)
         foot_delta = self.maprange((-INPUT_SCALE, INPUT_SCALE), ANGLE_RANGES["foot"], mapped_input)
 
-        self._servo_service.front_leg_left_angle += leg_delta
-        self._servo_service.front_foot_left_angle += foot_delta
+        self._servo_service.front_leg_left += leg_delta
+        self._servo_service.front_foot_left += foot_delta
 
-        self._servo_service.front_leg_right_angle += leg_delta
-        self._servo_service.front_foot_right_angle += foot_delta
+        self._servo_service.front_leg_right += leg_delta
+        self._servo_service.front_foot_right += foot_delta
 
-        self._servo_service.rear_leg_left_angle += leg_delta
-        self._servo_service.rear_foot_left_angle += foot_delta
+        self._servo_service.rear_leg_left += leg_delta
+        self._servo_service.rear_foot_left += foot_delta
 
-        self._servo_service.rear_leg_right_angle += leg_delta
-        self._servo_service.rear_foot_right_angle += foot_delta
+        self._servo_service.rear_leg_right += leg_delta
+        self._servo_service.rear_foot_right += foot_delta
 
     def _body_move_roll_analog(self, raw_value: float):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.front_shoulder_left_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
-        self._servo_service.rear_shoulder_left_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.front_shoulder_left = int(self.maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_left = int(self.maprange((-5, 5), (145, 35), raw_value))
 
-        self._servo_service.front_shoulder_right_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
-        self._servo_service.rear_shoulder_right_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
+        self._servo_service.front_shoulder_right = int(self.maprange((-5, 5), (35, 145), raw_value))
+        self._servo_service.rear_shoulder_right = int(self.maprange((-5, 5), (35, 145), raw_value))
 
     def _body_move_yaw_analog(self, raw_value: float):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        self._servo_service.front_shoulder_left_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
-        self._servo_service.rear_shoulder_right_angle = int(self.maprange((-5, 5), (35, 145), raw_value))
+        self._servo_service.front_shoulder_left = int(self.maprange((-5, 5), (35, 145), raw_value))
+        self._servo_service.rear_shoulder_right = int(self.maprange((-5, 5), (35, 145), raw_value))
 
-        self._servo_service.front_shoulder_right_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
-        self._servo_service.rear_shoulder_left_angle = int(self.maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.front_shoulder_right = int(self.maprange((-5, 5), (145, 35), raw_value))
+        self._servo_service.rear_shoulder_left = int(self.maprange((-5, 5), (145, 35), raw_value))
 
     def _body_move_height_analog(self, raw_value: float):
         raw_value = math.floor(raw_value * 10 / 2)
 
-        for name in ["front_leg_left_angle", "rear_leg_left_angle", "front_leg_right_angle", "rear_leg_right_angle"]:
+        for name in ["front_leg_left", "rear_leg_left", "front_leg_right", "rear_leg_right"]:
             setattr(self._servo_service, name, int(self.maprange((-5, 5), (180, 20), raw_value)))
 
         for name in [
-            "front_foot_left_angle",
-            "rear_foot_left_angle",
-            "front_foot_right_angle",
-            "rear_foot_right_angle",
+            "front_foot_left",
+            "rear_foot_left",
+            "front_foot_right",
+            "rear_foot_right",
         ]:
             setattr(self._servo_service, name, int(self.maprange((-5, 5), (130, 170), raw_value)))
 
