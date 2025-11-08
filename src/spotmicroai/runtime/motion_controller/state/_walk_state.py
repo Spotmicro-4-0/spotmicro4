@@ -2,7 +2,7 @@ from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
 from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.runtime.motion_controller.services import ButtonManager, KeyframeService
-from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotState
+from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotStateName
 
 
 class WalkState(BaseRobotState):
@@ -36,15 +36,15 @@ class WalkState(BaseRobotState):
             pose.rear_right.foot_angle, pose.rear_right.leg_angle, pose.rear_right.shoulder_angle
         )
 
-    def handle_event(self, event: ControllerEvent) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotStateName | None:
         if not event:
             return None
 
         if self._button_manager.check_edge(ControllerEventKey.START, event):
-            return RobotState.IDLE
+            return RobotStateName.IDLE
 
         if self._button_manager.check_edge(ControllerEventKey.BACK, event):
-            return RobotState.STAND
+            return RobotStateName.STAND
 
         if self._button_manager.check_edge(ControllerEventKey.DPAD_VERTICAL, event):
             if event.dpad_vertical > 0:

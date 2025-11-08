@@ -5,7 +5,7 @@ from spotmicroai.logger import Logger
 from spotmicroai.runtime.motion_controller.models import ControllerEvent
 
 
-class RobotState(Enum):
+class RobotStateName(Enum):
     IDLE = 'idle'
     STAND = 'stand'
     WALK = 'walk'
@@ -14,7 +14,7 @@ class RobotState(Enum):
 
 
 class BaseRobotState(ABC):
-    _log = Logger().setup_logger('RobotState')
+    _log = Logger().setup_logger('BaseRobotState')
 
     @abstractmethod
     def enter(self) -> None:
@@ -25,7 +25,7 @@ class BaseRobotState(ABC):
         pass
 
     @abstractmethod
-    def handle_event(self, event: ControllerEvent) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotStateName | None:
         pass
 
     @abstractmethod

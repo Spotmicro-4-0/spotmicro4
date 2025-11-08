@@ -1,6 +1,6 @@
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.motion_controller.models import ControllerEvent
-from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotState
+from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotStateName
 from spotmicroai.runtime.motion_controller.state._idle_state import IdleState
 from spotmicroai.runtime.motion_controller.state._stand_state import StandState
 from spotmicroai.runtime.motion_controller.state._walk_state import WalkState
@@ -12,23 +12,23 @@ log = Logger().setup_logger('StateMachine')
 class StateMachine:
 
     def __init__(self):
-        self._states: dict[RobotState, BaseRobotState] = {
-            RobotState.IDLE: IdleState(),
-            RobotState.TRANSIT_IDLE: TransitIdleState(),
-            RobotState.STAND: StandState(),
-            RobotState.TRANSIT_STAND: TransitStandState(),
-            RobotState.WALK: WalkState(),
+        self._states: dict[RobotStateName, BaseRobotState] = {
+            RobotStateName.IDLE: IdleState(),
+            RobotStateName.TRANSIT_IDLE: TransitIdleState(),
+            RobotStateName.STAND: StandState(),
+            RobotStateName.TRANSIT_STAND: TransitStandState(),
+            RobotStateName.WALK: WalkState(),
         }
 
-        self._current_state: RobotState = RobotState.IDLE
+        self._current_state: RobotStateName = RobotStateName.IDLE
         self._states[self._current_state].enter()
 
     @property
-    def current_state(self) -> RobotState:
+    def current_state(self) -> RobotStateName:
         return self._current_state
 
     def is_idle(self) -> bool:
-        return self._current_state == RobotState.IDLE
+        return self._current_state == RobotStateName.IDLE
 
     def update(self) -> None:
         self._states[self._current_state].update()
@@ -38,7 +38,7 @@ class StateMachine:
         if next_state:
             self._transition_to(next_state)
 
-    def _transition_to(self, new_state: RobotState) -> None:
+    def _transition_to(self, new_state: RobotStateName) -> None:
         if new_state == self._current_state:
             return
 
