@@ -74,25 +74,25 @@ class WalkState(BaseRobotState):
             else:
                 self._keyframe_service.adjust_walking_speed(1)
 
-        if event.get(ControllerEventKey.LEFT_STICK_Y):
+        if event.left_stick_y:
             self._keyframe_service.set_forward_factor(event.left_stick_y)
 
-        if event.get(ControllerEventKey.LEFT_STICK_X):
+        if event.left_stick_x:
             self._keyframe_service.set_rotation_factor(event.left_stick_x)
 
-        if event.get(ControllerEventKey.LEFT_STICK_CLICK):
+        if event.left_stick_click:
             self._keyframe_service.reset_movement()
 
-        if event.get(ControllerEventKey.RIGHT_STICK_Y):
+        if event.right_stick_y:
             self._keyframe_service.set_lean(event.right_stick_y)
 
-        if event.get(ControllerEventKey.RIGHT_STICK_X):
+        if event.right_stick_y:
             self._keyframe_service.set_height_offset(event.right_stick_x)
 
-        if event.get(ControllerEventKey.RIGHT_STICK_CLICK):
+        if event.right_stick_click:
             self._keyframe_service.reset_body_adjustments()
 
-        if event.get(ControllerEventKey.A):
+        if event.a:
             self._servo_service.rest_position()
 
         return None
