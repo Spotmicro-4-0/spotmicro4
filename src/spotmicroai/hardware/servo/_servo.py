@@ -64,9 +64,9 @@ class Servo:
         # Initialize Adafruit servo with absolute values for range
         self._servo = adafruit_servo.Servo(
             pwm_channel,
-            min_pulse=min(min_pulse, max_pulse),
-            max_pulse=max(min_pulse, max_pulse),
-            actuation_range=self._angle_range,
+            min_pulse=int(min(min_pulse, max_pulse)),
+            max_pulse=int(max(min_pulse, max_pulse)),
+            actuation_range=int(self._angle_range),
         )
 
         # Initialize with rest angle
@@ -173,7 +173,7 @@ class Servo:
         self._pulse_range = abs(max_pulse - min_pulse)
 
         # Update Adafruit servo with new calibration
-        self._servo.set_pulse_width_range(min(min_pulse, max_pulse), max(min_pulse, max_pulse))
+        self._servo.set_pulse_width_range(int(min(min_pulse, max_pulse)), int(max(min_pulse, max_pulse)))
         self._servo.actuation_range = new_range
 
         self.angle = self._rest_angle
