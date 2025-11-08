@@ -1,7 +1,7 @@
 from typing import Callable, Optional
 
 from spotmicroai.runtime.motion_controller.debounced_button import DebouncedButton
-from spotmicroai.runtime.motion_controller.models import ControllerEvent
+from spotmicroai.runtime.motion_controller.models import ControllerEvent, ControllerEventKey
 
 
 class ButtonManager:
@@ -11,6 +11,28 @@ class ButtonManager:
     This class tracks button states across frames to detect button press events
     (transition from not pressed to pressed) and enforces debouncing per button.
     """
+
+    # Mapping from ControllerEventKey enum to ControllerEvent attribute names
+    _KEY_TO_ATTR = {
+        ControllerEventKey.LEFT_STICK_X: "left_stick_x",
+        ControllerEventKey.LEFT_STICK_Y: "left_stick_y",
+        ControllerEventKey.RIGHT_STICK_X: "right_stick_x",
+        ControllerEventKey.RIGHT_STICK_Y: "right_stick_y",
+        ControllerEventKey.RIGHT_TRIGGER: "right_trigger",
+        ControllerEventKey.LEFT_TRIGGER: "left_trigger",
+        ControllerEventKey.DPAD_HORIZONTAL: "dpad_horizontal",
+        ControllerEventKey.DPAD_VERTICAL: "dpad_vertical",
+        ControllerEventKey.A: "a",
+        ControllerEventKey.B: "b",
+        ControllerEventKey.X: "x",
+        ControllerEventKey.Y: "y",
+        ControllerEventKey.LEFT_BUMPER: "left_bumper",
+        ControllerEventKey.RIGHT_BUMPER: "right_bumper",
+        ControllerEventKey.BACK: "back",
+        ControllerEventKey.START: "start",
+        ControllerEventKey.LEFT_STICK_CLICK: "left_stick_click",
+        ControllerEventKey.RIGHT_STICK_CLICK: "right_stick_click",
+    }
 
     def __init__(self):
         """Initialize the button manager."""
@@ -81,7 +103,7 @@ class ButtonManager:
             return self._buttons[key].update(event)
         return False
 
-    def check_edge(self, key: str, event: ControllerEvent) -> bool:
+    def check_edge(self, key: ControllerEventKey, event: ControllerEvent) -> bool:
         """
         Check if a button/key transitioned from 0 to non-zero (edge detection).
 
@@ -89,17 +111,23 @@ class ButtonManager:
 
         Parameters
         ----------
-        key : str
+        key : ControllerEventKey
             The event key to check
-        event : dict
-            The current event dictionary
+        event : ControllerEvent
+            The current event object
 
         Returns
         -------
         bool
             True if the key transitioned from 0 to non-zero
         """
-        current_value = event.get(key, 0)
+        # Get the attribute name from the key
+        attr_name = self._KEY_TO_ATTR.get(key)
+        if attr_name is None:
+            return False
+
+        # Get current and previous values
+        current_value = getattr(event, attr_name, 0)
         previous_value = self._previous_event.get(key, 0)
 
         # Update previous event state
