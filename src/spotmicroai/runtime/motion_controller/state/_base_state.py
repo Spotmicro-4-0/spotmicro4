@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from spotmicroai.logger import Logger
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 
 
 class RobotState(Enum):
@@ -24,7 +25,7 @@ class BaseRobotState(ABC):
         pass
 
     @abstractmethod
-    def handle_event(self, event: dict) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotState | None:
         pass
 
     @abstractmethod

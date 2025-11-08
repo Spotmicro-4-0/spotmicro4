@@ -9,6 +9,7 @@ from spotmicroai.hardware.buzzer.buzzer import Buzzer
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
+from spotmicroai.runtime.motion_controller.models.controller_event import ControllerEvent
 from spotmicroai.runtime.motion_controller.services import TelemetryService
 from spotmicroai.runtime.motion_controller.state.state_machine import StateMachine
 from spotmicroai.singleton import Singleton
@@ -132,13 +133,13 @@ class MotionController(metaclass=Singleton):
             self._publish_telemetry(event, elapsed_time, idle_time)
             self._sleep_until_next_frame(idle_time)
 
-    def _get_controller_event(self) -> dict:
+    def _get_controller_event(self) -> ControllerEvent:
         try:
             return self._motion_topic.get(block=False)
         except queue.Empty:
-            return {}
+            return ControllerEvent({})
 
-    def _publish_telemetry(self, event: dict, elapsed_time: float, idle_time: float) -> None:
+    def _publish_telemetry(self, event: ControllerEvent, elapsed_time: float, idle_time: float) -> None:
         loop_time_ms = elapsed_time * 1000
         idle_time_ms = idle_time * 1000
 

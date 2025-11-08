@@ -1,6 +1,7 @@
 import math
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.runtime.motion_controller.services import ButtonManager, PoseService
 from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotState
 
@@ -20,7 +21,7 @@ class StandState(BaseRobotState):
     def update(self) -> None:
         pass
 
-    def handle_event(self, event: dict) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotState | None:
         if not event:
             return None
 
@@ -39,22 +40,22 @@ class StandState(BaseRobotState):
             self._servo_service.set_pose(prev_pose)
 
         if event.get(ControllerEventKey.DPAD_VERTICAL):
-            self._body_move_pitch(event[ControllerEventKey.DPAD_VERTICAL])
+            self._body_move_pitch(event.dpad_vertical)
 
         if event.get(ControllerEventKey.DPAD_HORIZONTAL):
-            self._body_move_roll(event[ControllerEventKey.DPAD_HORIZONTAL])
+            self._body_move_roll(event.dpad_horizontal)
 
         if event.get(ControllerEventKey.LEFT_STICK_Y):
-            self._body_move_pitch_analog(event[ControllerEventKey.LEFT_STICK_Y])
+            self._body_move_pitch_analog(event.left_stick_y)
 
         if event.get(ControllerEventKey.LEFT_STICK_X):
-            self._body_move_roll_analog(event[ControllerEventKey.LEFT_STICK_X])
+            self._body_move_roll_analog(event.left_stick_x)
 
         if event.get(ControllerEventKey.RIGHT_STICK_Y):
-            self._body_move_yaw_analog(event[ControllerEventKey.RIGHT_STICK_Y])
+            self._body_move_yaw_analog(event.right_stick_y)
 
         if event.get(ControllerEventKey.RIGHT_STICK_X):
-            self._body_move_height_analog(event[ControllerEventKey.RIGHT_STICK_X])
+            self._body_move_height_analog(event.right_stick_x)
 
         if event.get(ControllerEventKey.A):
             self._servo_service.rest_position()

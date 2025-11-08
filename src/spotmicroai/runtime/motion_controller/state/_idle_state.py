@@ -1,5 +1,6 @@
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.runtime.motion_controller.services import ButtonManager
 from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotState
 
@@ -17,7 +18,7 @@ class IdleState(BaseRobotState):
     def update(self) -> None:
         pass
 
-    def handle_event(self, event: dict) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotState | None:
         if self._button_manager.check_edge(ControllerEventKey.START, event):
             return RobotState.STAND
         return None

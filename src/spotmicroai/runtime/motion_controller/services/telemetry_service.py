@@ -11,6 +11,7 @@ from spotmicroai import labels
 import spotmicroai.constants as constants
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import MessageBus
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.singleton import Singleton
 
 log = Logger().setup_logger('Telemetry Service')
@@ -35,7 +36,7 @@ class TelemetryService(metaclass=Singleton):
 
     def publish(
         self,
-        event: Dict,
+        event: ControllerEvent,
         loop_time_ms: float,
         idle_time_ms: float,
         cycle_index: Optional[int] = None,
@@ -46,7 +47,7 @@ class TelemetryService(metaclass=Singleton):
 
         Parameters
         ----------
-        event : Dict
+        event : ControllerEvent
             Current controller event data.
         loop_time_ms : float
             Time taken for the current loop iteration in milliseconds.
@@ -85,7 +86,7 @@ class TelemetryService(metaclass=Singleton):
 
     def _collect(
         self,
-        event: Dict,
+        event: ControllerEvent,
         loop_time_ms: float,
         idle_time_ms: float,
         cycle_index: Optional[int],

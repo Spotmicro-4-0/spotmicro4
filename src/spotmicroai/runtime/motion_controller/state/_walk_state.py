@@ -1,5 +1,6 @@
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.runtime.motion_controller.services import ButtonManager, KeyframeService
 from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotState
 
@@ -35,7 +36,7 @@ class WalkState(BaseRobotState):
             pose.rear_right.foot_angle, pose.rear_right.leg_angle, pose.rear_right.shoulder_angle
         )
 
-    def handle_event(self, event: dict) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotState | None:
         if not event:
             return None
 
@@ -46,25 +47,25 @@ class WalkState(BaseRobotState):
             return RobotState.STAND
 
         if self._button_manager.check_edge(ControllerEventKey.DPAD_VERTICAL, event):
-            if event[ControllerEventKey.DPAD_VERTICAL] > 0:
+            if event.dpad_vertical > 0:
                 self._keyframe_service.adjust_walking_speed(-1)
             else:
                 self._keyframe_service.adjust_walking_speed(1)
 
         if event.get(ControllerEventKey.LEFT_STICK_Y):
-            self._keyframe_service.set_forward_factor(event[ControllerEventKey.LEFT_STICK_Y])
+            self._keyframe_service.set_forward_factor(event.left_stick_y)
 
         if event.get(ControllerEventKey.LEFT_STICK_X):
-            self._keyframe_service.set_rotation_factor(event[ControllerEventKey.LEFT_STICK_X])
+            self._keyframe_service.set_rotation_factor(event.left_stick_x)
 
         if event.get(ControllerEventKey.LEFT_STICK_CLICK):
             self._keyframe_service.reset_movement()
 
         if event.get(ControllerEventKey.RIGHT_STICK_Y):
-            self._keyframe_service.set_lean(event[ControllerEventKey.RIGHT_STICK_Y])
+            self._keyframe_service.set_lean(event.right_stick_y)
 
         if event.get(ControllerEventKey.RIGHT_STICK_X):
-            self._keyframe_service.set_height_offset(event[ControllerEventKey.RIGHT_STICK_X])
+            self._keyframe_service.set_height_offset(event.right_stick_x)
 
         if event.get(ControllerEventKey.RIGHT_STICK_CLICK):
             self._keyframe_service.reset_body_adjustments()
@@ -76,4 +77,3 @@ class WalkState(BaseRobotState):
 
     def exit(self) -> None:
         self._log.debug('Exiting WALK state')
-

@@ -1,3 +1,4 @@
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotState
 
 
@@ -9,7 +10,7 @@ class TransitIdleState(BaseRobotState):
     def update(self) -> None:
         pass
 
-    def handle_event(self, event: dict) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotState | None:
         return None
 
     def exit(self) -> None:
@@ -24,7 +25,7 @@ class TransitStandState(BaseRobotState):
     def update(self) -> None:
         pass
 
-    def handle_event(self, event: dict) -> RobotState | None:
+    def handle_event(self, event: ControllerEvent) -> RobotState | None:
         return None
 
     def exit(self) -> None:

@@ -1,6 +1,7 @@
 from typing import Callable, Optional
 
 from spotmicroai.runtime.motion_controller.debounced_button import DebouncedButton
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 
 
 class ButtonManager:
@@ -80,7 +81,7 @@ class ButtonManager:
             return self._buttons[key].update(event)
         return False
 
-    def check_edge(self, key: str, event: dict) -> bool:
+    def check_edge(self, key: str, event: ControllerEvent) -> bool:
         """
         Check if a button/key transitioned from 0 to non-zero (edge detection).
 

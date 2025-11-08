@@ -1,4 +1,5 @@
 from spotmicroai.logger import Logger
+from spotmicroai.runtime.motion_controller.models import ControllerEvent
 from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotState
 from spotmicroai.runtime.motion_controller.state._idle_state import IdleState
 from spotmicroai.runtime.motion_controller.state._stand_state import StandState
@@ -32,7 +33,7 @@ class StateMachine:
     def update(self) -> None:
         self._states[self._current_state].update()
 
-    def handle_event(self, event: dict) -> None:
+    def handle_event(self, event: ControllerEvent) -> None:
         next_state = self._states[self._current_state].handle_event(event)
         if next_state:
             self._transition_to(next_state)
