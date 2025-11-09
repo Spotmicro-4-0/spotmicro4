@@ -22,9 +22,7 @@ class DebouncedButton:
         Callback function to execute when button is pressed
     """
 
-    def __init__(
-        self, key: str, debounce_time: float = constants.DEFAULT_DEBOUNCE_TIME, on_press: Optional[Callable] = None
-    ):
+    def __init__(self, debounce_time: float = constants.DEFAULT_DEBOUNCE_TIME, on_press: Optional[Callable] = None):
         """
         Initialize a debounced button.
 
@@ -37,13 +35,13 @@ class DebouncedButton:
         on_press : Optional[Callable]
             Callback function to execute when button is pressed
         """
-        self.key = key
         self.debounce_time = debounce_time
         self.on_press = on_press
         self._last_trigger_time = 0.0
         self._previous_value = 0.0
+        self._is_pressed = False
 
-    def update(self, event: dict) -> bool:
+    def update(self, current_value: bool) -> None:
         """
         Update button state and check if it was pressed.
 
@@ -57,15 +55,13 @@ class DebouncedButton:
         bool
             True if button was pressed and debounce time has passed, False otherwise
         """
-        current_value = event.get(self.key, 0)
-
         # Check if button was just pressed (transition from 0 to non-zero)
-        is_pressed = current_value != 0 and self._previous_value == 0
+        self._is_pressed = current_value != 0 and self._previous_value == 0
 
         # Update previous value for next check
         self._previous_value = current_value
 
-        if is_pressed:
+        if self._is_pressed:
             # Check debounce timing
             current_time = time.time()
             if current_time - self._last_trigger_time >= self.debounce_time:
@@ -75,11 +71,11 @@ class DebouncedButton:
                 if self.on_press:
                     self.on_press()
 
-                return True
-
-        return False
-
     def reset(self):
         """Reset the button state and debounce timer."""
         self._last_trigger_time = 0
         self._previous_value = 0
+
+    @property
+    def value(self):
+        return self._is_pressed

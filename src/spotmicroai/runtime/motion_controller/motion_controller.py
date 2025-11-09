@@ -8,9 +8,10 @@ from spotmicroai import labels
 import spotmicroai.constants as constants
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
+from spotmicroai.runtime.controller_event import ControllerEvent
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
-from spotmicroai.runtime.motion_controller.models import ControllerEventKey
-from spotmicroai.runtime.motion_controller.services import ButtonManager, KeyframeService, PoseService, TelemetryService
+from spotmicroai.runtime.motion_controller.filtered_controller_event import FilteredControllerEvent
+from spotmicroai.runtime.motion_controller.services import KeyframeService, PoseService, TelemetryService
 from spotmicroai.singleton import Singleton
 
 log = Logger().setup_logger('Motion controller')
@@ -24,7 +25,7 @@ class MotionController(metaclass=Singleton):
 
     _servo_service: ServoService
     _pose_service: PoseService
-    _button_manager: ButtonManager
+    _filtered_controller_event: FilteredControllerEvent
 
     _is_activated = False
     _is_running = False
@@ -45,13 +46,7 @@ class MotionController(metaclass=Singleton):
             self._servo_service = ServoService()
             self._pose_service = PoseService()
             self._keyframe_service = KeyframeService()
-            self._button_manager = ButtonManager()
-
-            # # Register buttons that need debouncing
-            # START button - toggle activation on/off (1 second debounce)
-            # self._button_manager.register_button(ControllerEvent.START, on_press=self._handle_start_button_toggle)
-            # BACK button - toggle walking mode on/off (1 second debounce)
-            # self._button_manager.register_button(ControllerEvent.BACK, debounce_time=1.0)
+            self._filtered_controller_event = FilteredControllerEvent()
 
             # Initialize telemetry system
             self._telemetry_service = TelemetryService(self)
@@ -99,7 +94,8 @@ class MotionController(metaclass=Singleton):
         # State Variables
         inactivity_counter = time.time()
 
-        event = {}
+        raw_event: ControllerEvent | None = None
+        self._filtered_controller_event = FilteredControllerEvent()
 
         # Telemetry variables
         cycle_index = None
@@ -115,19 +111,29 @@ class MotionController(metaclass=Singleton):
             frame_start = time.time()
 
             try:
-                event = self._motion_topic.get(block=False)
+                raw_event = self._motion_topic.get(block=False)
             except queue.Empty:
-                event = {}
+                raw_event = None
+
+            # Filter the raw event through debouncing and smoothing
+            if raw_event is not None:
+                self._filtered_controller_event.update(raw_event)
 
             # Handle START button with debouncing
-            if self._button_manager.check_edge(ControllerEventKey.START, event):
+            if self._filtered_controller_event.start:
                 inactivity_counter = self._handle_start_button_toggle(inactivity_counter)
 
             if not self._is_activated:
                 time.sleep(0.1)
                 continue
 
-            if event == {}:
+            # Get filtered event reference for cleaner code
+            filtered_event = self._filtered_controller_event
+
+            # Check if there's any user input activity
+            has_input = filtered_event.has_activity()
+
+            if not has_input:
                 # if there is no user input, check to see if it have been long enough to warn the user
                 if (time.time() - inactivity_counter) >= constants.INACTIVITY_TIME:
                     log.info(labels.MOTION_INACTIVITY_WARNING.format(constants.INACTIVITY_TIME))
@@ -153,104 +159,103 @@ class MotionController(metaclass=Singleton):
                     cycle_ratio = None
                     leg_positions = None
 
-                if event[ControllerEventKey.A]:
+                if filtered_event.a:
                     self._is_running = False
                     self._servo_service.rest_position()
 
                 # Handle cases when robot is running
                 if self._is_running:
                     # Right Trigger
-                    # if self.check_event(ControllerEvent.RIGHT_TRIGGER, event, prev_event):
+                    # if filtered_event.right_trigger:
                     # Left Trigger
-                    # if self.check_event(ControllerEvent.LEFT_TRIGGER, event, prev_event):
+                    # if filtered_event.left_trigger:
 
-                    if self._button_manager.check_edge(ControllerEventKey.Y, event):
+                    if filtered_event.y:
                         pass
 
-                    if self._button_manager.check_edge(ControllerEventKey.B, event):
+                    if filtered_event.b:
                         pass
 
-                    if self._button_manager.check_edge(ControllerEventKey.X, event):
+                    if filtered_event.x:
                         pass
 
                     # D-Pad Left/Right
-                    if self._button_manager.check_edge(ControllerEventKey.DPAD_HORIZONTAL, event):
+                    if filtered_event.dpad_horizontal != 0:
                         pass
                     # D-Pad Up/Down
-                    if self._button_manager.check_edge(ControllerEventKey.DPAD_VERTICAL, event):
-                        if event[ControllerEventKey.DPAD_VERTICAL] > 0:
+                    if filtered_event.dpad_vertical != 0:
+                        if filtered_event.dpad_vertical > 0:
                             self._keyframe_service.adjust_walking_speed(-1)
                         else:
                             self._keyframe_service.adjust_walking_speed(1)
 
                     # Left Thumbstick Up/Down
-                    if event[ControllerEventKey.LEFT_STICK_Y]:
-                        self._keyframe_service.set_forward_factor(event[ControllerEventKey.LEFT_STICK_Y])
+                    if filtered_event.left_stick_y != 0:
+                        self._keyframe_service.set_forward_factor(filtered_event.left_stick_y)
 
                     # Left Thumbstick Left/Right
-                    if event[ControllerEventKey.LEFT_STICK_X]:
-                        self._keyframe_service.set_rotation_factor(event[ControllerEventKey.LEFT_STICK_X])
+                    if filtered_event.left_stick_x != 0:
+                        self._keyframe_service.set_rotation_factor(filtered_event.left_stick_x)
 
                     # Left Thumbstick Click
-                    if event[ControllerEventKey.LEFT_STICK_CLICK]:
+                    if filtered_event.left_stick_click:
                         self._keyframe_service.reset_movement()
 
                     # Right Thumbstick Up/Down
-                    if event[ControllerEventKey.RIGHT_STICK_Y]:
-                        self._keyframe_service.set_lean(event[ControllerEventKey.RIGHT_STICK_Y])
+                    if filtered_event.right_stick_y != 0:
+                        self._keyframe_service.set_lean(filtered_event.right_stick_y)
                     # Right Thumbstick Left/Right
-                    if event[ControllerEventKey.RIGHT_STICK_X]:
-                        self._keyframe_service.set_height_offset(event[ControllerEventKey.RIGHT_STICK_X])
-                        # self.set_lean(event[ControllerEvent.RIGHT_STICK_X])
+                    if filtered_event.right_stick_x != 0:
+                        self._keyframe_service.set_height_offset(filtered_event.right_stick_x)
                     # Right Thumbstick Click
-                    if event[ControllerEventKey.RIGHT_STICK_CLICK]:
+                    if filtered_event.right_stick_click:
                         self._keyframe_service.reset_body_adjustments()
                 else:
                     # Right Bumper
-                    if self._button_manager.check_edge(ControllerEventKey.RIGHT_BUMPER, event):
+                    if filtered_event.right_bumper:
                         # Next Pose
                         time.sleep(0.5)
                         next_pose = self._pose_service.next()
                         self._servo_service.set_pose(next_pose)
                     # Left Bumper
-                    if self._button_manager.check_edge(ControllerEventKey.LEFT_BUMPER, event):
+                    if filtered_event.left_bumper:
                         # Prev Pose
                         time.sleep(0.5)
                         prev_pose = self._pose_service.previous()
                         self._servo_service.set_pose(prev_pose)
 
-                    if event[ControllerEventKey.DPAD_VERTICAL]:
-                        self.body_move_pitch(event[ControllerEventKey.DPAD_VERTICAL])
+                    if filtered_event.dpad_vertical != 0:
+                        self.body_move_pitch(filtered_event.dpad_vertical)
 
-                    if event[ControllerEventKey.DPAD_HORIZONTAL]:
-                        self.body_move_roll(event[ControllerEventKey.DPAD_HORIZONTAL])
+                    if filtered_event.dpad_horizontal != 0:
+                        self.body_move_roll(filtered_event.dpad_horizontal)
 
-                    if event[ControllerEventKey.LEFT_STICK_Y]:
-                        self.body_move_pitch_analog(event[ControllerEventKey.LEFT_STICK_Y])
+                    if filtered_event.left_stick_y != 0:
+                        self.body_move_pitch_analog(filtered_event.left_stick_y)
 
-                    if event[ControllerEventKey.LEFT_STICK_X]:
-                        self.body_move_roll_analog(event[ControllerEventKey.LEFT_STICK_X])
+                    if filtered_event.left_stick_x != 0:
+                        self.body_move_roll_analog(filtered_event.left_stick_x)
 
-                    if event[ControllerEventKey.RIGHT_STICK_Y]:
-                        self.body_move_yaw_analog(event[ControllerEventKey.RIGHT_STICK_Y])
+                    if filtered_event.right_stick_y != 0:
+                        self.body_move_yaw_analog(filtered_event.right_stick_y)
 
-                    if event[ControllerEventKey.RIGHT_STICK_X]:
-                        self.body_move_height_analog(event[ControllerEventKey.RIGHT_STICK_X])
+                    if filtered_event.right_stick_x != 0:
+                        self.body_move_height_analog(filtered_event.right_stick_x)
 
-                    # if event[ControllerEvent.Y]:
+                    # if filtered_event.y:
                     #     self.standing_position()
 
-                    # if event[ControllerEvent.B]:
+                    # if filtered_event.b:
                     #     self.handle_instinct(self._instincts['pushUp'])
 
-                    # if event[ControllerEvent.X]:
+                    # if filtered_event.x:
                     #     self.handle_instinct(self._instincts['sit'])
 
-                    # if event[ControllerEvent.Y]:
+                    # if filtered_event.y:
                     #     self.handle_instinct(self._instincts['sleep'])
 
                 # Handle BACK button (walking toggle) with debouncing
-                if self._button_manager.check_edge(ControllerEventKey.BACK, event):
+                if filtered_event.back:
                     self._is_running = not self._is_running
                     if self._is_running:
                         # Reset walking state when starting to walk
@@ -275,7 +280,7 @@ class MotionController(metaclass=Singleton):
                 telemetry_update_counter = 0
                 try:
                     telemetry_data = self._telemetry_service.collect(
-                        event=event,
+                        event=filtered_event.value if has_input else None,
                         loop_time_ms=loop_time_ms,
                         idle_time_ms=idle_time_ms,
                         cycle_index=cycle_index,

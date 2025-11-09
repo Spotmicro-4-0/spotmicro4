@@ -9,13 +9,14 @@ import queue
 import signal
 import sys
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from spotmicroai import labels
 from spotmicroai.logger import Logger
 from spotmicroai.runtime.messaging import MessageBus
+from spotmicroai.runtime.motion_controller.models.telemetry_data import TelemetryData
 from spotmicroai.singleton import Singleton
-from spotmicroai.spot_config.ui import theme as THEME, ui_utils
+from spotmicroai.spot_config.ui import ui_utils, theme as THEME
 
 log = Logger().setup_logger('Telemetry controller')
 
@@ -36,7 +37,7 @@ class TelemetryController(metaclass=Singleton):
             self._display = TelemetryDisplay()
             self._display.initialize()
 
-            self._latest_payload: Dict[str, Any] = {}
+            self._latest_payload: TelemetryData | None = None
             self._last_render_ts = 0.0
             self._is_alive = True
 
@@ -61,7 +62,7 @@ class TelemetryController(metaclass=Singleton):
         while True:
             try:
                 payload = self._telemetry_topic.get(timeout=self._render_interval)
-                if isinstance(payload, dict):
+                if isinstance(payload, TelemetryData):
                     self._latest_payload = payload
                 else:
                     log.debug(labels.TELEMETRY_UNEXPECTED_TYPE.format(type(payload)))
@@ -73,7 +74,7 @@ class TelemetryController(metaclass=Singleton):
                 time.sleep(self._render_interval)
                 continue
 
-            if not self._latest_payload:
+            if self._latest_payload is None:
                 continue
 
             now = time.time()
@@ -102,7 +103,7 @@ class TelemetryDisplay:
     PREFERRED_WIDTH: int = 96
 
     def __init__(self) -> None:
-        self._stdscr: Optional[Any] = None
+        self._stdscr: Any | None = None
         self._initialized = False
         self._text_mode = curses is None
         self._timestamp_format = "%Y-%m-%d %H:%M:%S"
@@ -174,7 +175,7 @@ class TelemetryDisplay:
         self._stdscr = None
         self._initialized = False
 
-    def update(self, telemetry_data: Dict[str, Any]) -> None:
+    def update(self, telemetry_data: TelemetryData) -> None:
         """Render fresh telemetry values."""
         if not self._initialized:
             self.initialize()
@@ -192,7 +193,7 @@ class TelemetryDisplay:
     # --------------------------------------------------------------------- #
     # Rendering helpers
     # --------------------------------------------------------------------- #
-    def _render_curses(self, telemetry_data: Dict[str, Any]) -> None:
+    def _render_curses(self, telemetry_data: TelemetryData) -> None:
         if self._stdscr is None or curses is None:
             return
 
@@ -239,7 +240,7 @@ class TelemetryDisplay:
 
         stdscr.refresh()
 
-    def _render_plain_text(self, telemetry_data: Dict[str, Any]) -> None:
+    def _render_plain_text(self, telemetry_data: TelemetryData) -> None:
         """ANSI fallback for platforms without curses."""
         lines = [text for text, _ in self._build_content_lines(telemetry_data)]
         output = "\n".join(lines)
@@ -267,7 +268,7 @@ class TelemetryDisplay:
     # --------------------------------------------------------------------- #
     # Content assembly
     # --------------------------------------------------------------------- #
-    def _build_content_lines(self, telemetry_data: Dict[str, Any]) -> list[tuple[str, int]]:
+    def _build_content_lines(self, telemetry_data: TelemetryData) -> list[tuple[str, int]]:
         bold_attr = curses.A_BOLD if curses is not None and hasattr(curses, "A_BOLD") else 0
         dim_attr = curses.A_DIM if curses is not None and hasattr(curses, "A_DIM") else 0
 
@@ -300,27 +301,27 @@ class TelemetryDisplay:
         section.append(("", 0))
         return section
 
-    def _system_status_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
-        activated = self._fmt_bool(telemetry_data.get("is_activated"))
-        running = self._fmt_bool(telemetry_data.get("is_running"))
-        frame = self._fmt_float(telemetry_data.get("frame_rate"), 1)
-        loop = self._fmt_float(telemetry_data.get("loop_time_ms"), 1)
-        idle = self._fmt_float(telemetry_data.get("idle_time_ms"), 1)
+    def _system_status_lines(self, telemetry_data: TelemetryData) -> list[str]:
+        activated = self._fmt_bool(telemetry_data.is_activated)
+        running = self._fmt_bool(telemetry_data.is_running)
+        frame = self._fmt_float(telemetry_data.frame_rate, 1)
+        loop = self._fmt_float(telemetry_data.loop_time_ms, 1)
+        idle = self._fmt_float(telemetry_data.idle_time_ms, 1)
 
         return [
             f"  Activated: {activated:<3}  Running: {running:<3}  Frame Rate: {frame} Hz",
             f"  Loop Time: {loop} ms  Idle Time: {idle} ms",
         ]
 
-    def _motion_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
-        forward = self._fmt_float(telemetry_data.get("forward_factor"), 2, signed=True)
-        rotation = self._fmt_float(telemetry_data.get("rotation_factor"), 2, signed=True)
-        speed = self._fmt_float(telemetry_data.get("walking_speed"), 1)
-        lean = self._fmt_float(telemetry_data.get("lean_factor"), 1, signed=True)
-        height = self._fmt_float(telemetry_data.get("height_factor"), 1)
-        idx = self._fmt_int(telemetry_data.get("cycle_index"))
-        ratio = self._fmt_float(telemetry_data.get("cycle_ratio"), 2)
-        elapsed = self._fmt_float(telemetry_data.get("elapsed_time"), 1)
+    def _motion_lines(self, telemetry_data: TelemetryData) -> list[str]:
+        forward = self._fmt_float(telemetry_data.forward_factor, 2, signed=True)
+        rotation = self._fmt_float(telemetry_data.rotation_factor, 2, signed=True)
+        speed = self._fmt_float(telemetry_data.walking_speed, 1)
+        lean = self._fmt_float(telemetry_data.lean_factor, 1, signed=True)
+        height = self._fmt_float(telemetry_data.height_factor, 1)
+        idx = self._fmt_int(telemetry_data.cycle_index)
+        ratio = self._fmt_float(telemetry_data.cycle_ratio, 2)
+        elapsed = self._fmt_float(telemetry_data.elapsed_time, 1)
 
         return [
             f"  Forward: {forward}  Rotation: {rotation}  Speed: {speed}",
@@ -328,23 +329,23 @@ class TelemetryDisplay:
             f"  Cycle Index: {idx}  Ratio: {ratio}  Elapsed: {elapsed} s",
         ]
 
-    def _controller_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
-        events = telemetry_data.get("controller_events") or {}
+    def _controller_lines(self, telemetry_data: TelemetryData) -> list[str]:
+        event = telemetry_data.controller_event
 
-        lx = self._fmt_float(events.get("lx"), 2, signed=True)
-        ly = self._fmt_float(events.get("ly"), 2, signed=True)
-        rx = self._fmt_float(events.get("rz"), 2, signed=True)
-        ry = self._fmt_float(events.get("lz"), 2, signed=True)
-        hatx = self._fmt_int(events.get("hat0x"))
-        haty = self._fmt_int(events.get("hat0y"))
-        brake = self._fmt_float(events.get("brake"), 2)
-        gas = self._fmt_float(events.get("gas"), 2)
-        a_btn = self._fmt_bool(events.get("a"))
-        b_btn = self._fmt_bool(events.get("b"))
-        x_btn = self._fmt_bool(events.get("x"))
-        y_btn = self._fmt_bool(events.get("y"))
-        start = self._fmt_bool(events.get("start"))
-        back = self._fmt_bool(events.get("select"))
+        lx = self._fmt_float(event.left_stick_x if event else None, 2, signed=True)
+        ly = self._fmt_float(event.left_stick_y if event else None, 2, signed=True)
+        rx = self._fmt_float(event.right_stick_x if event else None, 2, signed=True)
+        ry = self._fmt_float(event.right_stick_y if event else None, 2, signed=True)
+        hatx = self._fmt_int(event.dpad_horizontal if event else None)
+        haty = self._fmt_int(event.dpad_vertical if event else None)
+        brake = self._fmt_float(event.left_trigger if event else None, 2)
+        gas = self._fmt_float(event.right_trigger if event else None, 2)
+        a_btn = self._fmt_bool(event.a if event else None)
+        b_btn = self._fmt_bool(event.b if event else None)
+        x_btn = self._fmt_bool(event.x if event else None)
+        y_btn = self._fmt_bool(event.y if event else None)
+        start = self._fmt_bool(event.start if event else None)
+        back = self._fmt_bool(event.back if event else None)
 
         return [
             f"  Left Stick  X:{lx}  Y:{ly}    Right Stick X:{rx}  Y:{ry}",
@@ -352,32 +353,32 @@ class TelemetryDisplay:
             f"  Buttons     A:{a_btn:<3} B:{b_btn:<3} X:{x_btn:<3} Y:{y_btn:<3} START:{start:<3} BACK:{back:<3}",
         ]
 
-    def _leg_coordinate_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
-        positions = telemetry_data.get("leg_positions") or {}
-        front_right = self._fmt_coordinate(positions.get("front_right"))
-        front_left = self._fmt_coordinate(positions.get("front_left"))
-        rear_right = self._fmt_coordinate(positions.get("rear_right"))
-        rear_left = self._fmt_coordinate(positions.get("rear_left"))
+    def _leg_coordinate_lines(self, telemetry_data: TelemetryData) -> list[str]:
+        positions = telemetry_data.leg_positions
+        front_right = self._fmt_coordinate(positions.front_right if positions else None)
+        front_left = self._fmt_coordinate(positions.front_left if positions else None)
+        rear_right = self._fmt_coordinate(positions.rear_right if positions else None)
+        rear_left = self._fmt_coordinate(positions.rear_left if positions else None)
 
         return [
             f"  Front Right: {front_right}    Front Left: {front_left}",
             f"  Rear Right : {rear_right}    Rear Left : {rear_left}",
         ]
 
-    def _servo_angle_lines(self, telemetry_data: Dict[str, Any]) -> list[str]:
-        servo_angles = telemetry_data.get("servo_angles") or {}
-        sr = self._fmt_float(servo_angles.get("front_shoulder_right"), 1)
-        lr = self._fmt_float(servo_angles.get("front_leg_right"), 1)
-        fr = self._fmt_float(servo_angles.get("front_foot_right"), 1)
-        sl = self._fmt_float(servo_angles.get("front_shoulder_left"), 1)
-        ll = self._fmt_float(servo_angles.get("front_leg_left"), 1)
-        fl = self._fmt_float(servo_angles.get("front_foot_left"), 1)
-        srr = self._fmt_float(servo_angles.get("rear_shoulder_right"), 1)
-        lrr = self._fmt_float(servo_angles.get("rear_leg_right"), 1)
-        frr = self._fmt_float(servo_angles.get("rear_foot_right"), 1)
-        srl = self._fmt_float(servo_angles.get("rear_shoulder_left"), 1)
-        lrl = self._fmt_float(servo_angles.get("rear_leg_left"), 1)
-        frl = self._fmt_float(servo_angles.get("rear_foot_left"), 1)
+    def _servo_angle_lines(self, telemetry_data: TelemetryData) -> list[str]:
+        servo_angles = telemetry_data.servo_angles
+        sr = self._fmt_float(servo_angles.front_shoulder_right if servo_angles else None, 1)
+        lr = self._fmt_float(servo_angles.front_leg_right if servo_angles else None, 1)
+        fr = self._fmt_float(servo_angles.front_foot_right if servo_angles else None, 1)
+        sl = self._fmt_float(servo_angles.front_shoulder_left if servo_angles else None, 1)
+        ll = self._fmt_float(servo_angles.front_leg_left if servo_angles else None, 1)
+        fl = self._fmt_float(servo_angles.front_foot_left if servo_angles else None, 1)
+        srr = self._fmt_float(servo_angles.rear_shoulder_right if servo_angles else None, 1)
+        lrr = self._fmt_float(servo_angles.rear_leg_right if servo_angles else None, 1)
+        frr = self._fmt_float(servo_angles.rear_foot_right if servo_angles else None, 1)
+        srl = self._fmt_float(servo_angles.rear_shoulder_left if servo_angles else None, 1)
+        lrl = self._fmt_float(servo_angles.rear_leg_left if servo_angles else None, 1)
+        frl = self._fmt_float(servo_angles.rear_foot_left if servo_angles else None, 1)
 
         return [
             f"  Front Right  Shoulder: {sr}°  Leg: {lr}°  Foot: {fr}°",

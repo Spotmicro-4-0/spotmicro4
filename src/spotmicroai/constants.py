@@ -45,7 +45,7 @@ DEFAULT_SLEEP = 0.1
 # Rate (in Hz) at which the current joystick state is broadcast to the motion queue.
 PUBLISH_RATE_HZ = 20.0
 # Delay between read loop iterations (in seconds)
-READ_LOOP_SLEEP = 0.005
+READ_LOOP_SLEEP = 0.01
 # ===============================
 # Analog Input Filtering
 # ===============================
@@ -53,13 +53,26 @@ READ_LOOP_SLEEP = 0.005
 DEADZONE = 0.08
 # Minimum absolute change in axis value required before updating state.
 AXIS_UPDATE_THRESHOLD = 0.01
+# Linux joystick drivers (via /dev/input/js*) report axis values as signed 16-bit integers
+# The raw range is -32767 ... 32767
+# -32767 means full movement in the negative direction (e.g., left or up),
+# +32767 means full movement in the positive direction (e.g., right or down),
+# 0 means centered.
+# This vlaue is normalized to a float range of [-1.0, 1.0].
+AXIS_NORMALIZATION_CONSTANT = 32767.0
+DEVICE_PATH = '/dev/input'
+JSIOCGNAME = 0x80006A13  # Joystick device name
+JSIOCGAXES = 0x80016A11  # Number of joystick axes
+JSIOCGBUTTONS = 0x80016A12  # Number of joystick buttons
+JSIOCGAXMAP = 0x80406A32  # Joystick axis mapping
+JSIOCGBTNMAP = 0x80406A34  # Joystick button mapping
 # ===============================
 # Reconnection and Device Search
 # ===============================
 # Delay between joystick access retries when device is not yet ready or permissions unavailable.
 RECONNECT_RETRY_DELAY = 2.0
 # Delay between failed device detection cycles.
-DEVICE_SEARCH_INTERVAL = 2.5
+DEVICE_SEARCH_INTERVAL = 1.0
 
 # ===============================
 # Calibration Wizard Constants

@@ -10,14 +10,12 @@ class FilteredAnalogAxis:
 
     def __init__(
         self,
-        key: str,
         deadzone: float = 0.05,
         smoothing: float = 0.1,
         nonlinear_exp: float = 1.0,
         update_callback=None,
         min_update_interval: float = 0.02,
     ):
-        self.key = key
         self.deadzone = deadzone
         self.alpha = smoothing
         self.nonlinear_exp = nonlinear_exp
@@ -27,9 +25,8 @@ class FilteredAnalogAxis:
         self._last_value = 0.0
         self._last_update_time = 0.0
 
-    def update(self, event: dict):
+    def update(self, raw: float):
         """Process a new joystick event and return a filtered value."""
-        raw = event.get(self.key, 0.0)
         now = time.time()
 
         # --- Deadzone ---
@@ -59,3 +56,7 @@ class FilteredAnalogAxis:
     def reset(self):
         self._last_value = 0.0
         self._last_update_time = 0.0
+
+    @property
+    def value(self):
+        return self._last_value

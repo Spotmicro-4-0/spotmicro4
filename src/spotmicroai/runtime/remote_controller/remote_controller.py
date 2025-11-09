@@ -52,7 +52,6 @@ class RemoteControllerController(metaclass=Singleton):
         """Notify about device search and abort current motion."""
         self._abort_topic.put(MessageAbortCommand.ABORT)
         self._lcd_topic.put(LcdMessage(MessageTopic.REMOTE, MessageTopicStatus.SEARCHING))
-        self._remote_control_service.check_for_connected_devices()
 
     def do_process_events_from_queues(self):
         """
@@ -68,30 +67,45 @@ class RemoteControllerController(metaclass=Singleton):
                 remote_controller_connected_already = True
             else:
                 self._notify_searching_for_device()
+                self._remote_control_service.scan()
                 time.sleep(DEVICE_SEARCH_INTERVAL)
                 remote_controller_connected_already = False
                 continue
 
-            last_publish_time = 0
+            next_publish_time = time.time() + 1.0 / PUBLISH_RATE_HZ
 
             # Main event loop
             while True:
                 try:
-                    # Try to read and parse events from the device
-                    self._remote_control_service.read_and_parse_events()
+                    # Poll joystick events (~100 Hz)
+                    self._remote_control_service.poll_events()
 
                     now = time.time()
-                    if now - last_publish_time >= 1.0 / PUBLISH_RATE_HZ:
-                        # Get current state and publish
-                        current_state = self._remote_control_service.get_current_state()
+                    if now >= next_publish_time:
+                        # Publish the aggregated state
+                        current_state = self._remote_control_service.controller_event()
                         self._motion_topic.put(current_state)
-                        last_publish_time = now
 
+                        # Reset aggregated state so next window starts clean
+                        self._remote_control_service.clear()
+
+                        # Schedule next publish tick (avoids drift)
+                        next_publish_time += 1.0 / PUBLISH_RATE_HZ
+
+                    # Sleep briefly to limit CPU usage
                     time.sleep(READ_LOOP_SLEEP)
 
+                except (OSError, IOError) as e:
+                    # Recoverable hardware or I/O error: attempt reconnect
+                    log.warning(labels.REMOTE_IO_ERROR.format(e))
+                    self._remote_control_service.disconnect()
+                    remote_controller_connected_already = False
+                    break
+
                 except Exception as e:
+                    # Unexpected fatal exception: log and abort system
                     log.error(labels.REMOTE_QUEUE_ERROR.format(e))
                     self._abort_topic.put(MessageAbortCommand.ABORT)
-                    remote_controller_connected_already = False
                     self._remote_control_service.disconnect()
+                    remote_controller_connected_already = False
                     break

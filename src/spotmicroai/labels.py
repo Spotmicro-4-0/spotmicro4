@@ -197,6 +197,7 @@ REMOTE_STARTING_CONTROLLER = 'Starting controller...'
 REMOTE_INIT_ERROR = 'Remote controller controller initialization problem: {}'
 REMOTE_TERMINATED = 'Terminated'
 REMOTE_QUEUE_ERROR = 'Unknown problem while processing the queue of the remote controller: {}'
+REMOTE_IO_ERROR = 'Joystick read issue ({}); attempting to reconnect...'
 
 # Remote Control Service
 REMOTE_LOOKING_FOR_DEVICES = 'Looking for connected devices: {}'
