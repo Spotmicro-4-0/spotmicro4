@@ -29,7 +29,11 @@ CONFIG_FILE_NAME = "connect_config.json"  # Local saved setup metadata
 SSH_KEY_FILE = "id_rsa"  # Default SSH key file
 SSH_CONNECT_TIMEOUT = 30
 SSH_OPTS = "-o StrictHostKeyChecking=no"
-APT_PACKAGES = "python3 python3-pip python3-venv python3-dev i2c-tools python3-smbus"
+APT_PACKAGES = (
+    "python3 python3-pip python3-venv python3-dev build-essential pkg-config "
+    "i2c-tools python3-smbus python3-smbus2 python3-rpi.gpio "
+    "python3-numpy python3-scipy libatlas-base-dev python3-rpi.gpio"
+)
 ENABLE_I2C_CMDS = [
     "sudo raspi-config nonint do_i2c 0",
     "sudo grep -q 'dtparam=i2c_arm=on' /boot/firmware/config.txt "
@@ -379,7 +383,9 @@ class SetupTool:
         """Create and setup Python virtual environment."""
         self.print_step(5, LABELS.STEP_CREATE_VENV)
         cmds = [
-            f"python3 -m venv ~/{REMOTE_VENV_DIR}",
+            # Create venv with system site packages visible
+            f"python3 -m venv --system-site-packages ~/{REMOTE_VENV_DIR}",
+            # Activate and upgrade pip inside the venv
             f"source ~/{REMOTE_VENV_DIR}/bin/activate && pip install --upgrade pip",
         ]
         return all(self._run_remote(c) for c in cmds)
@@ -418,11 +424,16 @@ class SetupTool:
         return False
 
     def install_python_packages(self):
-        """Install Python packages from requirements.txt."""
+        """Install Python packages from requirements.txt (prefer system wheels, no builds)."""
         self.print_step(7, LABELS.STEP_INSTALL_PACKAGES)
-        return self._run_remote(
-            f"cd ~/{PROJECT_DIR} && source ~/{REMOTE_VENV_DIR}/bin/activate && pip install -r requirements.txt"
+        cmd = (
+            f"cd ~/{PROJECT_DIR} && "
+            f"source ~/{REMOTE_VENV_DIR}/bin/activate && "
+            # rely on --system-site-packages venv; avoid source builds
+            f"PIP_NO_BUILD_ISOLATION=1 PIP_ONLY_BINARY=:all: "
+            f"pip install --no-cache-dir -r requirements.txt"
         )
+        return self._run_remote(cmd)
 
     def _post_deploy_finalize(self):
         """Set executable permissions on shell scripts after deployment."""
