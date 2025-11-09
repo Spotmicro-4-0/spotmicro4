@@ -8,7 +8,6 @@ from spotmicroai import labels
 import spotmicroai.constants as constants
 from spotmicroai.hardware.servo.servo_service import ServoService
 from spotmicroai.logger import Logger
-from spotmicroai.motion.command import Command
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
 from spotmicroai.runtime.motion_controller.models import ControllerEventKey
 from spotmicroai.runtime.motion_controller.services import ButtonManager, KeyframeService, PoseService, TelemetryService
@@ -26,7 +25,6 @@ class MotionController(metaclass=Singleton):
     _servo_service: ServoService
     _pose_service: PoseService
     _button_manager: ButtonManager
-    _command: Command
 
     _is_activated = False
     _is_running = False
