@@ -109,6 +109,10 @@ class MotionController(metaclass=Singleton):
         leg_positions = None
         telemetry_update_counter = 0
 
+        iteration_window_start = time.time()
+        iteration_time_accumulator = 0.0
+        iteration_samples = 0
+
         while True:
             frame_start = time.time()
 
@@ -290,6 +294,23 @@ class MotionController(metaclass=Singleton):
 
             if elapsed_time < constants.FRAME_DURATION:
                 time.sleep(constants.FRAME_DURATION - elapsed_time)
+
+            iteration_end = time.time()
+            iteration_duration = iteration_end - frame_start
+            iteration_time_accumulator += iteration_duration
+            iteration_samples += 1
+
+            if (iteration_end - iteration_window_start) >= 1.0 and iteration_samples > 0:
+                avg_iteration_duration = iteration_time_accumulator / iteration_samples
+                avg_iteration_frequency = 1.0 / avg_iteration_duration if avg_iteration_duration > 0 else 0.0
+                log.info(
+                    "Motion loop avg iteration time: %.2f ms (%.2f Hz)",
+                    avg_iteration_duration * 1000,
+                    avg_iteration_frequency,
+                )
+                iteration_window_start = iteration_end
+                iteration_time_accumulator = 0.0
+                iteration_samples = 0
 
     def _update_servo_angles(self):
         """
