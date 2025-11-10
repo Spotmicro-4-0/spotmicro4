@@ -26,6 +26,7 @@ from spotmicroai.constants import (
 from spotmicroai.hardware.servo import JointType
 from spotmicroai.hardware.servo._servo import Servo
 from spotmicroai.hardware.servo._servo_factory import ServoFactory
+from spotmicroai.runtime.abort_controller.abort_controller import AbortController
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 import spotmicroai.labels as LABELS
 
@@ -383,8 +384,10 @@ class DiagnosticsWizard:
 
 def main() -> None:
     """Main entry point for diagnostics."""
-    try:
+    abort_controller = AbortController()
 
+    try:
+        abort_controller.activate_servos()
         def diagnostics_wrapper(stdscr):
             curses.curs_set(0)
             curses.start_color()
@@ -405,9 +408,11 @@ def main() -> None:
 
     except KeyboardInterrupt:
         print(LABELS.DIAG_INTERRUPTED)
+        abort_controller.abort()
         sys.exit(1)
     except Exception as e:
         print(LABELS.DIAG_ERROR_GENERAL.format(e))
+        abort_controller.abort()
         sys.exit(1)
 
 

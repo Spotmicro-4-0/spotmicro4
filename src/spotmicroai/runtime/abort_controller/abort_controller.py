@@ -104,3 +104,4 @@ class AbortController(metaclass=Singleton):
         assert self._gpio_port is not None
         self._lcd_topic.put(LcdMessage(MessageTopic.ABORT, MessageTopicStatus.OFF))
         GPIO.output(self._gpio_port, GPIO.HIGH)
+        time.sleep(0.1)

@@ -13,6 +13,7 @@ import curses
 import sys
 from typing import Tuple
 
+from spotmicroai.runtime.abort_controller.abort_controller import AbortController
 from spotmicroai.spot_config.calibration.calibration_points import CALIBRATION_POINTS, CalibrationPoint
 from spotmicroai.configuration._config_provider import ConfigProvider, ServoName
 from spotmicroai.constants import (
@@ -381,7 +382,9 @@ def main(servo_id: str) -> None:
     Args:
         servo_id: The servo ID to calibrate, or "all" to calibrate all servos
     """
+    abort_controller = AbortController()
     try:
+        abort_controller.activate_servos()
         # Handle "all" case
         if servo_id.lower() == "all":
             _calibrate_all_servos()
@@ -391,9 +394,11 @@ def main(servo_id: str) -> None:
         _calibrate_single_servo(servo_id)
 
     except KeyboardInterrupt:
+        abort_controller.abort()
         print(LABELS.WIZARD_INTERRUPTED)
         sys.exit(1)
     except Exception as e:
+        abort_controller.abort()
         print(LABELS.WIZARD_ERROR_GENERAL.format(e))
         sys.exit(1)
 
