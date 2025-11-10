@@ -28,6 +28,9 @@ class ParametersProvider(metaclass=Singleton):
     # Servo parameters
     num_servos: int
     servo_max_angle_deg: float
+    max_roll_deg: float
+    max_pitch_deg: float
+    max_yaw_deg: float
 
     # Control parameters
     dt: float

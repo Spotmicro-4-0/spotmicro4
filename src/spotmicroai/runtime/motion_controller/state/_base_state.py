@@ -3,7 +3,7 @@ from enum import Enum
 
 from spotmicroai import constants
 from spotmicroai.logger import Logger
-from spotmicroai.runtime.motion_controller.models import ControllerEvent
+from spotmicroai.runtime.controller_event import ControllerEvent
 
 
 class RobotStateName(Enum):

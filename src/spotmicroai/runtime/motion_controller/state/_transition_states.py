@@ -1,4 +1,5 @@
-from spotmicroai.runtime.motion_controller.models import ControllerEvent
+import time
+from spotmicroai.runtime.controller_event import ControllerEvent
 from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotStateName
 
 
@@ -8,21 +9,10 @@ class TransitIdleState(BaseRobotState):
         self._log.debug('Entering TRANSIT_IDLE state')
 
     def update(self) -> None:
-        import time
-
-        start_time = time.time()
-        # Transition state does nothing
-        duration = (time.time() - start_time) * 1000
-        self._log.debug(f"TransitIdleState.update took {duration:.2f}ms")
+        self._log.debug('Updating TRANSIT_IDLE state')
 
     def handle_event(self, event: ControllerEvent) -> RobotStateName | None:
-        import time
-
-        start_time = time.time()
-        result = None  # Transition states don't handle events
-        duration = (time.time() - start_time) * 1000
-        self._log.debug(f"TransitIdleState.handle_event took {duration:.2f}ms")
-        return result
+        self._log.debug('Handling TRANSIT_IDLE state')
 
     def exit(self) -> None:
         self._log.debug('Exiting TRANSIT_IDLE state')
@@ -34,21 +24,10 @@ class TransitStandState(BaseRobotState):
         self._log.debug('Entering TRANSIT_STAND state')
 
     def update(self) -> None:
-        import time
-
-        start_time = time.time()
-        # Transition state does nothing
-        duration = (time.time() - start_time) * 1000
-        self._log.debug(f"TransitStandState.update took {duration:.2f}ms")
+        self._log.debug('Updating TRANSIT_STAND state')
 
     def handle_event(self, event: ControllerEvent) -> RobotStateName | None:
-        import time
-
-        start_time = time.time()
-        result = None  # Transition states don't handle events
-        duration = (time.time() - start_time) * 1000
-        self._log.debug(f"TransitStandState.handle_event took {duration:.2f}ms")
-        return result
+        self._log.debug('Handling TRANSIT_STAND state')
 
     def exit(self) -> None:
         self._log.debug('Exiting TRANSIT_STAND state')

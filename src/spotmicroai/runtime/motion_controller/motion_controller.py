@@ -12,6 +12,7 @@ from spotmicroai.runtime.controller_event import ControllerEvent
 from spotmicroai.runtime.messaging import LcdMessage, MessageAbortCommand, MessageBus, MessageTopic, MessageTopicStatus
 from spotmicroai.runtime.motion_controller.filtered_controller_event import FilteredControllerEvent
 from spotmicroai.runtime.motion_controller.services import KeyframeService, PoseService, TelemetryService
+from spotmicroai.runtime.motion_controller.state import StateMachine
 from spotmicroai.singleton import Singleton
 
 log = Logger().setup_logger('Motion controller')
@@ -31,6 +32,7 @@ class MotionController(metaclass=Singleton):
     _is_running = False
     _keyframe_service: KeyframeService
     _telemetry_service: TelemetryService
+    _state_machine: StateMachine
 
     def __init__(self):
         """
@@ -59,6 +61,8 @@ class MotionController(metaclass=Singleton):
             self._abort_topic = message_bus.abort
             self._lcd_topic = message_bus.lcd
             self._telemetry_topic = message_bus.telemetry
+
+            self._state_machine = StateMachine()
 
             self._lcd_topic.put(LcdMessage(MessageTopic.MOTION, MessageTopicStatus.OK))
 
@@ -111,6 +115,8 @@ class MotionController(metaclass=Singleton):
         while True:
             frame_start = time.time()
 
+            self._state_machine.update()
+
             try:
                 raw_event = self._motion_topic.get(block=False)
             except queue.Empty:
@@ -119,6 +125,7 @@ class MotionController(metaclass=Singleton):
             # Filter the raw event through debouncing and smoothing
             if raw_event is not None:
                 self._filtered_controller_event.update(raw_event)
+                self._state_machine.handle_event(raw_event)
 
             # Handle START button with debouncing
             if self._filtered_controller_event.start:

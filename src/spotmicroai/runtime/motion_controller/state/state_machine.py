@@ -1,10 +1,15 @@
+import sys
+import time
+from spotmicroai.configuration._parameters_provider import ParametersProvider
 from spotmicroai.logger import Logger
-from spotmicroai.runtime.motion_controller.models import ControllerEvent
+from spotmicroai.runtime.controller_event import ControllerEvent
+from spotmicroai.runtime.motion_controller.inverse_kinematics import BodyState, InverseKinematicsSolver
 from spotmicroai.runtime.motion_controller.state._base_state import BaseRobotState, RobotStateName
 from spotmicroai.runtime.motion_controller.state._idle_state import IdleState
 from spotmicroai.runtime.motion_controller.state._stand_state import StandState
 from spotmicroai.runtime.motion_controller.state._walk_state import WalkState
 from spotmicroai.runtime.motion_controller.state._transition_states import TransitIdleState, TransitStandState
+from spotmicroai.runtime.motion_controller.state.command import Command
 
 log = Logger().setup_logger('StateMachine')
 
@@ -23,6 +28,12 @@ class StateMachine:
         self._current_state: RobotStateName = RobotStateName.IDLE
         self._states[self._current_state].enter()
 
+        self._body_state = BodyState()
+        self._inverse_kinematics_solver = InverseKinematicsSolver(0, 0.04, 0)
+        self._command = Command()
+
+        self._parameters_provider = ParametersProvider()
+
     @property
     def current_state(self) -> RobotStateName:
         return self._current_state
@@ -35,16 +46,12 @@ class StateMachine:
         return self._states[self._current_state].frame_duration
 
     def update(self) -> None:
-        import time
         start_time = time.time()
         self._states[self._current_state].update()
         duration = (time.time() - start_time) * 1000
         log.debug(f"StateMachine.update took {duration:.2f}ms")
 
     def handle_event(self, event: ControllerEvent) -> None:
-        import time
-        import sys
-
         start_time = time.time()
 
         handle_start = time.time()
@@ -83,9 +90,6 @@ class StateMachine:
             )
 
     def _transition_to(self, new_state: RobotStateName) -> None:
-        import time
-        import sys
-
         if new_state == self._current_state:
             return
 
