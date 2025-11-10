@@ -12,6 +12,7 @@ import sys
 from spotmicroai.configuration._config_provider import ServoName
 from spotmicroai.constants import CALIBRATION_STEP_SIZE, POPUP_HEIGHT, POPUP_WIDTH
 from spotmicroai.hardware.servo import ServoFactory
+from spotmicroai.runtime.abort_controller.abort_controller import AbortController
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
 import spotmicroai.labels as LABELS
 
@@ -100,6 +101,8 @@ class ServoManualControl:
 def main(servo_id: str) -> None:
     """CLI entry point for manual servo control."""
     try:
+        abort_controller = AbortController()
+
         try:
             servo_enum = ServoName(servo_id)
         except ValueError:
@@ -108,6 +111,7 @@ def main(servo_id: str) -> None:
             sys.exit(1)
 
         servo = ServoFactory.create(servo_enum)
+        abort_controller.activate_servos()
 
         def control_wrapper(stdscr):
             curses.curs_set(0)
@@ -129,9 +133,11 @@ def main(servo_id: str) -> None:
 
     except KeyboardInterrupt:
         print(LABELS.MANUAL_INTERRUPTED)
+        abort_controller.abort()
         sys.exit(1)
     except Exception as e:
         print(LABELS.MANUAL_ERROR.format(e))
+        abort_controller.abort()
         sys.exit(1)
 
 

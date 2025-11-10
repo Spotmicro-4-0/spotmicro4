@@ -60,12 +60,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     log.info(labels.MAIN_STARTING)
+    abort_ctrl = AbortController()
 
     try:
         main(telemetry_enabled=not args.telemetry_off)
 
     except KeyboardInterrupt:
         log.info(labels.MAIN_TERMINATED_CTRL_C)
+        abort_ctrl.abort()
 
     else:
         log.info(labels.MAIN_TERMINATED_NORMAL)
+        abort_ctrl.abort()

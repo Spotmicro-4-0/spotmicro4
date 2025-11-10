@@ -6,6 +6,7 @@ import sys
 
 from spotmicroai.configuration._config_provider import ServoName
 from spotmicroai.constants import POPUP_HEIGHT, POPUP_WIDTH
+from spotmicroai.runtime.abort_controller.abort_controller import AbortController
 from spotmicroai.runtime.motion_controller.models.coordinate import Coordinate
 from spotmicroai.hardware.servo import ServoFactory
 from spotmicroai.spot_config.ui import theme as THEME, ui_utils
@@ -152,7 +153,10 @@ class InverseKinematicsControl:
 
 def main(corner: str) -> None:
     """CLI entry point for inverse kinematics control."""
+    abort_controller = AbortController()
+
     try:
+        abort_controller.activate_servos()
         # Validate corner
         if corner not in CORNER_TO_SERVOS:
             print(f"Error: Invalid corner '{corner}'")
@@ -179,9 +183,11 @@ def main(corner: str) -> None:
 
     except KeyboardInterrupt:
         print("\n✗ Inverse kinematics control interrupted by user")
+        abort_controller.abort()
         sys.exit(1)
     except Exception as e:
         print(f"\n✗ Error during inverse kinematics control: {e}")
+        abort_controller.abort()
         sys.exit(1)
 
 
