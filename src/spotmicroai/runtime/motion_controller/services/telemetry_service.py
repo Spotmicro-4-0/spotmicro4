@@ -4,16 +4,25 @@ Telemetry Service Module for SpotMicroAI Motion Controller
 This module provides the TelemetryService class for collecting telemetry data.
 """
 
+import queue
+from typing import Dict
+from spotmicroai import labels
+from spotmicroai.logger import Logger
 from spotmicroai.runtime.controller_event import ControllerEvent
+from spotmicroai.runtime.messaging import MessageBus
 from spotmicroai.runtime.motion_controller.models.telemetry_data import (
     LegPosition,
     LegPositions,
     ServoAngles,
     TelemetryData,
 )
+from spotmicroai.singleton import Singleton
+import spotmicroai.constants as constants
+
+log = Logger().setup_logger('Telemetry Service')
 
 
-class TelemetryService:
+class TelemetryService(metaclass=Singleton):
     """Collects telemetry data from motion controller components."""
 
     def __init__(self, motion_controller):
@@ -25,8 +34,64 @@ class TelemetryService:
             The motion controller instance to collect data from.
         """
         self._motion_controller = motion_controller
+        self._message_bus = MessageBus()
+        self._telemetry_topic = self._message_bus._telemetry
+        self._update_counter = 0
 
-    def collect(
+    def publish(
+        self,
+        event: ControllerEvent | None,
+        loop_time_ms: float,
+        idle_time_ms: float,
+        cycle_index: int | None = None,
+        cycle_ratio: float | None = None,
+        leg_positions: Dict | None = None,
+    ) -> None:
+        """Collect and publish telemetry data from all sources.
+
+        Parameters
+        ----------
+        event : ControllerEvent
+            Current controller event data.
+        loop_time_ms : float
+            Time taken for the current loop iteration in milliseconds.
+        idle_time_ms : float
+            Idle/sleep time in the current loop in milliseconds.
+        cycle_index : Optional[int]
+            Current walking cycle index.
+        cycle_ratio : Optional[float]
+            Current walking cycle interpolation ratio.
+        leg_positions : Optional[Dict]
+            Current interpolated leg positions.
+        """
+        self._update_counter = (self._update_counter + 1) % constants.TELEMETRY_UPDATE_INTERVAL
+        if self._update_counter != 0:
+            return
+
+        if self._telemetry_topic is None:
+            return
+
+        try:
+            queue_stats = self._message_bus.get_queue_stats()
+
+            telemetry_data = self._collect(
+                event=event,
+                loop_time_ms=loop_time_ms,
+                idle_time_ms=idle_time_ms,
+                cycle_index=cycle_index,
+                cycle_ratio=cycle_ratio,
+                leg_positions=leg_positions,
+                queue_stats=queue_stats,
+            )
+
+            try:
+                self._telemetry_topic.put(telemetry_data, block=False)
+            except queue.Full:
+                log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
+        except Exception as e:
+            log.warning(labels.MOTION_TELEMETRY_ERROR.format(e))
+
+    def _collect(
         self,
         event: ControllerEvent | None,
         loop_time_ms: float,
@@ -34,6 +99,7 @@ class TelemetryService:
         cycle_index: int | None = None,
         cycle_ratio: float | None = None,
         leg_positions: dict | None = None,
+        queue_stats: Dict[str, int] | None = None,
     ) -> TelemetryData:
         """Collect current telemetry data from all sources.
 
@@ -106,6 +172,7 @@ class TelemetryService:
             frame_rate=50.0,
             loop_time_ms=loop_time_ms,
             idle_time_ms=idle_time_ms,
+            queue_stats=queue_stats or {},
             forward_factor=kf_service.forward_factor if kf_service else None,
             rotation_factor=kf_service.rotation_factor if kf_service else None,
             lean_factor=kf_service.lean_factor if kf_service else None,

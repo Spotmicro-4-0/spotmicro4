@@ -5,6 +5,7 @@ This module defines strongly-typed telemetry data structures.
 """
 
 from dataclasses import dataclass
+from typing import Dict
 
 from spotmicroai.runtime.controller_event import ControllerEvent
 
@@ -53,6 +54,7 @@ class TelemetryData:
     frame_rate: float
     loop_time_ms: float
     idle_time_ms: float
+    queue_stats: Dict[str, int]
 
     # Motion parameters
     forward_factor: float | None = None

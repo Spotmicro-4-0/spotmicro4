@@ -41,13 +41,13 @@ class MessageBus(metaclass=Singleton):
     _abort: multiprocessing.Queue
     _motion: multiprocessing.Queue
     _lcd: multiprocessing.Queue
-    _telemetry: multiprocessing.Queue
+    _telemetry: multiprocessing.Queue | None
 
-    def __init__(self) -> None:
+    def __init__(self, telemetry_enabled: bool = True) -> None:
         self._abort = multiprocessing.Queue(10)
         self._motion = multiprocessing.Queue(1)
         self._lcd = multiprocessing.Queue(10)
-        self._telemetry = multiprocessing.Queue(10)
+        self._telemetry = multiprocessing.Queue(10) if telemetry_enabled else None
 
     @property
     def abort(self):
@@ -71,7 +71,7 @@ class MessageBus(metaclass=Singleton):
             "abort": self._abort.qsize(),
             "motion": self._motion.qsize(),
             "lcd": self._lcd.qsize(),
-            "telemetry": self._telemetry.qsize(),
+            "telemetry": self._telemetry.qsize() if self._telemetry is not None else 0,
         }
 
     def log_queue_stats(self) -> None:
@@ -90,8 +90,9 @@ class MessageBus(metaclass=Singleton):
         self._lcd.close()
         self._lcd.join_thread()
 
-        self._telemetry.close()
-        self._telemetry.join_thread()
+        if self._telemetry is not None:
+            self._telemetry.close()
+            self._telemetry.join_thread()
 
     def __del__(self) -> None:
         self.close()

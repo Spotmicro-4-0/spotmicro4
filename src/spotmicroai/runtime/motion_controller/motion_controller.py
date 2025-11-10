@@ -58,7 +58,7 @@ class MotionController(metaclass=Singleton):
             self._motion_topic = message_bus.motion
             self._abort_topic = message_bus.abort
             self._lcd_topic = message_bus.lcd
-            self._telemetry_topic = message_bus.telemetry
+            # self._telemetry_topic = message_bus.telemetry
 
             self._lcd_topic.put(LcdMessage(MessageTopic.MOTION, MessageTopicStatus.OK))
 
@@ -102,7 +102,6 @@ class MotionController(metaclass=Singleton):
         cycle_index = None
         cycle_ratio = None
         leg_positions = None
-        telemetry_update_counter = 0
 
         iteration_window_start = time.time()
         iteration_time_accumulator = 0.0
@@ -275,27 +274,15 @@ class MotionController(metaclass=Singleton):
             loop_time_ms = elapsed_time * 1000
             idle_time_ms = idle_time * 1000
 
-            # Update telemetry display periodically (not every frame to reduce overhead)
-            telemetry_update_counter += 1
-            if telemetry_update_counter >= constants.TELEMETRY_UPDATE_INTERVAL:
-                telemetry_update_counter = 0
-                try:
-                    telemetry_data = self._telemetry_service.collect(
-                        event=filtered_event.value if has_input else None,
-                        loop_time_ms=loop_time_ms,
-                        idle_time_ms=idle_time_ms,
-                        cycle_index=cycle_index,
-                        cycle_ratio=cycle_ratio,
-                        leg_positions=leg_positions,
-                    )
-                    try:
-                        # self._telemetry_topic.put(telemetry_data, block=False)
-                        pass
-                    except queue.Full:
-                        log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
-                except Exception as e:
-                    # Don't let telemetry errors crash the robot
-                    log.warning(labels.MOTION_TELEMETRY_ERROR.format(e))
+            # Publish telemetry (service handles throttling and queue stats internally)
+            self._telemetry_service.publish(
+                event=filtered_event.value if has_input else None,
+                loop_time_ms=loop_time_ms,
+                idle_time_ms=idle_time_ms,
+                cycle_index=cycle_index,
+                cycle_ratio=cycle_ratio,
+                leg_positions=leg_positions,
+            )
 
             if elapsed_time < constants.FRAME_DURATION:
                 time.sleep(constants.FRAME_DURATION - elapsed_time)
