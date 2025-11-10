@@ -45,9 +45,5 @@
   "stance_ticks": 20,
   "phase_ticks": [5, 10, 5, 10],
   "phase_length": 30,
-  "publish_odom": false,
-  "lidar_x_pos": 0.0,
-  "lidar_y_pos": 0.0,
-  "lidar_z_pos": 0.0,
-  "lidar_yaw_angle": 0.0
+  "publish_odom": false
 }
