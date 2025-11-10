@@ -10,11 +10,11 @@ class FilteredAnalogAxis:
 
     def __init__(
         self,
-        deadzone: float = 0.05,
-        smoothing: float = 0.1,
-        nonlinear_exp: float = 1.0,
+        deadzone: float = 0.03,
+        smoothing: float = 0.4,
+        nonlinear_exp: float = 1.3,
         update_callback=None,
-        min_update_interval: float = 0.02,
+        min_update_interval: float = 0.01,
     ):
         self.deadzone = deadzone
         self.alpha = smoothing
@@ -51,6 +51,28 @@ class FilteredAnalogAxis:
         if self.callback:
             self.callback(smoothed)
 
+        return smoothed
+
+    # Strong smoothing near the center and weaker at high speeds
+    def update_adaptive(self, raw: float):
+        now = time.time()
+        if abs(raw) < self.deadzone:
+            raw = 0.0
+
+        # Adaptive smoothing: less smoothing when input is large
+        adaptive_alpha = self.alpha * (1 - abs(raw)) + 0.7 * abs(raw)
+        smoothed = self._last_value + adaptive_alpha * (raw - self._last_value)
+
+        if self.nonlinear_exp != 1.0:
+            smoothed = math.copysign(abs(smoothed) ** self.nonlinear_exp, smoothed)
+
+        if now - self._last_update_time < self.min_update_interval:
+            return self._last_value
+
+        self._last_update_time = now
+        self._last_value = smoothed
+        if self.callback:
+            self.callback(smoothed)
         return smoothed
 
     def reset(self):
