@@ -28,11 +28,12 @@ class TelemetryController(metaclass=Singleton):
 
     _render_interval = 0.2  # seconds
 
-    def __init__(self, message_bus: MessageBus) -> None:
+    def __init__(self) -> None:
         try:
             signal.signal(signal.SIGINT, self.exit_gracefully)
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
+            message_bus = MessageBus()
             self._telemetry_topic = message_bus.telemetry
             self._display = TelemetryDisplay()
             self._display.initialize()

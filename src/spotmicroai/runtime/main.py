@@ -17,8 +17,8 @@ from spotmicroai.runtime.telemetry_controller.telemetry_controller import Teleme
 log = Logger().setup_logger()
 
 
-def process_controller(controller_class: type, message_bus: MessageBus) -> None:
-    controller = controller_class(message_bus)
+def process_controller(controller_class: type) -> None:
+    controller = controller_class()
     controller.do_process_events_from_queues()
 
 
@@ -38,7 +38,7 @@ def main(telemetry_enabled: bool = True):
 
     processes = []
     for controller_class in controller_types:
-        process = multiprocessing.Process(target=process_controller, args=(controller_class, message_bus))
+        process = multiprocessing.Process(target=process_controller, args=(controller_class,))
         process.daemon = True
         process.start()
         sleep(0.1)

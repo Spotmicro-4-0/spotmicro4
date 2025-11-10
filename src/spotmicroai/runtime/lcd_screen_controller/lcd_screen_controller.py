@@ -43,7 +43,7 @@ class LcdScreenController(metaclass=Singleton):
     _screen: Lcd16x2
     _lcd_topic: Queue
 
-    def __init__(self, message_bus: MessageBus):
+    def __init__(self):
         try:
 
             log.debug(labels.LCD_STARTING_CONTROLLER)
@@ -54,7 +54,7 @@ class LcdScreenController(metaclass=Singleton):
             i2c_address = self._config_provider.get_lcd_screen_address()
 
             self.screen = Lcd16x2(address=i2c_address)
-
+            message_bus = MessageBus()
             self._lcd_topic = message_bus.lcd
             self._lcd_status = None
             self._abort_status = None

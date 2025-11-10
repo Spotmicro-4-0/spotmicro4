@@ -24,7 +24,7 @@ class AbortController(metaclass=Singleton):
     _gpio_port: Optional[int] = None
     _config_provider: ConfigProvider = ConfigProvider()
 
-    def __init__(self, message_bus: MessageBus):
+    def __init__(self):
 
         try:
 
@@ -34,6 +34,7 @@ class AbortController(metaclass=Singleton):
             signal.signal(signal.SIGTERM, self.exit_gracefully)
 
             self._gpio_port = self._config_provider.get_abort_gpio_port()
+            message_bus = MessageBus()
             self._lcd_topic = message_bus.lcd
             self._abort_topic = message_bus.abort
 

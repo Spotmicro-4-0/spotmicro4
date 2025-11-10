@@ -32,7 +32,7 @@ class MotionController(metaclass=Singleton):
     _keyframe_service: KeyframeService
     _telemetry_service: TelemetryService
 
-    def __init__(self, message_bus: MessageBus):
+    def __init__(self):
         """
         Initializes the MotionController with necessary services and queues.
 
@@ -54,6 +54,7 @@ class MotionController(metaclass=Singleton):
             self.prev_pitch_input: float | None = None
             self.prev_pitch_analog: float | None = None
 
+            message_bus = MessageBus()
             self._motion_topic = message_bus.motion
             self._abort_topic = message_bus.abort
             self._lcd_topic = message_bus.lcd

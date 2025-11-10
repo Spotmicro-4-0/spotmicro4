@@ -17,7 +17,7 @@ log = Logger().setup_logger('Remote controller')
 class RemoteControllerController(metaclass=Singleton):
     _config_provider = ConfigProvider()
 
-    def __init__(self, message_bus: MessageBus):
+    def __init__(self):
         try:
             log.debug(labels.REMOTE_STARTING_CONTROLLER)
 
@@ -30,6 +30,7 @@ class RemoteControllerController(metaclass=Singleton):
             # Initialize the remote control service
             self._remote_control_service = RemoteControlService(device_name)
 
+            message_bus = MessageBus()
             self._lcd_topic = message_bus.lcd
             self._abort_topic = message_bus.abort
             self._motion_topic = message_bus.motion
