@@ -288,7 +288,8 @@ class MotionController(metaclass=Singleton):
                         leg_positions=leg_positions,
                     )
                     try:
-                        self._telemetry_topic.put(telemetry_data, block=False)
+                        # self._telemetry_topic.put(telemetry_data, block=False)
+                        pass
                     except queue.Full:
                         log.debug(labels.MOTION_TELEMETRY_QUEUE_FULL)
                 except Exception as e:
